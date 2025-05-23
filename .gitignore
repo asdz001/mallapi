@@ -1,13 +1,17 @@
-# Django 불필요 파일 무시
+# Django DB
 db.sqlite3
-*.zip
-*.xlsx
-*.csv
 
-# 업로드된 미디어와 정적 파일
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+
+# Virtual environment
+venv/
+
+# Django static/media
+/static/
 /media/
-/staticfiles/
 
-/__pycache__/
-/*.pyc
-.env
+# VSCode
+.vscode/
