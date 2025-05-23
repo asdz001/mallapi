@@ -1,0 +1,100 @@
+2025-05-23 19:36:03.013 [info] Extension host with pid 12847 started
+2025-05-23 19:36:03.022 [info] Lock '/root/.vscode-server/data/User/workspaceStorage/69b865ee5b39d8dd4400c31e5ed23100/vscode.lock': Lock acquired.
+2025-05-23 19:36:03.124 [info] Eager extensions activated
+2025-05-23 19:36:05.411 [info] ExtensionService#_doActivateExtension vscode.debug-auto-launch, startup: false, activationEvent: 'onStartupFinished'
+2025-05-23 19:36:05.413 [info] ExtensionService#_doActivateExtension vscode.git-base, startup: false, activationEvent: '*', root cause: vscode.git
+2025-05-23 19:36:05.414 [info] ExtensionService#_doActivateExtension vscode.merge-conflict, startup: false, activationEvent: 'onStartupFinished'
+2025-05-23 19:36:06.220 [info] ExtensionService#_doActivateExtension vscode.git, startup: false, activationEvent: '*'
+2025-05-23 19:36:06.220 [info] ExtensionService#_doActivateExtension vscode.github, startup: false, activationEvent: '*'
+2025-05-23 19:36:06.327 [info] ExtensionService#_doActivateExtension ms-python.python, startup: false, activationEvent: 'workspaceContains:mspythonconfig.json,pyproject.toml,Pipfile,setup.py,requirements.txt,manage.py,app.py,.venv,.conda'
+2025-05-23 19:36:12.140 [info] ExtensionService#_doActivateExtension vscode.npm, startup: false, activationEvent: 'onTerminalQuickFixRequest:ms-vscode.npm-command'
+2025-05-23 19:36:17.838 [info] ExtensionService#_doActivateExtension vscode.configuration-editing, startup: false, activationEvent: 'onLanguage:json'
+2025-05-23 19:36:17.838 [info] ExtensionService#_doActivateExtension vscode.extension-editing, startup: false, activationEvent: 'onLanguage:json'
+2025-05-23 19:36:17.839 [info] ExtensionService#_doActivateExtension vscode.json-language-features, startup: false, activationEvent: 'onLanguage:json'
+2025-05-23 19:36:17.839 [info] ExtensionService#_doActivateExtension vscode.emmet, startup: false, activationEvent: 'onLanguage'
+2025-05-23 19:36:44.209 [info] ExtensionService#_doActivateExtension ms-python.debugpy, startup: false, activationEvent: 'onLanguage:python'
+2025-05-23 19:36:44.212 [warning] Using default string since no string found in i18n bundle that has the key: No Schema Validation
+2025-05-23 19:36:46.505 [error] [ms-python.python] provider FAILED
+2025-05-23 19:36:46.505 [error] Error: _pickle.UnpicklingError: unpickling stack underflow
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 19:49:35.435 [error] [ms-python.python] provider FAILED
+2025-05-23 19:49:35.436 [error] Error: AttributeError: 'dict' object has no attribute 'append'
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 19:49:35.438 [error] [ms-python.python] provider FAILED
+2025-05-23 19:49:35.438 [error] Error: _pickle.UnpicklingError: could not find MARK
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 19:49:35.552 [error] [ms-python.python] provider FAILED
+2025-05-23 19:49:35.552 [error] Error: _pickle.UnpicklingError: could not find MARK
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 19:49:35.601 [error] [ms-python.python] provider FAILED
+2025-05-23 19:49:35.601 [error] Error: _pickle.UnpicklingError: could not find MARK
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 19:49:37.127 [error] [ms-python.python] provider FAILED
+2025-05-23 19:49:37.127 [error] Error: _pickle.UnpicklingError: could not find MARK
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 19:49:37.454 [error] [ms-python.python] provider FAILED
+2025-05-23 19:49:37.454 [error] Error: _pickle.UnpicklingError: could not find MARK
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 19:49:37.457 [error] [ms-python.python] provider FAILED
+2025-05-23 19:49:37.458 [error] Error: _pickle.UnpicklingError: could not find MARK
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 19:49:38.547 [error] [ms-python.python] provider FAILED
+2025-05-23 19:49:38.547 [error] Error: _pickle.UnpicklingError: could not find MARK
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 19:49:38.579 [error] [ms-python.python] provider FAILED
+2025-05-23 19:49:38.579 [error] Error: _pickle.UnpicklingError: could not find MARK
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 19:49:38.581 [error] [ms-python.python] provider FAILED
+2025-05-23 19:49:38.581 [error] Error: _pickle.UnpicklingError: could not find MARK
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 19:49:39.539 [error] [ms-python.python] provider FAILED
+2025-05-23 19:49:39.539 [error] Error: _pickle.UnpicklingError: could not find MARK
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 19:49:39.542 [error] [ms-python.python] provider FAILED
+2025-05-23 19:49:39.542 [error] Error: _pickle.UnpicklingError: could not find MARK
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 19:49:39.714 [error] [ms-python.python] provider FAILED
+2025-05-23 19:49:39.715 [error] Error: _pickle.UnpicklingError: could not find MARK
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)

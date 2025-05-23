@@ -1,0 +1,52 @@
+2025-05-23 16:57:01.446 [info] (Client) Pylance async client (2025.5.1) started with python extension (2025.6.1)
+2025-05-23 16:57:04.945 [info] [Info  - 4:57:04 PM] (7485) Server root directory: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist
+2025-05-23 16:57:04.946 [info] [Info  - 4:57:04 PM] (7485) Pylance language server 2025.5.1 (pyright version 1.1.400, commit b962ffc2) starting
+2025-05-23 16:57:04.946 [info] [Info  - 4:57:04 PM] (7485) Starting service instance "root" for workspace "/root"
+2025-05-23 16:57:05.148 [info] [Info  - 4:57:05 PM] (7485) Setting environmentName for service "root": "3.10.12 (글로벌)"
+2025-05-23 16:57:05.149 [info] [Info  - 4:57:05 PM] (7485) Setting pythonPath for service "root": "/bin/python3"
+2025-05-23 16:57:05.149 [info] [Info  - 4:57:05 PM] (7485) No include entries specified; assuming /root
+2025-05-23 16:57:05.150 [info] [Info  - 4:57:05 PM] (7485) Auto-excluding **/node_modules
+2025-05-23 16:57:05.150 [info] [Info  - 4:57:05 PM] (7485) Auto-excluding **/__pycache__
+2025-05-23 16:57:05.150 [info] [Info  - 4:57:05 PM] (7485) Auto-excluding **/.*
+2025-05-23 16:57:05.335 [info] [Info  - 4:57:05 PM] (7485) Assuming Python version 3.10.12.final.0
+2025-05-23 16:57:05.743 [info] [Info  - 4:57:05 PM] (7485) Auto-excluding /root/venv
+2025-05-23 16:57:06.033 [info] [Info  - 4:57:06 PM] (7485) Found 101 source files
+2025-05-23 16:57:06.241 [info] [Info  - 4:57:06 PM] (7485) Setting environmentName for service "root": "3.10.12 (글로벌)"
+2025-05-23 16:57:06.241 [info] [Info  - 4:57:06 PM] (7485) Setting pythonPath for service "root": "/bin/python3"
+2025-05-23 16:57:06.242 [info] [Info  - 4:57:06 PM] (7485) No include entries specified; assuming /root
+2025-05-23 16:57:06.243 [info] [Info  - 4:57:06 PM] (7485) Auto-excluding **/node_modules
+2025-05-23 16:57:06.243 [info] [Info  - 4:57:06 PM] (7485) Auto-excluding **/__pycache__
+2025-05-23 16:57:06.244 [info] [Info  - 4:57:06 PM] (7485) Auto-excluding **/.*
+2025-05-23 16:57:06.546 [info] [Info  - 4:57:06 PM] (7485) Assuming Python version 3.10.12.final.0
+2025-05-23 16:57:07.341 [info] [Info  - 4:57:07 PM] (7485) Auto-excluding /root/venv
+2025-05-23 16:57:07.447 [info] [Info  - 4:57:07 PM] (7485) Found 101 source files
+2025-05-23 16:57:12.067 [info] [Info  - 4:57:12 PM] (7485) BG: Priority queue background worker(2) root directory: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist
+2025-05-23 16:57:12.067 [info] [Info  - 4:57:12 PM] (7485) BG: Priority queue background worker(2) started
+2025-05-23 16:57:14.964 [info] [Info  - 4:57:14 PM] (7485) BG: Indexer background runner(3) root directory: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist (index)
+2025-05-23 16:57:14.964 [info] [Info  - 4:57:14 PM] (7485) BG: Indexing(3) started
+2025-05-23 16:57:21.791 [info] [Info  - 4:57:21 PM] (7485) BG: [IDX(3)] Long operation: scan packages file:///root (5407ms)
+2025-05-23 16:57:21.791 [info] [Info  - 4:57:21 PM] (7485) BG: scanned(3) 92 files over 1 exec env
+2025-05-23 16:57:27.106 [info] [Info  - 4:57:27 PM] (7485) BG: [IDX(3)] Long operation: indexing: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist/typeshed-fallback/stubs/networkx/networkx/__init__.pyi (2006ms)
+2025-05-23 16:57:32.631 [info] [Info  - 4:57:32 PM] (7485) BG: [IDX(3)] Long operation: index execution environment file:///root (9235ms)
+2025-05-23 16:57:32.723 [info] [Info  - 4:57:32 PM] (7485) BG: [IDX(3)] Long operation: index packages file:///root (9336ms)
+2025-05-23 16:57:32.724 [info] [Info  - 4:57:32 PM] (7485) BG: indexed(3) 92 files over 1 exec env
+2025-05-23 16:57:33.009 [info] [Info  - 4:57:33 PM] (7485) BG: Indexing finished(3).
+2025-05-23 17:05:47.076 [info] [Info  - 5:05:47 PM] (7485) Setting environmentName for service "root": "3.10.12 (venv venv)"
+2025-05-23 17:05:47.077 [info] [Info  - 5:05:47 PM] (7485) Setting pythonPath for service "root": "/root/venv/bin/python"
+2025-05-23 17:05:47.077 [info] [Info  - 5:05:47 PM] (7485) No include entries specified; assuming /root
+2025-05-23 17:05:47.077 [info] [Info  - 5:05:47 PM] (7485) Auto-excluding **/node_modules
+2025-05-23 17:05:47.080 [info] [Info  - 5:05:47 PM] (7485) Auto-excluding **/__pycache__
+2025-05-23 17:05:47.080 [info] [Info  - 5:05:47 PM] (7485) Auto-excluding **/.*
+2025-05-23 17:05:47.159 [info] [Info  - 5:05:47 PM] (7485) Assuming Python version 3.10.12.final.0
+2025-05-23 17:05:47.471 [info] [Info  - 5:05:47 PM] (7485) Auto-excluding /root/venv
+2025-05-23 17:05:47.563 [info] [Info  - 5:05:47 PM] (7485) Found 101 source files
+2025-05-23 17:05:52.170 [info] [Info  - 5:05:52 PM] (7485) BG: [BG(1)] Long operation: checking: file:///root/mallapi/settings.py (2006ms)
+2025-05-23 17:05:52.170 [info] [Info  - 5:05:52 PM] (7485) BG: [BG(1)] Long operation: analyzing: file:///root/mallapi/settings.py (4100ms)
+2025-05-23 17:05:53.873 [info] [Info  - 5:05:53 PM] (7485) BG: Indexer background runner(4) root directory: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist (index)
+2025-05-23 17:05:53.873 [info] [Info  - 5:05:53 PM] (7485) BG: Indexing(4) started
+2025-05-23 17:05:54.883 [info] [Info  - 5:05:54 PM] (7485) BG: [BG(1)] Long operation: checking: file:///root/mallapi/urls.py (2705ms)
+2025-05-23 17:05:54.883 [info] [Info  - 5:05:54 PM] (7485) BG: [BG(1)] Long operation: analyzing: file:///root/mallapi/urls.py (2712ms)
+2025-05-23 17:05:58.578 [info] [Info  - 5:05:58 PM] (7485) BG: [IDX(4)] Long operation: scan packages file:///root (3103ms)
+2025-05-23 17:05:58.578 [info] [Info  - 5:05:58 PM] (7485) BG: scanned(4) 12 files over 1 exec env
+2025-05-23 17:06:00.798 [info] [Info  - 5:06:00 PM] (7485) BG: indexed(4) 12 files over 1 exec env
+2025-05-23 17:06:00.798 [info] [Info  - 5:06:00 PM] (7485) BG: Indexing finished(4).

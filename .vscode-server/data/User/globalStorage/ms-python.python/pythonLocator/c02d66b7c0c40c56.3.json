@@ -1,0 +1,14 @@
+{
+  "environment": {
+    "executable": "/root/venv/bin/python",
+    "prefix": "/root/venv",
+    "version": "3.10.12.final.0",
+    "is64Bit": true,
+    "symlinks": [
+      "/root/venv/bin/python",
+      "/root/venv/bin/python3",
+      "/root/venv/bin/python3.10"
+    ]
+  },
+  "symlinks": []
+}
