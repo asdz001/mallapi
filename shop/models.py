@@ -71,7 +71,7 @@ class Product(models.Model):
 
 
     retailer = models.CharField(max_length=100, verbose_name="부띠끄명")
-    external_product_id = models.CharField("고유상품 ID", max_length=100, null=True, blank=True, db_index=True)
+    external_product_id = models.CharField("고유상품 ID", max_length=100, null=True, blank=True, db_index=True, unique=True)
     brand_name = models.CharField(max_length=100, verbose_name="브랜드명", null=True, blank=True ) 
     raw_brand_name = models.CharField(max_length=100, verbose_name="원본 브랜드명", null=True, blank=True ) 
     image_url = models.URLField(verbose_name="이미지 URL", blank=True, null=True)

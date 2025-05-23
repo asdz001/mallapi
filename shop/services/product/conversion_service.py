@@ -52,6 +52,8 @@ def convert_or_update_product(raw_product):
             f"원산지: {raw_product.origin}"
         )
         log_conversion_failure(raw_product, reason)
+
+        print(f"❌ [실패] {raw_product.external_product_id}: {reason}")
         return False
 
     # 4. 상품 등록 또는 수정 (price_supply 제외, 필수 필드 추가 포함)
@@ -99,16 +101,50 @@ def convert_or_update_product(raw_product):
     return True
 
 
-# ✅ 자동 일괄 등록 함수 (스케줄러 또는 수동 호출용)
+
+
+# 자동 일괄 등록 함수 (uc804체 상품 대상)
 def bulk_convert_or_update_products(batch_size=1000):
     raw_products = RawProduct.objects.filter(status__in=['pending', 'converted']).iterator()
     updated_raw_ids = []
+    success_count = 0
+    fail_count = 0 
 
     for raw_product in raw_products:
         success = convert_or_update_product(raw_product)
         if success:
             updated_raw_ids.append(raw_product.id)
+            success_count += 1
+        else:
+            fail_count += 1
 
-    # 7. 상태 대량 업데이트 처리
     with transaction.atomic():
         RawProduct.objects.filter(id__in=updated_raw_ids).update(status='converted', updated_at=now())
+
+    print(f"✅ 전체 전송 완료 - 성공: {success_count}개 / 실패: {fail_count}개")      
+
+
+
+# 리테일러별 자동 일괄 등록 함수 (uac70래창 단위 처리)
+def bulk_convert_or_update_products_by_retailer(retailer_code, batch_size=1000):
+    raw_products = RawProduct.objects.filter(
+        retailer=retailer_code,
+        status__in=['pending', 'converted']
+    ).iterator()
+    updated_raw_ids = []
+    success_count = 0
+    fail_count = 0     
+
+    for raw_product in raw_products:
+        success = convert_or_update_product(raw_product)
+        if success:
+            updated_raw_ids.append(raw_product.id)
+            success_count += 1
+        else:
+            fail_count += 1
+
+    with transaction.atomic():
+        RawProduct.objects.filter(id__in=updated_raw_ids).update(status='converted', updated_at=now())
+
+
+    print(f"✅ [{retailer_code}] 전송 완료 - 성공: {success_count}개 / 실패: {fail_count}개")    

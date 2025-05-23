@@ -3,9 +3,10 @@ from shop.models import RawProduct, RawProductOption
 import requests, zipfile, io, json
 from decimal import Decimal
 
-LATTIZIP_URL = "https://lab.modacheva.com/json/json/ milanese/stock.zip"
+LATTIZIP_URL = "https://lab.modacheva.com/json/json/milanese/stock.zip"
 
-def fetch_latti_raw_products_optimized(limit=100):
+
+def fetch_latti_raw_products_optimized(limit=200):
     print("📥 운영용 ZIP 다운로드 중...")
     response = requests.get(LATTIZIP_URL)
     print(f"🔍 응답 상태 코드: {response.status_code}")

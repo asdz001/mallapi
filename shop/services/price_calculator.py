@@ -80,16 +80,16 @@ def calculate_final_price(product):
         extra_fee = Decimal("0")
 
     # 디버깅 로그 출력
-    print("\n[🧮 가격 계산 디버깅]")
-    print(f" - 공급가: {price_supply}")
-    print(f" - 환율: {exchange_rate}")
-    print(f" - 배송비: {shipping_fee}")
-    print(f" - 관세: {tariff}")
-    print(f" - VAT: {vat}")
-    print(f" - 마진율: {margin}")
-    print(f" - 개소세율: {special_tax_rate}")
-    print(f" - base: {base}")
-    print(f" - extra_fee: {extra_fee}")
+    #print("\n[🧮 가격 계산 디버깅]")
+    #print(f" - 공급가: {price_supply}")
+    #print(f" - 환율: {exchange_rate}")
+    #print(f" - 배송비: {shipping_fee}")
+    #print(f" - 관세: {tariff}")
+    #print(f" - VAT: {vat}")
+    #print(f" - 마진율: {margin}")
+    #print(f" - 개소세율: {special_tax_rate}")
+    #print(f" - base: {base}")
+    #print(f" - extra_fee: {extra_fee}")
 
     if base > Decimal("2000000"):
         taxable_base = base * shipping_fee
