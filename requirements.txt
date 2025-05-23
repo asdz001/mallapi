@@ -1,0 +1,14 @@
+Django>=4.2
+requests
+python-dotenv
+pytz
+gunicorn
+openpyxl
+pandas
+Pillow
+django-cron
+apscheduler
+djangorestframework
+drf-yasg
+coreapi
+django-multiselectfield

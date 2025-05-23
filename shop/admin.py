@@ -39,7 +39,8 @@ class RawProductAdmin(admin.ModelAdmin):
     search_fields = ('product_name', 'raw_brand_name', 'external_product_id')
     ordering = ('-created_at',)
     readonly_fields = ('created_at', 'updated_at')
-    actions = [convert_selected_raw_products]  # ✅ 액션 등록
+    actions = [convert_selected_raw_products ]  # ✅ 액션 등록
+
 
    #카테고리
     def combined_category(self, obj):
@@ -69,8 +70,7 @@ class RawProductAdmin(admin.ModelAdmin):
         return format_html("<br>".join(
             f"{opt.option_name} : {opt.stock}" for opt in obj.options.all()
         ))
-
-
+    
 
 #가공상품 재고
 class ProductOptionInline(admin.TabularInline):
