@@ -1,0 +1,7 @@
+{
+    "files.autoSave": "afterDelay",
+    "workbench.colorTheme": "GitHub Dark",
+    "remote.SSH.remotePlatform": {
+        "114.207.245.20": "linux"
+    }
+}

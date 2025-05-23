@@ -1,0 +1,24 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <div class="content">
+    <h1>엑셀 파일로 FTA 국가 정리 대량 등록</h1>
+
+    <p>
+      <strong>※ 엑셀 형식:</strong><br>
+      <code>표준국가명</code> / <code>FTA적용</code> / <code>치환국가명</code> 세 열로 구성된 .xlsx 파일이어야 합니다.
+    </p>
+
+    <p>
+      <a href="{{ example_url }}" class="button default">
+        ⬇ 예제 파일 다운로드
+      </a>
+    </p>
+
+    <form method="post" enctype="multipart/form-data" action="{{ upload_url }}">
+      {% csrf_token %}
+      <p><input type="file" name="excel_file" accept=".xlsx" required></p>
+      <button type="submit" class="default">업로드</button>
+    </form>
+  </div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <div class="content">
+    <h1>{{ category_name }} 카테고리 치환명 대량 등록</h1>
+
+    <p>
+      <strong>※ 업로드 형식:</strong><br>
+      <code>표준명</code> / <code>치환명</code> 두 열로 구성된 .xlsx 파일을 업로드하세요.
+    </p>
+
+    <p>
+      <a href="{{ example_url }}" class="button default">
+        ⬇ 예제 파일 다운로드
+      </a>
+    </p>
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <p><input type="file" name="excel_file" accept=".xlsx" required></p>
+      <button type="submit" class="default">업로드</button>
+    </form>
+  </div>
+{% endblock %}

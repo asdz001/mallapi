@@ -1,0 +1,89 @@
+*
+* Visual Studio Code Server
+*
+* By using the software, you agree to
+* the Visual Studio Code Server License Terms (https://aka.ms/vscode-server-license) and
+* the Microsoft Privacy Statement (https://privacy.microsoft.com/en-US/privacystatement).
+*
+Server bound to /tmp/code-550ddb2e-4847-4543-a9da-4964a6059963
+Extension host agent listening on /tmp/code-550ddb2e-4847-4543-a9da-4964a6059963
+
+[19:35:40] 
+
+
+
+
+[19:35:40] Extension host agent started.
+[19:35:40] [<unknown>][24a66e70][ExtensionHostConnection] New connection established.
+[19:35:40] [<unknown>][1c41241a][ManagementConnection] New connection established.
+[19:35:40] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+[19:35:40] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+Generating translation files failed. Error: ENOENT: no such file or directory, open '/root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/nls.keys.json'
+    at async open (node:internal/fs/promises:639:25)
+    at async Object.readFile (node:internal/fs/promises:1242:14)
+    at async pb (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/server-main.js:3:16849)
+    at async f2 (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/server-main.js:71:38731)
+    at async gf.start (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/server-main.js:71:41897) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/nls.keys.json'
+}
+[19:35:40] [<unknown>][24a66e70][ExtensionHostConnection] <12721> Launched Extension Host Process.
+[19:35:40] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+[19:35:41] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+[19:35:42] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+[19:35:42] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+[19:35:43] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+[19:35:43] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+[19:35:44] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+[19:35:44] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+[19:35:44] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+[19:35:45] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+[19:35:52] [<unknown>][1c41241a][ManagementConnection] The client has disconnected gracefully, so the connection will be disposed.
+[19:35:52] [<unknown>][24a66e70][ExtensionHostConnection] <12721> Extension Host Process exited with code: 0, signal: null.
+Cancelling previous shutdown timeout
+[19:35:52] Cancelling previous shutdown timeout
+Last EH closed, waiting before shutting down
+[19:35:52] Last EH closed, waiting before shutting down
+[19:36:01] [<unknown>][e94da280][ManagementConnection] New connection established.
+[19:36:01] [<unknown>][bc376488][ExtensionHostConnection] New connection established.
+[19:36:01] [<unknown>][bc376488][ExtensionHostConnection] <12847> Launched Extension Host Process.
+[19:36:01] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+[19:36:02] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+[19:36:02] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+[19:36:03] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+rejected promise not handled within 1 second: CodeExpectedError: Could not find pty 3 on pty host
+stack trace: CodeExpectedError: Could not find pty 3 on pty host
+    at I.W (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:45:12275)
+    at I.updateTitle (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:45:7722)
+    at O.s.<computed> (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:45:2962)
+    at Object.call (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:28:4204)
+    at el.s (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:26:80918)
+    at el.q (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:26:80441)
+    at ds.value (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:26:79843)
+    at x.B (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:26:2373)
+    at x.fire (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:26:2591)
+    at process.C (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:24:29877)
+    at process.emit (node:events:518:28)
+    at emit (node:internal/child_process:950:14)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[19:36:04] Error [CodeExpectedError]: Could not find pty 3 on pty host
+    at I.W (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:45:12275)
+    at I.updateTitle (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:45:7722)
+    at O.s.<computed> (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:45:2962)
+    at Object.call (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:28:4204)
+    at el.s (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:26:80918)
+    at el.q (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:26:80441)
+    at ds.value (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:26:79843)
+    at x.B (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:26:2373)
+    at x.fire (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:26:2591)
+    at process.C (file:///root/.vscode-server/cli/servers/Stable-6609ac3d66f4eade5cf376d1cb76f13985724bcb/server/out/vs/platform/terminal/node/ptyHostMain.js:24:29877)
+    at process.emit (node:events:518:28)
+    at emit (node:internal/child_process:950:14)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+[19:36:04] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+[19:36:04] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+[19:36:04] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+[19:36:05] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+[19:36:05] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
