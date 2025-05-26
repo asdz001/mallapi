@@ -88,18 +88,20 @@ def convert_or_update_product(raw_product):
         }
     )
 
-    ProductOption.objects.filter(product=product).delete()
     raw_options = RawProductOption.objects.filter(product=raw_product)
-    option_objs = [
-        ProductOption(
+
+    for opt in raw_options:
+        if opt.stock <= 0:
+            continue
+
+        ProductOption.objects.update_or_create(
             product=product,
-            external_option_id=opt.external_option_id,
             option_name=opt.option_name,
-            stock=opt.stock,
+            defaults={
+                'external_option_id': opt.external_option_id,
+                'stock': opt.stock,
+            }
         )
-        for opt in raw_options if opt.stock > 0
-    ]
-    ProductOption.objects.bulk_create(option_objs)
 
     raw_product.status = 'converted'
     raw_product.updated_at = now()
