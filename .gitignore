@@ -18,3 +18,5 @@ venv/
 
 
 settings_local.py
+
+mallapi.Zip
