@@ -1,0 +1,19 @@
+2025-05-24 23:14:23.207 [info] 실험 'pythonRecommendTensorboardExt'이(가) 활성 상태입니다.
+2025-05-24 23:14:23.207 [info] 실험 'pythonSurveyNotificationcf'이(가) 활성 상태입니다.
+2025-05-24 23:14:23.207 [info] 실험 'pythonTerminalEnvVarActivation'이(가) 활성 상태입니다.
+2025-05-24 23:14:23.207 [info] Native locator: Refresh started
+2025-05-24 23:14:23.207 [info] Native locator: Refresh started
+2025-05-24 23:14:23.214 [info] > pyenv which python
+2025-05-24 23:14:23.214 [info] cwd: .
+2025-05-24 23:14:24.008 [info] Native locator: Refresh finished in 2906 ms
+2025-05-24 23:14:24.012 [info] Python 인터프리터 경로: ./venv/bin/python
+2025-05-24 23:14:28.125 [info] > . ./venv/bin/activate && echo 'e8b39361-0157-4923-80e1-22d70d46dee6' && python ./.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/printEnvVariables.py
+2025-05-24 23:14:28.125 [info] shell: bash
+2025-05-24 23:14:28.324 [info] > /usr/bin/python2 ./.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/printEnvVariables.py
+2025-05-24 23:14:28.324 [info] shell: bash
+2025-05-24 23:14:28.426 [info] Setting environment variable VIRTUAL_ENV in collection to /root/venv {"applyAtShellIntegration":true,"applyAtProcessCreation":true}
+2025-05-24 23:14:28.426 [info] Setting environment variable VIRTUAL_ENV_PROMPT in collection to (venv)  {"applyAtShellIntegration":true,"applyAtProcessCreation":true}
+2025-05-24 23:14:28.426 [info] Prepending environment variable PS1 in collection with (venv)  {"applyAtShellIntegration":true,"applyAtProcessCreation":false}
+2025-05-24 23:14:28.426 [info] Prepending environment variable PATH in collection with /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/deactivate/bash:/root/venv/bin: {"applyAtShellIntegration":true,"applyAtProcessCreation":true}
+2025-05-24 23:14:28.427 [info] Send text to terminal: /usr/bin/python2 /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/printEnvVariablesToFile.py /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/deactivate/bash/envVars.txt
+2025-05-24 23:14:36.128 [info] Pylance 언어 서버를 시작하는 중입니다.

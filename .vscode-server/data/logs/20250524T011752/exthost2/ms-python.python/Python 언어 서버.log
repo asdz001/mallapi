@@ -1,0 +1,47 @@
+2025-05-24 01:18:18.049 [info] (Client) Pylance async client (2025.5.1) started with python extension (2025.6.1)
+2025-05-24 01:18:25.882 [info] [Info  - 1:18:25 AM] (22301) Server root directory: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist
+2025-05-24 01:18:25.883 [info] [Info  - 1:18:25 AM] (22301) Pylance language server 2025.5.1 (pyright version 1.1.400, commit b962ffc2) starting
+2025-05-24 01:18:25.884 [info] [Info  - 1:18:25 AM] (22301) Starting service instance "root" for workspace "/root"
+2025-05-24 01:18:26.471 [info] [Info  - 1:18:26 AM] (22301) Setting environmentName for service "root": "3.10.12 (venv venv)"
+2025-05-24 01:18:26.472 [info] [Info  - 1:18:26 AM] (22301) Setting pythonPath for service "root": "/root/venv/bin/python"
+2025-05-24 01:18:26.472 [info] [Info  - 1:18:26 AM] (22301) No include entries specified; assuming /root
+2025-05-24 01:18:26.473 [info] [Info  - 1:18:26 AM] (22301) Auto-excluding **/node_modules
+2025-05-24 01:18:26.473 [info] [Info  - 1:18:26 AM] (22301) Auto-excluding **/__pycache__
+2025-05-24 01:18:26.473 [info] [Info  - 1:18:26 AM] (22301) Auto-excluding **/.*
+2025-05-24 01:18:26.579 [info] [Info  - 1:18:26 AM] (22301) Assuming Python version 3.10.12.final.0
+2025-05-24 01:18:27.476 [info] [Info  - 1:18:27 AM] (22301) Auto-excluding /root/venv
+2025-05-24 01:18:27.476 [info] [Info  - 1:18:27 AM] (22301) Found 106 source files
+2025-05-24 01:18:28.388 [info] [Info  - 1:18:28 AM] (22301) Setting environmentName for service "root": "3.10.12 (venv venv)"
+2025-05-24 01:18:28.471 [info] [Info  - 1:18:28 AM] (22301) Setting pythonPath for service "root": "/root/venv/bin/python"
+2025-05-24 01:18:28.473 [info] [Info  - 1:18:28 AM] (22301) No include entries specified; assuming /root
+2025-05-24 01:18:28.473 [info] [Info  - 1:18:28 AM] (22301) Auto-excluding **/node_modules
+2025-05-24 01:18:28.473 [info] [Info  - 1:18:28 AM] (22301) Auto-excluding **/__pycache__
+2025-05-24 01:18:28.474 [info] [Info  - 1:18:28 AM] (22301) Auto-excluding **/.*
+2025-05-24 01:18:28.474 [info] [Info  - 1:18:28 AM] (22301) Assuming Python version 3.10.12.final.0
+2025-05-24 01:18:29.584 [info] [Info  - 1:18:29 AM] (22301) Auto-excluding /root/venv
+2025-05-24 01:18:29.586 [info] [Info  - 1:18:29 AM] (22301) Found 106 source files
+2025-05-24 01:18:34.991 [info] [Info  - 1:18:34 AM] (22301) BG: Priority queue background worker(2) root directory: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist
+2025-05-24 01:18:35.194 [info] [Info  - 1:18:35 AM] (22301) BG: Priority queue background worker(2) started
+2025-05-24 01:18:36.597 [info] [Info  - 1:18:36 AM] (22301) BG: Indexer background runner(3) root directory: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist (index)
+2025-05-24 01:18:36.598 [info] [Info  - 1:18:36 AM] (22301) BG: Indexing(3) started
+2025-05-24 01:18:42.322 [info] [Info  - 1:18:42 AM] (22301) BG: [IDX(3)] Long operation: scan packages file:///root (5221ms)
+2025-05-24 01:18:42.322 [info] [Info  - 1:18:42 AM] (22301) BG: scanned(3) 40 files over 1 exec env
+2025-05-24 01:18:45.322 [info] [Info  - 1:18:45 AM] (22301) BG: indexed(3) 40 files over 1 exec env
+2025-05-24 01:18:45.621 [info] [Info  - 1:18:45 AM] (22301) BG: Indexing finished(3).
+2025-05-24 01:18:46.330 [info] [Info  - 1:18:46 AM] (22301) BG: [BG(1)] Long operation: checking: file:///root/shop/management/commands/fetch_and_register_latti.py (2912ms)
+2025-05-24 01:18:46.330 [info] [Info  - 1:18:46 AM] (22301) BG: [BG(1)] Long operation: analyzing: file:///root/shop/management/commands/fetch_and_register_latti.py (2912ms)
+2025-05-24 01:21:06.369 [info] [Info  - 1:21:06 AM] (22301) Auto-excluding /root/venv
+2025-05-24 01:21:06.437 [info] [Info  - 1:21:06 AM] (22301) Found 106 source files
+2025-05-24 01:21:08.943 [info] [Info  - 1:21:08 AM] (22301) BG: [BG(1)] Long operation: analyzing: file:///root/shop/management/commands/fetch_and_register_latti.py (2474ms)
+2025-05-24 01:21:14.555 [info] [Info  - 1:21:14 AM] (22301) BG: [BG(1)] Long operation: checking: file:///root/shop/management/commands/fetch_and_register_latti.py (2913ms)
+2025-05-24 01:21:14.555 [info] [Info  - 1:21:14 AM] (22301) BG: [BG(1)] Long operation: analyzing: file:///root/shop/management/commands/fetch_and_register_latti.py (3198ms)
+2025-05-24 01:21:15.556 [info] [Info  - 1:21:15 AM] (22301) BG: Indexer background runner(4) root directory: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist (refresh)
+2025-05-24 01:21:15.556 [info] [Info  - 1:21:15 AM] (22301) BG: Indexing(4) started
+2025-05-24 01:21:18.558 [info] [Info  - 1:21:18 AM] (22301) BG: [IDX(4)] Long operation: scan packages file:///root (2794ms)
+2025-05-24 01:21:18.558 [info] [Info  - 1:21:18 AM] (22301) BG: scanned(4) 45 files over 1 exec env
+2025-05-24 01:21:24.274 [info] [Info  - 1:21:24 AM] (22301) BG: [IDX(4)] Long operation: index execution environment file:///root (3515ms)
+2025-05-24 01:21:24.277 [info] [Info  - 1:21:24 AM] (22301) BG: [IDX(4)] Long operation: index packages file:///root (3711ms)
+2025-05-24 01:21:24.277 [info] [Info  - 1:21:24 AM] (22301) BG: indexed(4) 45 files over 1 exec env
+2025-05-24 01:21:25.175 [info] [Info  - 1:21:25 AM] (22301) BG: Indexing finished(4).
+2025-05-24 01:35:13.924 [info] [Info  - 1:35:13 AM] (22301) Auto-excluding /root/venv
+2025-05-24 01:35:13.963 [info] [Info  - 1:35:13 AM] (22301) Found 106 source files

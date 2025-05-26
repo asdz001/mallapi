@@ -1,0 +1,13 @@
+# Django 불필요 파일 무시
+db.sqlite3
+*.zip
+*.xlsx
+*.csv
+
+# 업로드된 미디어와 정적 파일
+/media/
+/staticfiles/
+
+/__pycache__/
+/*.pyc
+.env

@@ -1,0 +1,60 @@
+2025-05-24 23:17:02.537 [info] Starting Python Locator /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python-env-tools/bin/pet server
+2025-05-24 23:17:04.237 [info] Discovered env: /root/venv/bin/python
+2025-05-24 23:17:04.241 [info] Discovered env: /usr/bin/python2
+2025-05-24 23:17:04.241 [info] Discovered env: /bin/python2
+2025-05-24 23:17:04.241 [info] Discovered env: /bin/python3
+2025-05-24 23:17:04.334 [info] Discovered env: /usr/bin/python3
+2025-05-24 23:17:04.630 [info] Locator Conda took 294.949453ms
+2025-05-24 23:17:04.631 [info] Locator Homebrew took 132.153µs
+2025-05-24 23:17:04.631 [info] Locator LinuxGlobal took 218.430773ms
+2025-05-24 23:17:04.631 [info] Locator PipEnv took 30.29µs
+2025-05-24 23:17:04.633 [info] Locator Pixi took 27.176µs
+2025-05-24 23:17:04.634 [info] Locator Poetry took 467.032µs
+2025-05-24 23:17:04.634 [info] Locator PyEnv took 9.467291ms
+2025-05-24 23:17:04.634 [info] Locator Venv took 146.253µs
+2025-05-24 23:17:04.634 [info] Locator VirtualEnv took 16.278µs
+2025-05-24 23:17:04.727 [info] Locator VirtualEnvWrapper took 108.166µs
+2025-05-24 23:17:04.728 [info] Locator GlobalVirtualEnvs took 134.779µs
+2025-05-24 23:17:04.734 [info] Locator Locators took 392.023347ms
+2025-05-24 23:17:04.740 [info] Locator Path took 505.845577ms
+2025-05-24 23:17:04.829 [info] Locator Workspaces took 496.689295ms
+2025-05-24 23:17:05.036 [info] Refresh completed in 506ms
+2025-05-24 23:17:05.039 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-24 23:24:49.994 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-24 23:25:20.528 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-24 23:25:53.002 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-24 23:35:39.459 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-24 23:38:39.307 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-24 23:39:25.052 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-24 23:51:45.526 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 00:16:25.533 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 00:17:22.638 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 00:24:18.593 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 00:25:46.181 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 00:34:25.966 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 00:38:59.430 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 00:44:18.112 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 00:44:54.764 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 00:52:17.921 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 00:55:15.335 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 00:59:28.216 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 01:00:07.210 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 01:00:40.865 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 01:01:17.856 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 01:03:42.822 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 01:04:45.978 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 01:06:19.352 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 01:17:25.645 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 01:18:36.287 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 01:19:58.929 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 01:25:52.748 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 01:29:39.593 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 01:32:28.259 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 01:34:28.500 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 01:41:45.233 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 01:43:17.647 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 01:45:31.197 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 01:56:56.186 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 02:03:44.253 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 02:36:20.615 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-25 03:14:34.218 [info] Resolved Python Environment /root/venv/bin/python
