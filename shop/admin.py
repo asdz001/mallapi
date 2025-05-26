@@ -337,7 +337,7 @@ class OrderItemInline(admin.TabularInline):
     # ✅ product, option 필드를 안 보이게 하려면 fields에서 제외해야 함
     fields = (
         'retailer_name', 'category', 'brand_name', 'product_name',
-        'option_name', 'quantity', 'price_org', 'price_supply' , 'markup', 'price_krw'
+        'option_name', 'quantity', 'price_org', 'price_supply' , 'markup', 'price_krw' , 'barcode', 'order_reference' 
     )
     readonly_fields = fields
 
@@ -375,6 +375,17 @@ class OrderItemInline(admin.TabularInline):
     #원화
     def price_krw(self, obj):
         return obj.price_krw
+    
+    # ✅ 바코드
+    def barcode(self, obj):
+        return obj.option.external_option_id if obj.option else "-"
+
+    # ✅ 주문번호 (RATTI 전송에 사용된 고유값)
+    def order_reference(self, obj):
+        date = obj.order.created_at.strftime("%Y%m%d")
+        retailer = obj.order.retailer.code.replace("IT-", "").replace("-", "")
+        return f"{date}-ORDER-{obj.order.id}-{obj.id}-{retailer}"
+
 
     retailer_name.short_description = "거래처"
     category.short_description = "카테고리"
@@ -386,6 +397,9 @@ class OrderItemInline(admin.TabularInline):
     price_supply.short_description = "공급가"
     markup.short_description = "브랜드 마크업"
     price_krw.short_description = "주문금액"
+    barcode.short_description = "주문바코드"
+    order_reference.short_description = "주문번호(날짜-고유번호-업체명)"
+
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):

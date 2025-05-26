@@ -1,5 +1,6 @@
 import requests
 from django.conf import settings
+from datetime import datetime
 
 
 def send_order(order):
@@ -14,12 +15,16 @@ def send_order(order):
 
     for item in order.items.all():
         option = item.option
+        retailer_code = order.retailer.code.replace("IT-", "").replace("-", "")  # "R01"
+        order_date = order.created_at.strftime("%Y%m%d")  # "20250526"
+
+        order_code = f"{order_date}-ORDER-{order.id}-{item.id}-{retailer_code}"
 
         payload = {
             "Barcode": option.external_option_id,     # 옵션 바코드
             "Qty": item.quantity,                     # 주문 수량
             "Size": option.option_name,               # 사이즈
-            "Order": f"ORDER-{order.id}-{item.id}"    # 주문번호 (중복불가 조건 대비)
+            "Order": order_code  # ✅ 여기에 주문번호 반영
         }
 
         # ✅ 디버깅용 로그 출력
