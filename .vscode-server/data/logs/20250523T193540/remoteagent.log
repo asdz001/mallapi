@@ -66,3 +66,16 @@
 2025-05-23 20:31:03.059 [error] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
 2025-05-23 20:36:03.101 [error] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
 2025-05-23 20:41:03.150 [error] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+2025-05-23 20:46:03.273 [error] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+2025-05-23 20:51:03.378 [error] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+2025-05-23 20:56:03.434 [error] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+2025-05-23 21:01:23.725 [error] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+2025-05-23 21:06:23.767 [error] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+2025-05-23 21:11:23.826 [error] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+2025-05-23 21:16:23.868 [error] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+2025-05-23 21:21:23.920 [error] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+2025-05-23 21:26:23.993 [error] [/root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1]: Extension is not compatible with Code 1.98.0. Extension requires: ^1.99.0.
+2025-05-23 21:31:08.451 [info] [<unknown>][e94da280][ManagementConnection] The client has disconnected gracefully, so the connection will be disposed.
+2025-05-23 21:31:08.692 [info] [<unknown>][bc376488][ExtensionHostConnection] <12847> Extension Host Process exited with code: 0, signal: null.
+2025-05-23 21:31:08.693 [info] Last EH closed, waiting before shutting down
+2025-05-23 21:36:08.699 [info] Last EH closed, shutting down

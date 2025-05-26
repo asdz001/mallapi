@@ -1,0 +1,23 @@
+2025-05-24 08:34:43.871 [info] 
+
+
+
+
+2025-05-24 08:34:43.925 [info] Extension host agent started.
+2025-05-24 08:34:44.041 [info] [<unknown>][30257137][ExtensionHostConnection] New connection established.
+2025-05-24 08:34:44.042 [info] [<unknown>][309bf91e][ManagementConnection] New connection established.
+2025-05-24 08:34:44.317 [info] [<unknown>][30257137][ExtensionHostConnection] <34074> Launched Extension Host Process.
+2025-05-24 08:34:44.520 [info] ComputeTargetPlatform: linux-x64
+2025-05-24 08:34:47.536 [info] ComputeTargetPlatform: linux-x64
+2025-05-24 08:34:52.316 [info] [<unknown>][309bf91e][ManagementConnection] The client has disconnected gracefully, so the connection will be disposed.
+2025-05-24 08:34:52.338 [info] [<unknown>][30257137][ExtensionHostConnection] <34074> Extension Host Process exited with code: 0, signal: null.
+2025-05-24 08:34:52.339 [info] Cancelling previous shutdown timeout
+2025-05-24 08:34:52.339 [info] Last EH closed, waiting before shutting down
+2025-05-24 08:34:56.844 [info] [<unknown>][52f0686e][ExtensionHostConnection] New connection established.
+2025-05-24 08:34:56.846 [info] [<unknown>][52f0686e][ExtensionHostConnection] <34201> Launched Extension Host Process.
+2025-05-24 08:34:56.850 [info] [<unknown>][5c03416c][ManagementConnection] New connection established.
+2025-05-24 08:35:29.783 [info] [<unknown>][5c03416c][ManagementConnection] The client has disconnected gracefully, so the connection will be disposed.
+2025-05-24 08:35:29.831 [info] [<unknown>][52f0686e][ExtensionHostConnection] <34201> Extension Host Process exited with code: 0, signal: null.
+2025-05-24 08:35:29.831 [info] Cancelling previous shutdown timeout
+2025-05-24 08:35:29.831 [info] Last EH closed, waiting before shutting down
+2025-05-24 08:40:29.832 [info] Last EH closed, shutting down

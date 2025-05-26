@@ -98,3 +98,43 @@
 	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
 	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
 	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 20:57:18.811 [error] [ms-python.python] provider FAILED
+2025-05-23 20:57:18.818 [error] Error: _pickle.UnpicklingError: could not find MARK
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 20:57:18.821 [error] [ms-python.python] provider FAILED
+2025-05-23 20:57:18.821 [error] Error: _pickle.UnpicklingError: could not find MARK
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 20:57:18.959 [error] [ms-python.python] provider FAILED
+2025-05-23 20:57:18.959 [error] Error: _pickle.UnpicklingError: could not find MARK
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 20:57:21.242 [error] [ms-python.python] provider FAILED
+2025-05-23 20:57:21.242 [error] Error: _pickle.UnpicklingError: could not find MARK
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 20:57:21.251 [error] [ms-python.python] provider FAILED
+2025-05-23 20:57:21.251 [error] Error: _pickle.UnpicklingError: could not find MARK
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 20:57:21.425 [error] [ms-python.python] provider FAILED
+2025-05-23 20:57:21.425 [error] Error: _pickle.UnpicklingError: could not find MARK
+	at ae (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1962784)
+	at oe (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1960744)
+	at Immediate.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:1957038)
+	at process.processImmediate (node:internal/timers:483:21)
+2025-05-23 21:21:24.755 [warning] Using default string since no string found in i18n bundle that has the key: No Schema Validation
+2025-05-23 21:31:08.454 [info] Extension host terminating: received terminate message from renderer
+2025-05-23 21:31:08.464 [info] Lock '/root/.vscode-server/data/User/workspaceStorage/69b865ee5b39d8dd4400c31e5ed23100/vscode.lock': Marking the lockfile as scheduled to be released in 6000 ms.
+2025-05-23 21:31:08.652 [info] Extension host with pid 12847 exiting with code 0
