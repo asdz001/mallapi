@@ -46,6 +46,13 @@ def convert_or_update_product(raw_product):
     if total_stock <= 0:
         return False
 
+    # ✅ 여기 추가
+    if not raw_product.price_org or raw_product.price_org == 0:
+        reason = "원가 없음 또는 0원"
+        log_conversion_failure(raw_product, reason)
+        print(f"❌ [원가 누락] {raw_product.external_product_id}: {reason}")
+        return False
+
     std_brand = match_brand_alias(raw_product.raw_brand_name)
     std_cat1 = match_alias(CategoryLevel1Alias, raw_product.gender)
     std_cat2 = match_alias(CategoryLevel2Alias, raw_product.category1)
