@@ -4,7 +4,7 @@ from shop.services.price_calculator import apply_price_to_product
 from dictionary.models import BrandAlias
 from shop.utils.markup_util import get_markup_from_product
 from decimal import Decimal
-
+from shop.services.price_calculator import calculate_final_price
 
 
 
@@ -34,6 +34,7 @@ class RawProduct(models.Model):
     image_url_4 = models.URLField(verbose_name="이미지 URL 3", blank=True, null=True)
     price_org = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="COST", default=0)
     price_supply = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="판매가", default=0)
+    discount_rate = models.DecimalField("할인율 (%)", max_digits=5, decimal_places=2, null=True, blank=True)
     price_retail = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="소비자가", default=0)
     status = models.CharField(max_length=10, choices=[('pending', '미등록'), ('converted', '등록됨')], default='pending', verbose_name="상태")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="수집일")
@@ -51,6 +52,7 @@ class RawProductOption(models.Model):
     external_option_id = models.CharField("외부 옵션 ID", max_length=100, null=True, blank=True, db_index=True)
     option_name = models.CharField(max_length=100, verbose_name="옵션명")
     stock = models.IntegerField(default=0, verbose_name="재고 수량")
+    price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="옵션 가격", null=True, blank=True)  # ✅ 추가
 
     def save(self, *args, **kwargs):
         if self.option_name:
@@ -83,8 +85,9 @@ class Product(models.Model):
     sku = models.CharField(max_length=100, verbose_name="SKU", blank=True, null=True)
     color = models.CharField(max_length=50, verbose_name="색상명", blank=True, null=True)
     origin = models.CharField(max_length=100, verbose_name="원산지", blank=True, null=True)
-    price_org = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="원가", default=0)
+    price_org = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="COST", default=0)
     price_supply = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="공급가", default=0)
+    discount_rate = models.DecimalField("할인율 (%)", max_digits=5, decimal_places=2, null=True, blank=True)
     price_retail = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="소비자가", default=0)
     calculated_price_krw = models.DecimalField("원화가", max_digits=12, decimal_places=0, null=True, blank=True)
     material = models.CharField(max_length=255, verbose_name="소재", blank=True, null=True)
@@ -97,27 +100,20 @@ class Product(models.Model):
     ]
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', verbose_name="상태")
 
-     
-    def save(self, *args, **kwargs):
-        # 브랜드 치환
-        if self.raw_brand_name:
-            self.brand_name = resolve_standard_brand(self.raw_brand_name)
-        else:
-            self.brand_name = "-"
+    #공급가 계산
+    @property
+    def price_supply(self):
+        if not self.price_org:
+            return None
+        markup = get_markup_from_product(self) or 1
+        return self.price_org * Decimal(str(markup))
+    
+    #원화 계산
+    @property
+    def calculated_price_krw(self):
+        return calculate_final_price(self)
 
-        # 공급가 계산
-        if self.price_org:
-            markup = get_markup_from_product(self)
-            if markup:
-                self.price_supply = self.price_org * Decimal(str(markup))
-
-        # 원화가 계산
-        if self.price_supply:
-            apply_price_to_product(self)
-
-        super().save(*args, **kwargs)
-
-
+    #상품명
     def __str__(self):
         return f"[{self.retailer}] {self.brand_name} - {self.product_name}"
 
@@ -144,6 +140,7 @@ class ProductOption(models.Model):
     product = models.ForeignKey('shop.Product', on_delete=models.CASCADE, related_name='options')
     option_name = models.CharField(max_length=100, verbose_name="옵션명")
     stock = models.IntegerField(default=0, verbose_name="재고 수량")
+    price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="옵션 COST", null=True, blank=True)  # ✅ 추가
 
     def save(self, *args, **kwargs):
         if self.option_name:
@@ -162,6 +159,16 @@ class ProductOption(models.Model):
     @property
     def order_quantity(self):
         return sum(item.quantity for item in self.orderitem_set.all())
+    
+    #옵션별 가격 - 마크업 포함
+    def get_calculated_supply(self):
+        from shop.utils.markup_util import get_markup_from_product
+        from decimal import Decimal
+
+        if self.price is not None:
+            markup = get_markup_from_product(self.product) or 1
+            return self.price * Decimal(str(markup))
+        return self.product.price_supply or 0
 
     
     
