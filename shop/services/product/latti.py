@@ -81,6 +81,7 @@ def fetch_latti_raw_products_optimized(limit=None):
                     external_option_id=barcodes[i],
                     option_name=sizes[i],
                     stock=int(stocks[i])
+                    price=round(price_org, 2)
                 ))
 
         RawProductOption.objects.bulk_create(new_options)

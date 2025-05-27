@@ -100,6 +100,7 @@ def convert_or_update_product(raw_product):
             defaults={
                 'external_option_id': opt.external_option_id,
                 'stock': opt.stock,
+                'price': opt.price,
             }
         )
 

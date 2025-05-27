@@ -7,6 +7,8 @@ from shop.services.order_service import create_orders_from_carts
 from django.utils.html import format_html ,format_html_join 
 from shop.utils.markup_util import get_markup_from_product
 from shop.services.product.conversion_service import convert_or_update_product
+from decimal import Decimal ,ROUND_HALF_UP
+
 
 
 
@@ -14,6 +16,7 @@ from shop.services.product.conversion_service import convert_or_update_product
 class RawProductOptionInline(admin.TabularInline):
     model = RawProductOption
     extra = 1
+    fields = ('external_option_id', 'option_name', 'stock', 'price')
 
 #원본상품 가공상품으로 전송버튼생성
 @admin.action(description="선택한 상품을 가공상품으로 등록/수정")
@@ -32,7 +35,7 @@ def convert_selected_raw_products(modeladmin, request, queryset):
 @admin.register(RawProduct)
 class RawProductAdmin(admin.ModelAdmin):
     list_display = ('retailer', 'external_product_id','combined_category', 'image_preview','season', 'raw_brand_name', 'product_name', 'sku',
-                      'price_retail','price_org' ,'origin' ,  'option_summary' ,  'status', 'created_at','updated_at' )
+                      'price_retail','discount_rate', 'price_org' ,'origin' ,  'option_summary' ,  'status', 'created_at','updated_at' )
 
     inlines = [RawProductOptionInline]
     list_filter = ('retailer' , 'status', 'created_at')
@@ -77,14 +80,24 @@ class RawProductAdmin(admin.ModelAdmin):
 class ProductOptionInline(admin.TabularInline):
     model = ProductOption
     extra = 1
+    fields = ('external_option_id', 'option_name', 'stock', 'price','calculated_supply' )
+    readonly_fields = ('calculated_supply',)  # ✅ 자동계산 필드
+
+
+    def calculated_supply(self, obj):
+        supply = obj.get_calculated_supply()
+        return f"{supply:,.2f} €"
+    calculated_supply.short_description = "공급가 (자동계산)"
+
+
 
 #가공상품
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'retailer', 'brand_name', 'image_tag', 'product_name', 'gender',
-        'category1', 'category2', 'season', 'sku', 'color', 'origin_display', 'price_retail',
-        'price_org', 'price_supply',  'markup_display' , 'formatted_price_krw' , 'option_summary' , 'material', 'status', 'created_at' , 'updated_at' , 'cart_button'
+        'category1', 'category2', 'season', 'sku', 'color', 'origin_display', 'price_retail', 'discount_rate',
+        'price_org', 'formatted_price_supply',  'markup_display' , 'formatted_price_krw' , 'option_summary' , 'material', 'status', 'created_at' , 'updated_at' , 'cart_button',
     )
 
     #list_filter = ('retailer', 'brand_name', 'season', 'gender', 'category1', 'status' )
@@ -117,6 +130,11 @@ class ProductAdmin(admin.ModelAdmin):
             return f"{obj.calculated_price_krw:,.0f}"
         return "-"
     formatted_price_krw.short_description = "원화가"
+
+    #공급가
+    def formatted_price_supply(self, obj):
+        return f"{obj.price_supply:,.2f}"
+    formatted_price_supply.short_description = "공급가"
 
 
     #마크업
@@ -218,6 +236,9 @@ def create_order_action(modeladmin, request, queryset):
     messages.success(request, f"{len(orders)}건의 주문이 생성되었습니다.")
 
 
+
+
+
 @admin.register(Cart)
 class CartAdmin(admin.ModelAdmin):
     list_display = (
@@ -231,7 +252,6 @@ class CartAdmin(admin.ModelAdmin):
 
     class Media:
         js = ('shop/admin_cart.js',)
-    
 
     def get_retailer(self, obj):
         return obj.product.retailer
@@ -260,7 +280,7 @@ class CartAdmin(admin.ModelAdmin):
 
     def product_price_org(self, obj):
         return obj.product.price_org
-    product_price_org.short_description = "원가"
+    product_price_org.short_description = "COST"
 
     def product_price_supply(self, obj):
         return obj.product.price_supply
@@ -277,52 +297,68 @@ class CartAdmin(admin.ModelAdmin):
 
     def display_option_table(self, obj):
         html = "<table style='border-collapse: collapse;'>"
-        html += "<tr><th>OPTION</th><th>재고정보</th><th>ORDER QTY</th></tr>"
+        html += "<tr><th>OPTION</th><th>재고정보</th><th>COST</th><th>공급가</th><th>ORDER QTY</th></tr>"
 
         for opt in obj.options.all():
             option = opt.product_option
-            stock_text = f"{option.stock}개 (장바구니: {option.cart_quantity}개, 주문됨: {option.order_quantity}개)"
+            qty = opt.quantity
+            stock = option.stock
+            cart_qty = option.cart_quantity
+            order_qty = option.order_quantity
+
+            # 가격 및 마크업 계산
+            markup = get_markup_from_product(obj.product) or 1
+            product_price = obj.product.price_supply or 0
+            base_price = option.price if option.price is not None else product_price
+            supply_price = option.get_calculated_supply()
+
+            price_display = f"{base_price:,.2f} "
+            supply_display = f"{supply_price:,.2f}({markup:.2f})"
+
             html += f"""
             <tr>
                 <td>{option.option_name}</td>
-                <td>{stock_text}</td>
+                <td>{stock}개 (장바구니: {cart_qty}개, 주문됨: {order_qty}개)</td>
+                <td>{price_display}</td>
+                <td>{supply_display}</td>
                 <td>
-                    <input type='number'class='cart-qty-input'data-option-id='{opt.id}'data-max-stock='{option.stock}'value='{opt.quantity}'style='width:40px;' />
+                    <input type='number' class='cart-qty-input'
+                           data-option-id='{opt.id}'
+                           data-max-stock='{stock}'
+                           value='{qty}' style='width:40px;' />
                 </td>
             </tr>
             """
 
-        # ✅ 이 부분을 추가하세요!
         html += """
         <tr>
-            <td colspan="3" style='text-align: right; padding-top: 8px;'>
+            <td colspan="5" style='text-align: right; padding-top: 8px;'>
+                <strong id="cart-total-display">총 주문금액: ₩0</strong><br>
                 <button type="button" onclick="saveAllCartOptions()" style="padding: 4px 10px;">💾 전체 저장</button>
             </td>
         </tr>
         </table>
         """
         return format_html(html)
-    
+
 
     display_option_table.short_description = "옵션별 주문정보"
 
     def change_view(self, request, object_id, form_url='', extra_context=None):
         if request.method == 'POST':
-            cart = self.get_object(request, object_id)  # 현재 장바구니 객체
-
-            for opt in cart.options.all():  # 이 장바구니에 포함된 옵션들
-                field_name = f'opt_{cart.id}_{opt.product_option.id}'  # input의 name 속성과 일치
+            cart = self.get_object(request, object_id)
+            for opt in cart.options.all():
+                field_name = f'opt_{cart.id}_{opt.product_option.id}'
                 if field_name in request.POST:
                     try:
                         opt.quantity = int(request.POST[field_name])
-                        opt.save()  # ✅ DB에 저장
+                        opt.save()
                     except ValueError:
-                        pass  # 잘못된 값은 무시
+                        pass
             self.message_user(request, "주문 수량이 저장되었습니다.", level=messages.SUCCESS)
 
         return super().change_view(request, object_id, form_url, extra_context)
-    
-    
+
     
 
 
@@ -361,12 +397,19 @@ class OrderItemInline(admin.TabularInline):
     #주문수량
     def quantity(self, obj):
         return obj.quantity
-    #원가가
+    #원가
     def price_org(self, obj):
-        return obj.product.price_org
+        if obj.option and obj.option.price is not None:
+            return f"{obj.option.price:,.2f} "
+        return f"{obj.product.price_org:,.2f} "
+
     #공급가
     def price_supply(self, obj):
-        return obj.product.price_supply
+        if obj.option:
+            supply = obj.option.get_calculated_supply()
+            return f"{supply:,.2f} €"
+        return f"{obj.product.price_supply:,.2f} €"
+
     
     #마크업
     def markup(self, obj):
@@ -393,7 +436,7 @@ class OrderItemInline(admin.TabularInline):
     product_name.short_description = "상품명"
     option_name.short_description = "옵션"
     quantity.short_description = "수량"
-    price_org.short_description = "원가"
+    price_org.short_description = "COST"
     price_supply.short_description = "공급가"
     markup.short_description = "브랜드 마크업"
     price_krw.short_description = "주문금액"
@@ -419,12 +462,18 @@ class OrderAdmin(admin.ModelAdmin):
 
             for item in items:
                 qty = int(item.quantity or 0)
-                supply = int(item.product.price_supply or 0)
+                if item.option and item.option.price is not None:
+                    markup = get_markup_from_product(item.product) or 1
+                    supply = (
+                        item.option.get_calculated_supply().quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                        if item.option else Decimal(str(item.product.price_supply or 0)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                    )
                 krw = int(item.price_krw or 0)
 
                 total_qty += qty
                 total_supply += qty * supply
                 total_krw += qty * krw
+
 
             return format_html(
                 "<strong>총 수량:</strong> {}개<br>"

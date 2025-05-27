@@ -20,3 +20,7 @@ venv/
 settings_local.py
 
 mallapi.Zip
+
+# CUCCUINI/아뜰리에 수집 데이터 무시
+export/*
+!export/.gitkeep

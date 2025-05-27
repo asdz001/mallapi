@@ -140,3 +140,38 @@ function saveAllCartOptions() {
       }
     });
 }
+
+
+// 장바구니 가격합계
+document.querySelectorAll(".cart-qty-input").forEach(input => {
+    input.addEventListener("input", updateCartTotal);
+});
+
+function updateCartTotal() {
+    let total = 0;
+
+    document.querySelectorAll(".cart-qty-input").forEach(input => {
+        const qty = parseInt(input.value) || 0;
+        const row = input.closest("tr");
+
+        // ✅ 공급가가 들어있는 4번째 td에서 숫자 추출
+        const priceText = row.querySelector("td:nth-child(4)").innerText.match(/([\d.,]+)/);
+        const price = priceText ? parseFloat(priceText[1].replace(/,/g, '')) : 0;
+
+        total += qty * price;
+    });
+
+    const totalDisplay = document.getElementById("cart-total-display");
+    if (totalDisplay) {
+        totalDisplay.innerText = `총 주문금액: ₩${total.toLocaleString()}`;
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".cart-qty-input").forEach(input => {
+        input.addEventListener("input", updateCartTotal);
+    });
+
+    // 페이지 로딩 시에도 한번 계산
+    updateCartTotal();
+});
