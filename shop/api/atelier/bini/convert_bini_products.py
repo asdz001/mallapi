@@ -40,16 +40,16 @@ def extract_image_url(pictures, no):
         return None
 
 
-def convert_CUCCUINI_raw_products(limit=None, goods_override=None):
-    RETAILER = "CUCCUINI"
+def convert_BINI_raw_products(limit=None, goods_override=None):
+    RETAILER = "BINI"
     BASE_PATH = os.path.join("export", RETAILER)
 
-    goods_path = os.path.join(BASE_PATH, "cuccuini_goods.json")
-    details_path = os.path.join(BASE_PATH, "cuccuini_details.json")
-    prices_path = os.path.join(BASE_PATH, "cuccuini_prices.json")
-    brand_path = os.path.join(BASE_PATH, "cuccuini_brand_mapping.json")
-    gender_path = os.path.join(BASE_PATH, "cuccuini_gender_mapping.json")
-    category_path = os.path.join(BASE_PATH, "cuccuini_category_mapping.json")
+    goods_path = os.path.join(BASE_PATH, "bini_goods.json")
+    details_path = os.path.join(BASE_PATH, "bini_details.json")
+    prices_path = os.path.join(BASE_PATH, "bini_prices.json")
+    brand_path = os.path.join(BASE_PATH, "bini_brand_mapping.json")
+    gender_path = os.path.join(BASE_PATH, "bini_gender_mapping.json")
+    category_path = os.path.join(BASE_PATH, "bini_category_mapping.json")
 
     goods = goods_override if goods_override else json.load(open(goods_path, encoding="utf-8"))
     if limit:
@@ -115,7 +115,7 @@ def convert_CUCCUINI_raw_products(limit=None, goods_override=None):
             product, _ = RawProduct.objects.update_or_create(
                 external_product_id=gid,
                 defaults={
-                    "retailer": "IT-C-02",
+                    "retailer": "IT-B-02",
                     "raw_brand_name": brand_name,
                     "product_name": f"{g.get('GoodsName')} {g.get('Model', '')} {g.get('Variant', '')}",
                     "gender": gender,
@@ -160,14 +160,14 @@ def convert_CUCCUINI_raw_products(limit=None, goods_override=None):
                 ))
 
         RawProductOption.objects.bulk_create(new_options)
-        print(f"✅ CUCCUINI 상품 등록 완료: 상품 {len(goods)}개 / 옵션 {len(new_options)}개")
+        print(f"✅ BINI 상품 등록 완료: 상품 {len(goods)}개 / 옵션 {len(new_options)}개")
 
 
-def convert_CUCCUINI_raw_products_by_id(target_id):
-    RETAILER = "CUCCUINI"
+def convert_BINI_raw_products_by_id(target_id):
+    RETAILER = "BINI"
     BASE_PATH = os.path.join("export", RETAILER)
 
-    goods_path = os.path.join(BASE_PATH, "cuccuini_goods.json")
+    goods_path = os.path.join(BASE_PATH, "bini_goods.json")
     goods = json.load(open(goods_path, encoding="utf-8"))
     target_goods = [g for g in goods if str(g.get("ID")) == str(target_id)]
 
@@ -175,6 +175,6 @@ def convert_CUCCUINI_raw_products_by_id(target_id):
         print(f"❌ 상품 ID {target_id}에 해당하는 상품을 찾을 수 없습니다.")
         return
 
-    convert_CUCCUINI_raw_products(limit=None, goods_override=target_goods)
+    convert_BINI_raw_products(limit=None, goods_override=target_goods)
 
 

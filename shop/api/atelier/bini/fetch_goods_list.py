@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 # 거래처 식별자
-RETAILER = "CUCCUINI"
+RETAILER = "BINI"
 BASE_PATH = os.path.join("export", RETAILER)
 
 EXPORT_JSON = os.path.join(BASE_PATH, f"{RETAILER}_goods.json")
@@ -40,7 +40,7 @@ def fetch_page(page, timestamp=None):
     params = {
         "pageNum": page,
         "pageSize": PAGE_SIZE,
-        "retailer": RETAILER.upper(),  # CUCCUINI 대문자로 필요할 경우
+        "retailer": RETAILER.upper(),  # BINI 대문자로 필요할 경우
     }
     if timestamp:
         params["modifiedTimestamp"] = timestamp
@@ -51,7 +51,7 @@ def fetch_page(page, timestamp=None):
             headers=HEADERS,
             params=params,
             auth=HTTPBasicAuth(USER_ID, USER_PW),
-            timeout=20,
+            timeout=30,
         )
 
         if res.status_code != 200:
@@ -70,11 +70,11 @@ def fetch_page(page, timestamp=None):
 
 
 # 전체 수집 실행
-def fetch_goods_list_CUCCUINI():
+def fetch_goods_list_BINI():
     all_goods = []
     last_timestamp = None
 
-    print("🕒 CUCCUINI 전체 상품 수집 중...")
+    print("🕒 BINI 전체 상품 수집 중...")
 
     with ThreadPoolExecutor(max_workers=WORKERS) as executor:
         futures = {
@@ -105,10 +105,10 @@ def fetch_goods_list_CUCCUINI():
     print(f"✅ 총 상품 수집 완료 (재고 있음): {len(goods_list)}개")
     print(f"📄 저장 파일: {EXPORT_JSON}")
 
-    with open("export/CUCCUINI/CUCCUINI_goods.done", "w") as f:
+    with open("export/BINI/BINI_goods.done", "w") as f:
         f.write("done")
 
 
 # 단독 실행용
 if __name__ == "__main__":
-    fetch_goods_list_CUCCUINI()
+    fetch_goods_list_BINI()

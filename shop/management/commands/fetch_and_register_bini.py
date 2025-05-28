@@ -2,35 +2,36 @@ import json
 import os
 import time
 from django.core.management.base import BaseCommand
-from shop.api.atelier.cuccuini.fetch_goods_list import fetch_goods_list_CUCCUINI
-from shop.api.atelier.cuccuini.fetch_details import fetch_all_details
-from shop.api.atelier.cuccuini.fetch_prices import fetch_all_prices
-from shop.api.atelier.cuccuini.convert_cuccuini_products import convert_CUCCUINI_raw_products
+from shop.api.atelier.bini.fetch_goods_list import fetch_goods_list_BINI
+from shop.api.atelier.bini.fetch_details import fetch_all_details
+from shop.api.atelier.bini.fetch_prices import fetch_all_prices
+from shop.api.atelier.bini.fetch_brand_category import fetch_brand_and_category_BINI
+from shop.api.atelier.bini.convert_bini_products import convert_BINI_raw_products
 from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer
-from shop.api.atelier.cuccuini.fetch_brand_category import fetch_brand_and_category_CUCCUINI # 추가
+
+
 
 class Command(BaseCommand):
-    help = "CUCCUINI 상품 자동 수집 및 등록"
+    help = "BINI 상품 자동 수집 및 등록"
 
     def handle(self, *args, **options):
         # ✅ [0/6] 브랜드 및 카테고리 수집
         print("📦 [0/6] 브랜드 및 카테고리 수집 시작")
-        fetch_brand_and_category_CUCCUINI()
-
-
+        fetch_brand_and_category_BINI()
+        
         # 상품기본정보 수집
         print("🟡 [1/6] 상품 수집 시작")
-        fetch_goods_list_CUCCUINI()
+        fetch_goods_list_BINI()
 
         print("🔍 [2/6] 상품 수 확인 중...")
-        wait_until_data_ready("export/CUCCUINI/CUCCUINI_goods.json", minimum_count=500)
+        wait_until_data_ready("export/BINI/BINI_goods.json", minimum_count=500)
 
         # 상품 디테일 정보 수집
         print("🟡 [3/6] 상세 정보 수집 시작")
         fetch_all_details()
 
         print("🔍 [4/6] 상세 정보 수 확인 중...")
-        wait_until_data_ready("export/CUCCUINI/CUCCUINI_details.json", minimum_count=1000)
+        wait_until_data_ready("export/BINI/BINI_details.json", minimum_count=1000)
 
         # 가격 수집
         print("🟡 [5/6] 가격 정보 수집 시작")
@@ -38,20 +39,20 @@ class Command(BaseCommand):
 
         print("🔍 [6/6] 수집 완료 파일 확인 중...")
         wait_until_done_files([
-            "export/CUCCUINI/CUCCUINI_goods.done",
-            "export/CUCCUINI/CUCCUINI_details.done",
-            "export/CUCCUINI/CUCCUINI_prices.done"
+            "export/BINI/BINI_goods.done",
+            "export/BINI/BINI_details.done",
+            "export/BINI/BINI_prices.done"
         ])
 
         # 상품정보 취합
         print("🟡 상품 등록 시작")
-        convert_CUCCUINI_raw_products()
+        convert_BINI_raw_products()
 
         # 가공상품 등록
         print("🟡 가공상품 등록 시작")
-        bulk_convert_or_update_products_by_retailer("IT-C-02")
+        bulk_convert_or_update_products_by_retailer("IT-B-02")
 
-        print("✅ CUCCUINI 전체 프로세스 완료")
+        print("✅ BINI 전체 프로세스 완료")
 
 
 # ⛳ 반드시 클래스 밖에 있어야 함

@@ -6,7 +6,7 @@ from requests.auth import HTTPBasicAuth
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # 설정값
-RETAILER = "CUCCUINI"
+RETAILER = "MINETTI"
 RETAILER_UPPER = RETAILER.upper()
 BASE_PATH = os.path.join("export", RETAILER)
 
@@ -144,7 +144,7 @@ def fetch_all_prices():
     print(f"📄 JSON 저장: {OUTPUT_JSON}")
     print(f"📄 실패 로그: {FAIL_LOG_PATH}")
 
-    with open("export/CUCCUINI/CUCCUINI_prices.done", "w") as f:
+    with open("export/MINETTI/MINETTI_prices.done", "w") as f:
         f.write("done")
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ import os
 from requests.auth import HTTPBasicAuth
 
 # 거래처 식별자
-RETAILER = "CUCCUINI"
+RETAILER = "MINETTI"
 BASE_PATH = os.path.join("export", RETAILER)
 os.makedirs(BASE_PATH, exist_ok=True)
 
@@ -36,7 +36,8 @@ def save_json_from_api(url, key, filename):
         json.dump(data, f, ensure_ascii=False, indent=2)
     print(f"✅ 저장 완료: {filepath} ({len(data)}개)")
 
-def fetch_brand_and_category_CUCCUINI():
+# ✅ 매핑 수집
+def fetch_brand_and_category_MINETTI():
     print("📦 브랜드 및 카테고리 수집 시작")
     save_json_from_api("https://www2.atelier-hub.com/hub/CategoryList", "CategoryList", f"{RETAILER}_category_mapping.json")
     save_json_from_api("https://www2.atelier-hub.com/hub/BrandList", "BrandList", f"{RETAILER}_brand_mapping.json")

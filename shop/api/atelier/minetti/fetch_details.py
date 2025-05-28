@@ -5,7 +5,7 @@ from requests.auth import HTTPBasicAuth
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # 거래처 식별자
-RETAILER = "cuccuini"
+RETAILER = "MINETTI"
 RETAILER_UPPER = RETAILER.upper()
 BASE_PATH = os.path.join("export", RETAILER)
 
@@ -90,7 +90,7 @@ def fetch_all_details():
     print(f"❌ 실패 수: {len(failed)}개")
     print(f"📄 저장 파일: {OUTPUT_PATH}")
 
-    with open("export/CUCCUINI/CUCCUINI_details.done", "w") as f:
+    with open("export/MINETTI/MINETTI_details.done", "w") as f:
         f.write("done")
 
 
