@@ -67,8 +67,14 @@ def send_order_to_api(order):
     try:
         print(f"\n🛰️ [API 전송 시작] 주문번호: {order.id}, 거래처: {order.retailer.name}")
 
-        # 하이픈 제거 → 모듈명은 _로 변환
-        module_key = order.retailer.code.lower().replace("-", "_")
+        # ✅ 고정된 아뜰리에 거래처 리스트
+        ATELIER_CODES = {"MINETTI", "CUCCUINI", "BINI", "IT-C-02", "IT-M-01", "IT-B-02"}
+
+        if order.retailer.code.upper() in ATELIER_CODES:
+            module_key = "atelier"  # 아뜰리에 공통 처리
+        else:
+            module_key = order.retailer.code.lower().replace("-", "_")
+
         module_path = f"shop.services.order.{module_key}"
         send_order = import_module(module_path).send_order
 

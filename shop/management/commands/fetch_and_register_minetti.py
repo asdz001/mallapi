@@ -50,7 +50,7 @@ class Command(BaseCommand):
 
         # 가공상품 등록
         print("🟡 가공상품 등록 시작")
-        bulk_convert_or_update_products_by_retailer("IT-B-02")
+        bulk_convert_or_update_products_by_retailer("IT-M-01")
 
         print("✅ MINETTI 전체 프로세스 완료")
 
