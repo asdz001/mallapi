@@ -44,12 +44,12 @@ def convert_BINI_raw_products(limit=None, goods_override=None):
     RETAILER = "BINI"
     BASE_PATH = os.path.join("export", RETAILER)
 
-    goods_path = os.path.join(BASE_PATH, "bini_goods.json")
-    details_path = os.path.join(BASE_PATH, "bini_details.json")
-    prices_path = os.path.join(BASE_PATH, "bini_prices.json")
-    brand_path = os.path.join(BASE_PATH, "bini_brand_mapping.json")
-    gender_path = os.path.join(BASE_PATH, "bini_gender_mapping.json")
-    category_path = os.path.join(BASE_PATH, "bini_category_mapping.json")
+    goods_path = os.path.join(BASE_PATH, "BINI_goods.json")
+    details_path = os.path.join(BASE_PATH, "BINI_details.json")
+    prices_path = os.path.join(BASE_PATH, "BINI_prices.json")
+    brand_path = os.path.join(BASE_PATH, "BINI_brand_mapping.json")
+    gender_path = os.path.join(BASE_PATH, "BINI_gender_mapping.json")
+    category_path = os.path.join(BASE_PATH, "BINI_category_mapping.json")
 
     goods = goods_override if goods_override else json.load(open(goods_path, encoding="utf-8"))
     if limit:
@@ -167,7 +167,7 @@ def convert_BINI_raw_products_by_id(target_id):
     RETAILER = "BINI"
     BASE_PATH = os.path.join("export", RETAILER)
 
-    goods_path = os.path.join(BASE_PATH, "bini_goods.json")
+    goods_path = os.path.join(BASE_PATH, "BINI_goods.json")
     goods = json.load(open(goods_path, encoding="utf-8"))
     target_goods = [g for g in goods if str(g.get("ID")) == str(target_id)]
 
