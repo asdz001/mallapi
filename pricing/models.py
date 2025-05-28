@@ -8,6 +8,9 @@ class Retailer(models.Model):
     name = models.CharField(max_length=100, verbose_name="업체명")  # 사람이 보는 이름
     code = models.CharField(max_length=50, unique=True, verbose_name="업체코드")  # 매칭용 키 (예: RATTI, GAUDENZI)
 
+    order_api_name = models.CharField(max_length=100, blank=True, null=True, verbose_name="주문용 리테일러명")
+
+
     def __str__(self):
         return f"{self.name} ({self.code})"
 

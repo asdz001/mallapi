@@ -124,7 +124,7 @@ class BrandSettingAdmin(admin.ModelAdmin):
 #거래처명
 @admin.register(Retailer)
 class RetailerAdmin(admin.ModelAdmin):
-    list_display = ('name', 'code')
+    list_display = ('name', 'code',"order_api_name", )
     search_fields = ('name',)
 
 
