@@ -92,9 +92,9 @@ def fetch_goods_list_MINETTI():
     df = pd.DataFrame(all_goods)
 
     # ✅ 재고 0인 상품 제외
-    if "InStock" in df.columns:
-        df["InStock"] = pd.to_numeric(df["InStock"], errors="coerce").fillna(0)
-        df = df[df["InStock"] > 0]
+    #if "InStock" in df.columns:
+        #df["InStock"] = pd.to_numeric(df["InStock"], errors="coerce").fillna(0)
+        #df = df[df["InStock"] > 0]
 
     # ✅ JSON 저장
     os.makedirs(BASE_PATH, exist_ok=True)
