@@ -68,7 +68,7 @@ def send_order_to_api(order):
         print(f"\n🛰️ [API 전송 시작] 주문번호: {order.id}, 거래처: {order.retailer.name}")
 
         # ✅ 고정된 아뜰리에 거래처 리스트
-        ATELIER_CODES = {"MINETTI", "CUCCUINI", "BINI", "IT-C-02", "IT-M-01", "IT-B-02"}
+        ATELIER_CODES = {"MINETTI", "CUCCUINI", "BINI", "IT-C-02", "IT-M-01", "IT-B-02","TEST-HUB"}
 
         if order.retailer.code.upper() in ATELIER_CODES:
             module_key = "atelier"  # 아뜰리에 공통 처리
