@@ -100,9 +100,10 @@ def fetch_all_prices():
     grouped = {}
     for item in detail_data:
         gid = str(item.get("ID"))
-        options = item.get("Sizes", [])
+        stock = item.get("Stock", {})
+        options = stock.get("Item", [])
         if options:
-            grouped[gid] = options
+            grouped[gid] = options  # ✅ 꼭 추가되어야 함
 
     if LIMIT:
         grouped = dict(list(grouped.items())[:LIMIT])
@@ -143,5 +144,9 @@ def fetch_all_prices():
     print(f"📄 JSON 저장: {OUTPUT_JSON}")
     print(f"📄 실패 로그: {FAIL_LOG_PATH}")
 
+    with open("export/CUCCUINI/CUCCUINI_prices.done", "w") as f:
+        f.write("done")
+
 if __name__ == "__main__":
     fetch_all_prices()
+

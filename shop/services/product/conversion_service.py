@@ -52,6 +52,8 @@ def convert_or_update_product(raw_product):
         log_conversion_failure(raw_product, reason)
         print(f"❌ [원가 누락] {raw_product.external_product_id}: {reason}")
         return False
+    
+    
 
     std_brand = match_brand_alias(raw_product.raw_brand_name)
     std_cat1 = match_alias(CategoryLevel1Alias, raw_product.gender)
@@ -62,14 +64,14 @@ def convert_or_update_product(raw_product):
     origin_for_save = origin_input if origin_input else "-"
     std_origin = match_country_alias(origin_input) if origin_input else "-"
 
-    brand_log = "브랜드 성공" if std_brand else f"브랜드 실패(사유: 매핑실패)"
-    category_log = "카테고리 성공" if std_cat1 else f"카테고리 실패(사유: 매핑실패)"
-    origin_log = "원산지 성공" if std_origin else f"원산지 실패(사유: 매핑실패)"
+    brand_log = "브랜드 성공" if std_brand else f"브랜드 실패(사유: {raw_product.raw_brand_name})"
+    category_log = "카테고리 성공" if std_cat1 else f"카테고리 실패(사유: {raw_product.category1})"
+    origin_log = "원산지 성공" if std_origin else f"원산지 실패(사유: {raw_product.origin or '-'})"
 
     if not std_brand or not std_cat1 or not std_origin:
         reason = f"{brand_log} / {category_log} / {origin_log}"
         log_conversion_failure(raw_product, reason)
-        print(f"\u274c [\uc2e4\ud328] {raw_product.external_product_id}: {reason}")
+        print(f"❌ [실패] {raw_product.external_product_id}: {reason}")
         return False
 
     product, created = Product.objects.update_or_create(

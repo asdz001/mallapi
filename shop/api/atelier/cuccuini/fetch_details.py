@@ -90,5 +90,10 @@ def fetch_all_details():
     print(f"❌ 실패 수: {len(failed)}개")
     print(f"📄 저장 파일: {OUTPUT_PATH}")
 
+    with open("export/CUCCUINI/CUCCUINI_details.done", "w") as f:
+        f.write("done")
+
+
 if __name__ == "__main__":
     fetch_all_details()
+

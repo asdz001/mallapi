@@ -36,7 +36,8 @@ def save_json_from_api(url, key, filename):
         json.dump(data, f, ensure_ascii=False, indent=2)
     print(f"✅ 저장 완료: {filepath} ({len(data)}개)")
 
-# ✅ 매핑 수집
-save_json_from_api("https://www2.atelier-hub.com/hub/CategoryList", "CategoryList", f"{RETAILER}_category_mapping.json")
-save_json_from_api("https://www2.atelier-hub.com/hub/BrandList", "BrandList", f"{RETAILER}_brand_mapping.json")
-save_json_from_api("https://www2.atelier-hub.com/hub/GenderList", "GenderList", f"{RETAILER}_gender_mapping.json")
+def fetch_brand_and_category_CUCCUINI():
+    print("📦 브랜드 및 카테고리 수집 시작")
+    save_json_from_api("https://www2.atelier-hub.com/hub/CategoryList", "CategoryList", f"{RETAILER}_category_mapping.json")
+    save_json_from_api("https://www2.atelier-hub.com/hub/BrandList", "BrandList", f"{RETAILER}_brand_mapping.json")
+    save_json_from_api("https://www2.atelier-hub.com/hub/GenderList", "GenderList", f"{RETAILER}_gender_mapping.json")

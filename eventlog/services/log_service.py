@@ -1,5 +1,6 @@
 from eventlog.models import ConversionLog
 
+
 def log_conversion_failure(raw_product, reason, source="conversion"):
     """
     상품 등록 실패 시 호출되는 공통 로깅 함수

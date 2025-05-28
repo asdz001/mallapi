@@ -107,6 +107,7 @@ class ProductAdmin(admin.ModelAdmin):
     )
 
     inlines = [ProductOptionInline]
+    list_filter = ('retailer' , 'brand_name', 'created_at')
 
     change_list_template = 'admin/shop/product/change_list_with_count.html'
 

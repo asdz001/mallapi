@@ -1,18 +1,33 @@
-from django.db import transaction
-from shop.models import RawProduct, RawProductOption
 import json
 import os
-from decimal import Decimal
+import django
+from django.db import transaction
+from shop.models import RawProduct, RawProductOption
+from decimal import Decimal, InvalidOperation
+
+
+
 
 def safe_float(value):
     try:
-        print(f"🧪 변환 시도: {value}")  # ← 여기를 넣으세요!
-        if value in (None, "null", ""):
+        print(f"🧚 빈속화 시도: {value}")
+        if value in (None, "null", "", "NaN"):
             return 0.0
         return float(str(value).replace(",", "."))
     except Exception as e:
         print(f"❌ [가격 변환 오류] value='{value}' → {e}")
         return 0.0
+
+
+def safe_decimal(value):
+    try:
+        if value in (None, "", "null") or str(value).lower() == "nan":
+            return Decimal("0.00")
+        return Decimal(str(value).replace(",", "."))
+    except InvalidOperation as e:
+        print(f"❌ [Decimal 변환 오류] value='{value}' → {e}")
+        return Decimal("0.00")
+
 
 def extract_image_url(pictures, no):
     try:
@@ -24,9 +39,11 @@ def extract_image_url(pictures, no):
         print(f"❌ 이미지 추출 오류 (No={no}): {e}")
         return None
 
-def convert_cuccuini_raw_products(limit=None, goods_override=None):
+
+def convert_CUCCUINI_raw_products(limit=None, goods_override=None):
     RETAILER = "CUCCUINI"
     BASE_PATH = os.path.join("export", RETAILER)
+
     goods_path = os.path.join(BASE_PATH, "cuccuini_goods.json")
     details_path = os.path.join(BASE_PATH, "cuccuini_details.json")
     prices_path = os.path.join(BASE_PATH, "cuccuini_prices.json")
@@ -34,14 +51,9 @@ def convert_cuccuini_raw_products(limit=None, goods_override=None):
     gender_path = os.path.join(BASE_PATH, "cuccuini_gender_mapping.json")
     category_path = os.path.join(BASE_PATH, "cuccuini_category_mapping.json")
 
-    # ✅ 경로 정의가 먼저 되어야 이 아래에서 사용 가능
-    if goods_override:
-        goods = goods_override
-    else:
-        goods = json.load(open(goods_path, encoding="utf-8"))
-        if limit:
-            goods = goods[:limit]
-
+    goods = goods_override if goods_override else json.load(open(goods_path, encoding="utf-8"))
+    if limit:
+        goods = goods[:limit]
 
     details_raw = json.load(open(details_path, encoding="utf-8"))
     prices = json.load(open(prices_path, encoding="utf-8"))
@@ -54,9 +66,6 @@ def convert_cuccuini_raw_products(limit=None, goods_override=None):
         (str(p.get("GoodsID")), p.get("Barcode"), p.get("Size", "").upper()): p for p in prices
     }
 
-    if limit:
-        goods = goods[:limit]
-
     new_options = []
     with transaction.atomic():
         for g in goods:
@@ -68,13 +77,13 @@ def convert_cuccuini_raw_products(limit=None, goods_override=None):
                 continue
 
             sizes = detail.get("Stock", {}).get("Item", [])
-            if not sizes or not isinstance(sizes, list) or len(sizes) == 0:
-                print(f"⚠️ 옵션 없음 또는 형식 오류: {gid}")
+            if not sizes:
+                print(f"⚠️ 옵션 없음: {gid}")
                 continue
 
             brand_name = brand_map.get(str(g.get("BrandID")))
             if not brand_name:
-                print(f"⚠️ 브랜드 매핑 실패: {gid}, BrandID: {g.get('BrandID')}")
+                print(f"⚠️ 브랜드 매핑 실패: {gid}")
                 continue
 
             gender = gender_map.get(str(g.get("GenderID")))
@@ -83,41 +92,25 @@ def convert_cuccuini_raw_products(limit=None, goods_override=None):
                 print(f"⚠️ 카테고리 매핑 실패: {gid}")
                 continue
 
-            # 이미지 처리
-            pictures = []
-            try:
-                pictures_field = detail.get("Pictures", None)
-                if isinstance(pictures_field, dict):
-                    pictures_data = pictures_field.get("Picture", [])
-                    pictures = pictures_data if isinstance(pictures_data, list) else []
-                elif isinstance(pictures_field, list):
-                    pictures = pictures_field
-                else:
-                    pictures = []
-            except Exception as e:
-                print(f"❌ 이미지 파싱 오류 (상품 ID: {gid}): {e}")
-                pictures = []
-
+            pictures = detail.get("Pictures", {}).get("Picture", [])
             image_urls = [p.get("PictureUrl") for p in pictures if isinstance(p, dict) and p.get("PictureUrl")][:4]
             image_url_1 = image_urls[0] if len(image_urls) > 0 else None
             image_url_2 = image_urls[1] if len(image_urls) > 1 else None
             image_url_3 = image_urls[2] if len(image_urls) > 2 else None
             image_url_4 = image_urls[3] if len(image_urls) > 3 else None
 
-
             print(f"🎯 가격 디버깅: {[price_map.get((gid, s.get('Barcode'), s.get('Size', '').upper())) for s in sizes]}")
-            # 완전 방어적 처리
+
             price_org = max([
-                safe_float(
-                    (price_map.get((gid, s.get("Barcode"), s.get("Size", "").upper())) or {}).get("NetPrice", "0")
-                )
+                safe_float((price_map.get((gid, s.get("Barcode"), s.get("Size", "").upper())) or {}).get("NetPrice", "0"))
                 for s in sizes
             ] or [0])
 
-
             first_price_key = (gid, sizes[0].get("Barcode"), sizes[0].get("Size", "").upper())
             retail_raw = price_map.get(first_price_key, {}).get("BrandReferencePrice") or "0"
-            price_retail = Decimal(str(retail_raw).replace(",", "."))
+            price_retail = safe_decimal(retail_raw)
+            discount_raw = price_map.get(first_price_key, {}).get("Discount", "0")
+            discount = safe_decimal(discount_raw)
 
             product, _ = RawProduct.objects.update_or_create(
                 external_product_id=gid,
@@ -133,7 +126,7 @@ def convert_cuccuini_raw_products(limit=None, goods_override=None):
                     "color": detail.get("Color"),
                     "origin": detail.get("MadeIn"),
                     "material": detail.get("Composition"),
-                    "discount_rate": Decimal(price_map.get(first_price_key, {}).get("Discount", "0").replace(",", ".")),
+                    "discount_rate": discount,
                     "image_url_1": image_url_1,
                     "image_url_2": image_url_2,
                     "image_url_3": image_url_3,
@@ -150,7 +143,12 @@ def convert_cuccuini_raw_products(limit=None, goods_override=None):
                 size = s.get("Size", "").upper()
                 qty = int(s.get("Qty", "0"))
                 price_data = price_map.get((gid, barcode, size), {})
-                option_price_raw = price_data.get("SizeNetPrice") or price_data.get("NetPrice") or "0"
+
+                # ✅ SizeNetPrice가 없으면 NetPrice 사용
+                option_price_raw = price_data.get("SizeNetPrice")
+                if option_price_raw in [None, "", "null"]:
+                    option_price_raw = price_data.get("NetPrice")
+
                 option_price = safe_float(option_price_raw)
 
                 new_options.append(RawProductOption(
@@ -165,9 +163,10 @@ def convert_cuccuini_raw_products(limit=None, goods_override=None):
         print(f"✅ CUCCUINI 상품 등록 완료: 상품 {len(goods)}개 / 옵션 {len(new_options)}개")
 
 
-def convert_cuccuini_raw_products_by_id(target_id):
+def convert_CUCCUINI_raw_products_by_id(target_id):
     RETAILER = "CUCCUINI"
     BASE_PATH = os.path.join("export", RETAILER)
+
     goods_path = os.path.join(BASE_PATH, "cuccuini_goods.json")
     goods = json.load(open(goods_path, encoding="utf-8"))
     target_goods = [g for g in goods if str(g.get("ID")) == str(target_id)]
@@ -176,4 +175,6 @@ def convert_cuccuini_raw_products_by_id(target_id):
         print(f"❌ 상품 ID {target_id}에 해당하는 상품을 찾을 수 없습니다.")
         return
 
-    convert_cuccuini_raw_products(limit=None, goods_override=target_goods)
+    convert_CUCCUINI_raw_products(limit=None, goods_override=target_goods)
+
+

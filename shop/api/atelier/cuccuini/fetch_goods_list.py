@@ -4,7 +4,7 @@ import os
 import json
 from requests.auth import HTTPBasicAuth
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+
 
 # 거래처 식별자
 RETAILER = "CUCCUINI"
@@ -34,22 +34,6 @@ PAGE_SIZE = 100
 WORKERS = 20
 
 
-# 마지막 수집 시간 불러오기
-def load_last_timestamp():
-    if os.path.exists(TIMESTAMP_PATH):
-        with open(TIMESTAMP_PATH, "r") as f:
-            return f.read().strip()
-    return None
-
-
-# 현재 시간 저장
-def save_current_timestamp():
-    now = datetime.now().strftime("%Y%m%d-%H%M%S")
-    os.makedirs(os.path.dirname(TIMESTAMP_PATH), exist_ok=True)
-    with open(TIMESTAMP_PATH, "w") as f:
-        f.write(now)
-
-
 # 개별 페이지 수집
 def fetch_page(page, timestamp=None):
     url = f"{BASE_URL}GoodsList"
@@ -67,7 +51,7 @@ def fetch_page(page, timestamp=None):
             headers=HEADERS,
             params=params,
             auth=HTTPBasicAuth(USER_ID, USER_PW),
-            timeout=10,
+            timeout=20,
         )
 
         if res.status_code != 200:
@@ -88,9 +72,9 @@ def fetch_page(page, timestamp=None):
 # 전체 수집 실행
 def fetch_goods_list_CUCCUINI():
     all_goods = []
-    last_timestamp = load_last_timestamp()
+    last_timestamp = None
 
-    print(f"🕒 이전 수집 시각: {last_timestamp if last_timestamp else '없음 (전체 수집)'}")
+    print("🕒 CUCCUINI 전체 상품 수집 중...")
 
     with ThreadPoolExecutor(max_workers=WORKERS) as executor:
         futures = {
@@ -121,8 +105,8 @@ def fetch_goods_list_CUCCUINI():
     print(f"✅ 총 상품 수집 완료 (재고 있음): {len(goods_list)}개")
     print(f"📄 저장 파일: {EXPORT_JSON}")
 
-    # 🔐 수집 시각 저장
-    save_current_timestamp()
+    with open("export/CUCCUINI/CUCCUINI_goods.done", "w") as f:
+        f.write("done")
 
 
 # 단독 실행용
