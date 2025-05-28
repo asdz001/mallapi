@@ -1,28 +1,28 @@
 import requests
 import json
 import traceback
-from django.conf import settings
+from requests.auth import HTTPBasicAuth
 
-
+# 운영 서버 API URL
 API_URL = "https://www2.atelier-hub.com/hub/CreateNewOrder"
-USER_MKT = "MILANESEKOREA"
-PWD_MKT = "4RDf55<lwja*"
 
-HEADERS = {
+# 운영 계정 인증 정보
+USER_ID = "Marketplace2"       # 운영 아이디
+USER_PW = "@aghA87plJ1,"       # 운영 비밀번호
+
+USER_MKT = "MILANESEKOREA"     # 운영 거래처 코드
+PWD_MKT = "4RDf55<lwja*"       # 운영 거래처 비밀번호
+
+headers = {
     "Content-Type": "application/json",
     "USER_MKT": USER_MKT,
     "PWD_MKT": PWD_MKT,
     "LANGUAGE": "en"
 }
 
-# ✅ 테스트 모드 여부 (True면 전송 없이 출력만 함)
-TEST_MODE = False
-
+TEST_MODE = False  # 운영에서는 False로
 
 def send_order(order):
-    """
-    아뜰리에 API로 주문 전송
-    """
     goods = []
 
     print(f"\n🧾 주문번호: {order.id}")
@@ -37,11 +37,12 @@ def send_order(order):
         print(f"   원가(price_org): {item.product.price_org}")
         print(f"   통화: EUR")
 
+        price_str = str(item.product.price_org).replace('.', ',')
         goods.append({
             "ID": option.external_option_id,
             "Size": option.option_name,
             "Qty": item.quantity,
-            "Price": str(item.product.price_org),
+            "Price": price_str,
             "Currency": "EUR",
             "ReferencePrice": ""
         })
@@ -57,6 +58,9 @@ def send_order(order):
     retailer_name = order.retailer.order_api_name or order.retailer.name
 
     payload = {
+        "USER_MKT": USER_MKT,
+        "PWD_MKT": PWD_MKT,
+        "LANGUAGE": "en",
         "OrderId": order_reference,
         "Retailer": retailer_name,
         "StockPointId": "",
@@ -76,7 +80,6 @@ def send_order(order):
     }
 
     try:
-        # 🧪 테스트 모드: 전송 없이 출력
         print("\n📤 전송 Payload:")
         print(json.dumps(payload, indent=2, ensure_ascii=False))
 
@@ -86,12 +89,17 @@ def send_order(order):
                 "message": "[테스트 모드] 전송 안 함. Payload만 출력"
             }]
 
-        # 🛰️ 실전 전송
-        response = requests.post(API_URL, json=payload, headers=HEADERS)
+        response = requests.post(
+            API_URL,
+            json=payload,
+            headers=headers,
+            auth=HTTPBasicAuth(USER_ID, USER_PW)
+        )
         print(f"📨 응답 코드: {response.status_code}")
         print("📨 응답 본문:", response.text)
 
         response.raise_for_status()
+
         result = response.json().get("Response", {})
 
         print("✅ 아뜰리에 응답:", result)
