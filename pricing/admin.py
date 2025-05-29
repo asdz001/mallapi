@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.urls import path, reverse
 from django.shortcuts import render, redirect
 import pandas as pd
@@ -9,8 +9,7 @@ from .models import Retailer
 from .models import FixedCountry, CountryAlias
 from .models import GlobalPricingSetting
 from .models import PriceFormulaRange
-
-
+from django.utils.html import format_html
 
 #브랜드
 @admin.register(BrandSetting)
@@ -124,9 +123,55 @@ class BrandSettingAdmin(admin.ModelAdmin):
 #거래처명
 @admin.register(Retailer)
 class RetailerAdmin(admin.ModelAdmin):
-    list_display = ('name', 'code',"order_api_name", )
+    list_display = ('name', 'code',"order_api_name",  "last_fetched_count","last_registered_count",
+                    "last_fetch_started_at","last_register_finished_at","run_auto_pipeline_button")
     search_fields = ('name',)
 
+    readonly_fields = [
+        "last_fetch_started_at", "last_fetch_finished_at",
+        "last_register_finished_at",
+        "last_fetched_count", "last_registered_count",
+    ]
+
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('<int:retailer_id>/run_pipeline/', self.admin_site.admin_view(self.run_pipeline), name='run_pipeline'),
+        ]
+        return custom_urls + urls
+
+    def run_auto_pipeline_button(self, obj):
+        return format_html(
+            '<a class="button" href="{}">수집 → 등록 실행</a>',
+            f"{obj.id}/run_pipeline/"
+        )
+    run_auto_pipeline_button.short_description = "자동 실행"
+
+    def run_pipeline(self, request, retailer_id):
+        from django.utils import timezone
+        from .models import Retailer
+
+        retailer = Retailer.objects.get(id=retailer_id)
+        retailer.last_fetch_started_at = timezone.now()
+        retailer.save()
+
+        try:
+            # 👇 여기에 실제 수집 및 등록 함수 연결 예정
+            fetch_count = 100  # 임시 숫자
+            register_count = 98  # 임시 숫자
+
+            retailer.last_fetch_finished_at = timezone.now()
+            retailer.last_register_finished_at = timezone.now()
+            retailer.last_fetched_count = fetch_count
+            retailer.last_registered_count = register_count
+            retailer.save()
+
+            messages.success(request, f"{retailer.name} 수집 및 등록 완료: 수집 {fetch_count}개, 등록 {register_count}개")
+        except Exception as e:
+            messages.error(request, f"오류 발생: {str(e)}")
+
+        return redirect("..")
 
 
 

@@ -1,12 +1,8 @@
 import json
 import os
-import django
 from django.db import transaction
 from shop.models import RawProduct, RawProductOption
 from decimal import Decimal, InvalidOperation
-
-
-
 
 def safe_float(value):
     try:
@@ -18,7 +14,6 @@ def safe_float(value):
         print(f"❌ [가격 변환 오류] value='{value}' → {e}")
         return 0.0
 
-
 def safe_decimal(value):
     try:
         if value in (None, "", "null") or str(value).lower() == "nan":
@@ -27,7 +22,6 @@ def safe_decimal(value):
     except InvalidOperation as e:
         print(f"❌ [Decimal 변환 오류] value='{value}' → {e}")
         return Decimal("0.00")
-
 
 def extract_image_url(pictures, no):
     try:
@@ -39,9 +33,9 @@ def extract_image_url(pictures, no):
         print(f"❌ 이미지 추출 오류 (No={no}): {e}")
         return None
 
-
 def convert_BINI_raw_products(limit=None, goods_override=None):
     RETAILER = "BINI"
+    RETAILER_CODE = "IT-B-02"
     BASE_PATH = os.path.join("export", RETAILER)
 
     goods_path = os.path.join(BASE_PATH, "BINI_goods.json")
@@ -115,7 +109,7 @@ def convert_BINI_raw_products(limit=None, goods_override=None):
             product, _ = RawProduct.objects.update_or_create(
                 external_product_id=gid,
                 defaults={
-                    "retailer": "IT-B-02",
+                    "retailer": RETAILER_CODE,
                     "raw_brand_name": brand_name,
                     "product_name": f"{g.get('GoodsName')} {g.get('Model', '')} {g.get('Variant', '')}",
                     "gender": gender,
@@ -144,7 +138,6 @@ def convert_BINI_raw_products(limit=None, goods_override=None):
                 qty = int(s.get("Qty", "0"))
                 price_data = price_map.get((gid, barcode, size), {})
 
-                # ✅ SizeNetPrice가 없으면 NetPrice 사용
                 option_price_raw = price_data.get("SizeNetPrice")
                 if option_price_raw in [None, "", "null"]:
                     option_price_raw = price_data.get("NetPrice")
@@ -161,7 +154,7 @@ def convert_BINI_raw_products(limit=None, goods_override=None):
 
         RawProductOption.objects.bulk_create(new_options)
         print(f"✅ BINI 상품 등록 완료: 상품 {len(goods)}개 / 옵션 {len(new_options)}개")
-
+        return len(goods)
 
 def convert_BINI_raw_products_by_id(target_id):
     RETAILER = "BINI"
@@ -176,5 +169,3 @@ def convert_BINI_raw_products_by_id(target_id):
         return
 
     convert_BINI_raw_products(limit=None, goods_override=target_goods)
-
-

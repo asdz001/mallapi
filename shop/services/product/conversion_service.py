@@ -160,3 +160,4 @@ def bulk_convert_or_update_products_by_retailer(retailer_code, batch_size=1000):
         RawProduct.objects.filter(id__in=updated_raw_ids).update(status='converted', updated_at=now())
 
     print(f"✅ [{retailer_code}] 전송 완료 - 성공: {success_count}개 / 실패: {fail_count}개")
+    return success_count
