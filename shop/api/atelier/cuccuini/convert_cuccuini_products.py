@@ -1,23 +1,17 @@
 import json
 import os
-import django
 from django.db import transaction
 from shop.models import RawProduct, RawProductOption
 from decimal import Decimal, InvalidOperation
 
-
-
-
 def safe_float(value):
     try:
-        print(f"🧚 빈속화 시도: {value}")
         if value in (None, "null", "", "NaN"):
             return 0.0
         return float(str(value).replace(",", "."))
     except Exception as e:
         print(f"❌ [가격 변환 오류] value='{value}' → {e}")
         return 0.0
-
 
 def safe_decimal(value):
     try:
@@ -27,7 +21,6 @@ def safe_decimal(value):
     except InvalidOperation as e:
         print(f"❌ [Decimal 변환 오류] value='{value}' → {e}")
         return Decimal("0.00")
-
 
 def extract_image_url(pictures, no):
     try:
@@ -39,17 +32,17 @@ def extract_image_url(pictures, no):
         print(f"❌ 이미지 추출 오류 (No={no}): {e}")
         return None
 
-
 def convert_CUCCUINI_raw_products(limit=None, goods_override=None):
     RETAILER = "CUCCUINI"
+    RETAILER_CODE = "IT-C-02"
     BASE_PATH = os.path.join("export", RETAILER)
 
-    goods_path = os.path.join(BASE_PATH, "cuccuini_goods.json")
-    details_path = os.path.join(BASE_PATH, "cuccuini_details.json")
-    prices_path = os.path.join(BASE_PATH, "cuccuini_prices.json")
-    brand_path = os.path.join(BASE_PATH, "cuccuini_brand_mapping.json")
-    gender_path = os.path.join(BASE_PATH, "cuccuini_gender_mapping.json")
-    category_path = os.path.join(BASE_PATH, "cuccuini_category_mapping.json")
+    goods_path = os.path.join(BASE_PATH, f"{RETAILER.lower()}_goods.json")
+    details_path = os.path.join(BASE_PATH, f"{RETAILER.lower()}_details.json")
+    prices_path = os.path.join(BASE_PATH, f"{RETAILER.lower()}_prices.json")
+    brand_path = os.path.join(BASE_PATH, f"{RETAILER.lower()}_brand_mapping.json")
+    gender_path = os.path.join(BASE_PATH, f"{RETAILER.lower()}_gender_mapping.json")
+    category_path = os.path.join(BASE_PATH, f"{RETAILER.lower()}_category_mapping.json")
 
     goods = goods_override if goods_override else json.load(open(goods_path, encoding="utf-8"))
     if limit:
@@ -99,8 +92,6 @@ def convert_CUCCUINI_raw_products(limit=None, goods_override=None):
             image_url_3 = image_urls[2] if len(image_urls) > 2 else None
             image_url_4 = image_urls[3] if len(image_urls) > 3 else None
 
-            print(f"🎯 가격 디버깅: {[price_map.get((gid, s.get('Barcode'), s.get('Size', '').upper())) for s in sizes]}")
-
             price_org = max([
                 safe_float((price_map.get((gid, s.get("Barcode"), s.get("Size", "").upper())) or {}).get("NetPrice", "0"))
                 for s in sizes
@@ -115,7 +106,7 @@ def convert_CUCCUINI_raw_products(limit=None, goods_override=None):
             product, _ = RawProduct.objects.update_or_create(
                 external_product_id=gid,
                 defaults={
-                    "retailer": "IT-C-02",
+                    "retailer": RETAILER_CODE,
                     "raw_brand_name": brand_name,
                     "product_name": f"{g.get('GoodsName')} {g.get('Model', '')} {g.get('Variant', '')}",
                     "gender": gender,
@@ -144,7 +135,6 @@ def convert_CUCCUINI_raw_products(limit=None, goods_override=None):
                 qty = int(s.get("Qty", "0"))
                 price_data = price_map.get((gid, barcode, size), {})
 
-                # ✅ SizeNetPrice가 없으면 NetPrice 사용
                 option_price_raw = price_data.get("SizeNetPrice")
                 if option_price_raw in [None, "", "null"]:
                     option_price_raw = price_data.get("NetPrice")
@@ -161,13 +151,13 @@ def convert_CUCCUINI_raw_products(limit=None, goods_override=None):
 
         RawProductOption.objects.bulk_create(new_options)
         print(f"✅ CUCCUINI 상품 등록 완료: 상품 {len(goods)}개 / 옵션 {len(new_options)}개")
-
+        return len(goods)
 
 def convert_CUCCUINI_raw_products_by_id(target_id):
     RETAILER = "CUCCUINI"
     BASE_PATH = os.path.join("export", RETAILER)
 
-    goods_path = os.path.join(BASE_PATH, "cuccuini_goods.json")
+    goods_path = os.path.join(BASE_PATH, f"{RETAILER.lower()}_goods.json")
     goods = json.load(open(goods_path, encoding="utf-8"))
     target_goods = [g for g in goods if str(g.get("ID")) == str(target_id)]
 
@@ -176,5 +166,3 @@ def convert_CUCCUINI_raw_products_by_id(target_id):
         return
 
     convert_CUCCUINI_raw_products(limit=None, goods_override=target_goods)
-
-
