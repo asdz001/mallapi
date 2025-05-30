@@ -5,7 +5,7 @@ from requests.auth import HTTPBasicAuth
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # 거래처 식별자
-RETAILER = "cuccuini"
+RETAILER = "CUCCUINI"
 RETAILER_UPPER = RETAILER.upper()
 BASE_PATH = os.path.join("export", RETAILER)
 

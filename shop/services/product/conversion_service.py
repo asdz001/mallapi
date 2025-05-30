@@ -84,6 +84,7 @@ def convert_or_update_product(raw_product):
             'category2': std_cat3,
             'image_url': raw_product.image_url_1,
             'raw_brand_name': raw_product.raw_brand_name,
+            'brand_name': std_brand, 
             'product_name': raw_product.product_name,
             'sku': raw_product.sku,
             'price_retail': raw_product.price_retail,

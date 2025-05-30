@@ -1,9 +1,9 @@
-import time
 from django.core.management.base import BaseCommand
-from django.utils import timezone
-from shop.api.atelier.convert_minetti_products import convert_minetti_products
+from shop.api.atelier.convert_minetti_products import convert_atelier_products
 from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer
 from pricing.models import Retailer
+from django.utils import timezone
+
 
 class Command(BaseCommand):
     help = "MINETTI 상품 자동 수집 및 등록"
@@ -17,21 +17,24 @@ class Command(BaseCommand):
         retailer.last_fetch_started_at = timezone.now()
         retailer.save()
 
+        # ✅ [1/2] 수집 및 원본상품 등록
         print("🟡 [1/2] MINETTI 상품 수집 및 저장 시작")
-        fetch_count = convert_minetti_products()
+        fetch_count = convert_atelier_products()
 
-        print("🟡 [2/2] 가공상품 전환 시작")
+        # ✅ [2/2] 가공상품 등록
+        print("🟡 [2/2] 가공상품 등록 시작")
         register_count = bulk_convert_or_update_products_by_retailer(retailer_code)
 
+        # ✅ 결과 저장
         retailer.last_fetch_finished_at = timezone.now()
         retailer.last_register_finished_at = timezone.now()
         retailer.last_fetched_count = fetch_count or 0
         retailer.last_registered_count = register_count or 0
-
         try:
             retailer.save()
         except Exception as e:
             print(f"❌ Retailer 저장 실패: {e}")
 
-        print(f"✅ 전체 완료: 수집 {fetch_count}개 / 등록 {register_count}개")
+        # ✅ 완료 메시지
+        print(f"✅ MINETTI 전체 프로세스 완료 - 수집: {fetch_count}개 / 등록: {register_count}개")
         return f"수집: {fetch_count}개 / 등록: {register_count}개"
