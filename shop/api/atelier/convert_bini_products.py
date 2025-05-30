@@ -37,14 +37,13 @@ def fetch_goods_data():
     print(f"✅ 전체 수집된 상품 수: {len(goods_list)}개")
 
     goods_ids = [
-        item["ID"]
-        for item in goods_list
+        item["ID"] for item in goods_list
         if item.get("ID") and int(item.get("InStock", 0)) > 0
     ]
 
     print(f"🟢 재고 있는 상품 수: {len(goods_ids)}개")
 
-    print("📦 전체 상세 정보 및 가격 수집 중 (일괄)...")
+    print("📦 전체 상세 정보 및 가격 수집 중 (일감)...")
     detail_all = atelier.get_goods_detail_list().get("GoodsDetailList", {}).get("Good", [])
     price_all = atelier.get_goods_price_list().get("GoodsPriceList", {}).get("Price", [])
 
@@ -59,7 +58,7 @@ def fetch_goods_data():
             results.append({"ID": gid, "detail": detail, "price": price})
 
     print(f"🎯 최종 수집 성공: {len(results)}개")
-    return results
+    return results, {str(g["ID"]): g for g in goods_list if g.get("ID")}
 
 # 2. 정제 및 저장 함수
 def convert_atelier_products():
@@ -67,13 +66,19 @@ def convert_atelier_products():
 
     brand_map = {str(b.get("ID")): b.get("Name") for b in atelier.get_brand_list().get("BrandList", {}).get("Brand", [])}
     gender_map = {str(g.get("ID")): g.get("Name") for g in atelier.get_gender_list().get("GenderList", {}).get("Gender", [])}
-    category_map = {
-        (str(c.get("CategoryID")), str(c.get("GenderID"))): (c.get("ParentName"), c.get("Name"))
-        for c in atelier.get_subcategory_list().get("SubCategoryList", {}).get("SubCategory", [])
-        if c.get("CategoryID") and c.get("GenderID") and c.get("ParentName") and c.get("Name")
-    }
 
-    data = fetch_goods_data()
+    subcategory_items = atelier.get_subcategory_list().get("SubCategoryList", {}).get("SubCategory", [])
+    print(f"📊 SubCategory 항목 수: {len(subcategory_items)}")
+    print("🔍 SubCategory 샘플 1~3개:", subcategory_items[:3])
+
+    category_map = {
+        (str(c.get("CategoryID")), str(c.get("GenderID"))): (c.get("ParentName"), c.get("CategoryName"))
+        for c in subcategory_items
+        if c.get("CategoryID") and c.get("GenderID") and c.get("ParentName") and c.get("CategoryName")
+    }
+    print("🔍 category_map 키 예시 (최대 5개):", list(category_map.keys())[:5])
+
+    data, goods_dict = fetch_goods_data()
     new_options = []
 
     with transaction.atomic():
@@ -81,6 +86,7 @@ def convert_atelier_products():
             gid = str(item["ID"])
             detail = item.get("detail")
             price_obj = item.get("price")
+            goods = goods_dict.get(gid, {})
 
             if not detail or not price_obj:
                 print(f"⚠️ 상세/가격 정보 없음: {gid}")
@@ -91,19 +97,28 @@ def convert_atelier_products():
                 print(f"⚠️ 옵션 없음: {gid}")
                 continue
 
-            brand_name = brand_map.get(str(detail.get("BrandID")))
+            brand_id = str(goods.get("BrandID"))
+            brand_name = brand_map.get(brand_id)
             if not brand_name:
-                print(f"⚠️ 브랜드 매핑 실패: {gid}")
+                print(f"⚠️ 브랜드 매핑 실패: {gid} (BrandID: {brand_id})")
+                print(f"💬 현재 브랜드맵 키 목록: {list(brand_map.keys())[:10]}")
                 continue
 
-            gender = gender_map.get(str(detail.get("GenderID")))
-            category1, category2 = category_map.get((str(detail.get("CategoryID")), str(detail.get("GenderID"))), (None, None))
+            gender = gender_map.get(str(goods.get("GenderID")))
+            category_id = str(goods.get("CategoryID"))
+            gender_id = str(goods.get("GenderID"))
+            category_key = (category_id, gender_id)
+
+            category1, category2 = category_map.get(category_key, (None, None))
+
             if not category1 or not category2:
-                print(f"⚠️ 카테고리 매핑 실패: {gid}")
+                print(f"⚠️ 카테고리 매핑 실패: {gid} (CategoryID: {category_id}, GenderID: {gender_id})")
+                print(f"💬 category_key 존재 여부: {category_key in category_map}")
+                print(f"💬 현재 category_map 전체 키 수: {len(category_map)}")
                 continue
 
             pictures = detail.get("Pictures", {}).get("Picture", [])
-            image_urls = [p.get("PictureUrl") for p in pictures if isinstance(p, dict) and p.get("PictureUrl")][:4]
+            image_urls = [p.get("PictureUrl") for p in pictures if isinstance(p, dict) and p.get("PictureUrl")] [:4]
             image_url_1 = image_urls[0] if len(image_urls) > 0 else None
             image_url_2 = image_urls[1] if len(image_urls) > 1 else None
             image_url_3 = image_urls[2] if len(image_urls) > 2 else None
@@ -128,12 +143,12 @@ def convert_atelier_products():
                 defaults={
                     "retailer": RETAILER_CODE,
                     "raw_brand_name": brand_name,
-                    "product_name": f"{detail.get('GoodsName', '')} {detail.get('Model', '')} {detail.get('Variant', '')}",
+                    "product_name": f"{goods.get('GoodsName', '')} {goods.get('Model', '')} {goods.get('Variant', '')}",
                     "gender": gender,
                     "category1": category1,
                     "category2": category2,
-                    "season": detail.get("Season"),
-                    "sku": f"{detail.get('Model', '')} {detail.get('Variant', '')}",
+                    "season": goods.get("Season"),
+                    "sku": f"{goods.get('Model', '')} {goods.get('Variant', '')}",
                     "color": detail.get("Color"),
                     "origin": detail.get("MadeIn"),
                     "material": detail.get("Composition"),
@@ -151,7 +166,7 @@ def convert_atelier_products():
             product.options.all().delete()
             for s in sizes:
                 barcode = s.get("Barcode")
-                size = s.get("Size", "").upper()
+                size = s.get("Size", "")
                 qty = int(s.get("Qty", "0"))
 
                 option_price_raw = next((r.get("SizeNetPrice") or r.get("NetPrice") for r in price_obj.get("Retailers", [])

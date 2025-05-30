@@ -7,11 +7,10 @@ from requests.auth import HTTPBasicAuth
 API_URL = "https://www2.atelier-hub.com/hub/CreateNewOrder"
 
 # 운영 계정 인증 정보
-USER_ID = "Marketplace2"       # 운영 아이디
-USER_PW = "@aghA87plJ1,"       # 운영 비밀번호
-
-USER_MKT = "MILANESEKOREA"     # 운영 거래처 코드
-PWD_MKT = "4RDf55<lwja*"       # 운영 거래처 비밀번호
+USER_ID = "Marketplace2"
+USER_PW = "@aghA87plJ1,"
+USER_MKT = "MILANESEKOREA"
+PWD_MKT = "4RDf55<lwja*"
 
 headers = {
     "Content-Type": "application/json",
@@ -20,7 +19,54 @@ headers = {
     "LANGUAGE": "en"
 }
 
-TEST_MODE = False  # 운영에서는 False로
+TEST_MODE = False  # 운영 전환 시 False로
+
+
+def validate_barcode_and_size(barcode: str, size: str, retailer: str) -> bool:
+    """
+    바코드와 사이즈가 실제로 존재하는지 아뜰리에 API로 유효성 검사
+    """
+    try:
+        print(f"\n🔍 유효성 검사 요청: barcode={barcode}, size={size}, retailer={retailer}")
+        response = requests.get(
+            "https://www2.atelier-hub.com/hub/GoodsDetailList",
+            headers={
+                "USER_MKT": USER_MKT,
+                "PWD_MKT": PWD_MKT,
+                "LANGUAGE": "en",
+                "DESCRIPTION": "ALL",
+                "SIZEPRICE": "ON",
+                "DETAILEDSIZE": "ON"
+            },
+            auth=HTTPBasicAuth(USER_ID, USER_PW),
+            params={"retailer": retailer, "barcode": barcode}
+        )
+        print(f"🛰️ 응답 코드: {response.status_code}")
+        response.raise_for_status()
+        data = response.json()
+        print(f"📦 응답 데이터:\n{json.dumps(data, indent=2)}")
+
+        goods = data.get("GoodsDetailList", {}).get("Good", [])
+        if not goods:
+            print(f"❌ 바코드 {barcode}에 해당하는 상품 없음")
+            return False
+
+        sizes_found = []
+        for stock in goods[0].get("Stock", {}).get("Item", []):
+            found_size = stock.get("Size", "").strip().upper()
+            sizes_found.append(found_size)
+            if found_size == size.strip().upper():
+                print(f"✅ 유효한 사이즈 매칭: {size}")
+                return True
+
+        print(f"❌ 사이즈 {size} 없음. 존재하는 사이즈: {sizes_found}")
+        return False
+
+    except Exception as e:
+        print(f"❌ 유효성 검사 실패: {e}")
+        traceback.print_exc()
+        return False
+
 
 def send_order(order):
     goods = []
@@ -30,30 +76,47 @@ def send_order(order):
 
     for item in order.items.all():
         option = item.option
+        barcode = option.external_option_id
+        size = option.option_name
+
         print(f"📦 상품명: {item.product.product_name}")
-        print(f"   옵션명: {option.option_name}")
-        print(f"   바코드: {option.external_option_id}")
+        print(f"   옵션명: {size}")
+        print(f"   바코드: {barcode}")
         print(f"   수량: {item.quantity}")
         print(f"   원가(price_org): {item.product.price_org}")
         print(f"   통화: EUR")
 
+        # ✅ 유효성 검사
+        is_valid = validate_barcode_and_size(
+            barcode=barcode,
+            size=size,
+            retailer=order.retailer.order_api_name or order.retailer.name
+        )
+        if not is_valid:
+            print(f"⚠️ 제외됨: 바코드 {barcode} - 사이즈 {size}")
+            continue
+
         price_str = str(item.product.price_org).replace('.', ',')
         goods.append({
-            "ID": option.external_option_id,
-            "Size": option.option_name,
+            "ID": barcode,
+            "Size": size,
             "Qty": item.quantity,
             "Price": price_str,
             "Currency": "EUR",
             "ReferencePrice": ""
         })
 
+    if not goods:
+        print("❌ 유효한 주문 항목이 없어 전송 중단")
+        return [{
+            "success": False,
+            "message": "유효한 옵션 없음"
+        }]
+
     item = order.items.first()
-    if item:
-        date_str = order.created_at.strftime("%Y%m%d")
-        retailer_code = order.retailer.code.replace("IT-", "").replace("-", "")
-        order_reference = f"{date_str}-ORDER-{order.id}-{item.id}-{retailer_code}"
-    else:
-        order_reference = f"ORDER-{order.id}"
+    date_str = order.created_at.strftime("%Y%m%d")
+    retailer_code = order.retailer.code.replace("IT-", "").replace("-", "")
+    order_reference = f"{date_str}-ORDER-{order.id}-{item.id}-{retailer_code}"
 
     retailer_name = order.retailer.order_api_name or order.retailer.name
 
@@ -84,9 +147,10 @@ def send_order(order):
         print(json.dumps(payload, indent=2, ensure_ascii=False))
 
         if TEST_MODE:
+            print("⚠️ 테스트 모드로 실제 전송 안 함")
             return [{
                 "success": None,
-                "message": "[테스트 모드] 전송 안 함. Payload만 출력"
+                "message": "[테스트 모드] 전송 안 함"
             }]
 
         response = requests.post(
@@ -99,9 +163,7 @@ def send_order(order):
         print("📨 응답 본문:", response.text)
 
         response.raise_for_status()
-
         result = response.json().get("Response", {})
-
         print("✅ 아뜰리에 응답:", result)
 
         return [{
@@ -110,7 +172,8 @@ def send_order(order):
         }]
 
     except Exception as e:
-        print("❌ [아뜰리에 오류]", str(e))
+        print("❌ [아뜰리에 오류 발생]")
+        print("❗ 오류 메시지:", str(e))
         traceback.print_exc()
         return [{
             "success": False,

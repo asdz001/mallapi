@@ -89,6 +89,7 @@ def convert_or_update_product(raw_product):
             'sku': raw_product.sku,
             'price_retail': raw_product.price_retail,
             'price_org': raw_product.price_org,
+            'discount_rate' : raw_product.discount_rate,
             'color': raw_product.color,
             'material': raw_product.material,
             'origin': std_origin or origin_for_save,
