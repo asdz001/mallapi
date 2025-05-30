@@ -1,0 +1,182 @@
+## 🐍 가상환경 설정
+- 가상환경 생성
+  ```bash
+  python -m venv venv
+  ```
+- 가상환경 활성화 (Windows)
+  ```bash
+  venv\Scripts\activate
+  ```
+- 가상환경 활성화 (Linux/macOS)
+  ```bash
+  source venv/bin/activate
+  ```
+
+## 🐍 단일 파이썬 실행
+- BaseBlu 테스트 파일 실행
+  ```bash
+  python shop/api/baseblu/test.py
+  ```
+- CUCCUINI 가격 수집
+  ```bash
+  python shop/api/atelier/CUCCUINI/fetch_prices.py
+  ```
+- CUCCUINI 재고 수집
+  ```bash
+  python shop/api/atelier/CUCCUINI/fetch_stocks.py
+  ```
+- CUCCUINI 병합 실행
+  ```bash
+  python shop/api/atelier/CUCCUINI/merge_all_data.py
+  ```
+
+## 🐚 Django Shell
+- Shell 실행
+  ```bash
+  python manage.py shell
+  ```
+- BaseBlu 상품 수동 등록
+  ```bash
+  from shop.api.baseblu.basebiu import run_full_baseblue_pipeline
+  ```
+- BaseBlu 10개 테스트 등록
+  ```bash
+  run_full_baseblue_pipeline(limit=10)
+  ```
+- Cuccuini 수동 변환 예시
+  ```bash
+  from shop.api.atelier.cuccuini.convert_cuccuini_products import convert_cuccuini_raw_products
+  ```
+- Cuccuini 테스트 실행
+  ```bash
+  convert_cuccuini_raw_products(limit=10)
+  ```
+
+## 👤 관리자 계정
+- 슈퍼유저 생성
+  ```bash
+  python manage.py createsuperuser
+  ```
+
+## 📁 Git 관리 제외
+- .gitignore 설정
+  ```bash
+  .gitignore 파일에 제외할 경로 추가
+  ```
+
+## 📁 패키지 목록 저장
+- requirements 생성
+  ```bash
+  pip freeze > requirements.txt
+  ```
+
+## 📆 스케줄러 설정
+- 크론 작업 편집
+  ```bash
+  crontab -e
+  ```
+- 크론 작업 목록 확인
+  ```bash
+  crontab -l
+  ```
+
+## 📤 GitHub 반영
+- 변경 전체 반영
+  ```bash
+  git add -A
+  ```
+- 커밋 메시지 작성
+  ```bash
+  git commit -m "작업 내용 요약"
+  ```
+- GitHub에 푸시
+  ```bash
+  git push origin main
+  ```
+
+## 📥 GitHub → 로컬 클론
+- 프로젝트 초기 클론
+  ```bash
+  git clone https://github.com/asdz001/mallapi.git
+  ```
+
+## 📥 GitHub 동기화
+- 최신 브랜치 가져오기
+  ```bash
+  git fetch origin
+  ```
+- 강제 동기화 (reset)
+  ```bash
+  git reset --hard origin/main
+  ```
+
+## 📦 패키지 설치
+- 필요한 라이브러리 설치
+  ```bash
+  pip install -r requirements.txt
+  ```
+
+## 🔁 운영 반영
+- 코드 반영 후 Gunicorn 재시작
+  ```bash
+  sudo systemctl restart gunicorn
+  ```
+
+## 🔧 Git 기본 설정
+- Git 사용자 정보 설정
+  ```bash
+  git config --global user.name "sunguk Choi"
+  ```
+- Git 이메일 설정
+  ```bash
+  git config --global user.email "asdz3539@naver.com"
+  ```
+
+## 🗂️ 서버 접속 및 설정
+- 서버 접속
+  ```bash
+  ssh root@114.207.245.20
+  ```
+- zip 압축 해제
+  ```bash
+  unzip mallapi.zip
+  ```
+- 프로젝트 폴더 이동
+  ```bash
+  cd mallapi
+  ```
+- 가상환경 활성화 (Linux)
+  ```bash
+  source venv/bin/activate
+  ```
+
+## 🚀 서버 실행
+- 로컬 개발 서버 실행
+  ```bash
+  python manage.py runserver
+  ```
+
+## 🧪 테스트 실행
+- Cuccuini 수집 명령어
+  ```bash
+  python manage.py fetch_and_register_cuccuini
+  ```
+- Minetti 수집 명령어
+  ```bash
+  python manage.py fetch_and_register_minetti
+  ```
+- BaseBlu 수집 명령어
+  ```bash
+  python manage.py fetch_and_register_baseblu
+  ```
+
+## 🧱 Django 마이그레이션
+- 모델 변경사항 탐지
+  ```bash
+  python manage.py makemigrations
+  ```
+- DB에 적용
+  ```bash
+  python manage.py migrate
+  ```
+

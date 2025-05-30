@@ -27,6 +27,15 @@ def run_full_pipeline_by_retailer(retailer_code):
 
 
 
+    #바제블루
+    elif retailer_code == "IT-B-01":  # BASEBLU
+        from shop.api.baseblu.basebiu import run_full_baseblue_pipeline
+        from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer
+
+        fetch_count = run_full_baseblue_pipeline()  # limit 생략 or 넣을 수 있음
+        bulk_convert_or_update_products_by_retailer(retailer_code)
+        register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
+  
 #아뜰리에 API 업체 
 
     #쿠쿠이니
