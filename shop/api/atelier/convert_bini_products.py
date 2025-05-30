@@ -68,8 +68,7 @@ def convert_atelier_products():
     gender_map = {str(g.get("ID")): g.get("Name") for g in atelier.get_gender_list().get("GenderList", {}).get("Gender", [])}
 
     subcategory_items = atelier.get_subcategory_list().get("SubCategoryList", {}).get("SubCategory", [])
-    print(f"📊 SubCategory 항목 수: {len(subcategory_items)}")
-    print("🔍 SubCategory 샘플 1~3개:", subcategory_items[:3])
+
 
     category_map = {
         (str(c.get("CategoryID")), str(c.get("GenderID"))): (c.get("ParentName"), c.get("CategoryName"))
