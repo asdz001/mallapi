@@ -19,12 +19,12 @@ headers = {
     "LANGUAGE": "en"
 }
 
-TEST_MODE = False  # 운영 전환 시 False로
+TEST_MODE = False  # 운영 전환 시 False로 설정
 
 
-def validate_barcode_and_size(barcode: str, size: str, retailer: str) -> bool:
+def get_goods_id_by_barcode(barcode: str, size: str, retailer: str):
     """
-    바코드와 사이즈가 실제로 존재하는지 아뜰리에 API로 유효성 검사
+    바코드와 사이즈로 유효성 검사 및 상품 ID 반환
     """
     try:
         print(f"\n🔍 유효성 검사 요청: barcode={barcode}, size={size}, retailer={retailer}")
@@ -49,23 +49,21 @@ def validate_barcode_and_size(barcode: str, size: str, retailer: str) -> bool:
         goods = data.get("GoodsDetailList", {}).get("Good", [])
         if not goods:
             print(f"❌ 바코드 {barcode}에 해당하는 상품 없음")
-            return False
+            return None
 
-        sizes_found = []
         for stock in goods[0].get("Stock", {}).get("Item", []):
             found_size = stock.get("Size", "").strip().upper()
-            sizes_found.append(found_size)
             if found_size == size.strip().upper():
                 print(f"✅ 유효한 사이즈 매칭: {size}")
-                return True
+                return goods[0].get("ID")  # 상품 ID 반환
 
-        print(f"❌ 사이즈 {size} 없음. 존재하는 사이즈: {sizes_found}")
-        return False
+        print(f"❌ 사이즈 {size} 없음")
+        return None
 
     except Exception as e:
         print(f"❌ 유효성 검사 실패: {e}")
         traceback.print_exc()
-        return False
+        return None
 
 
 def send_order(order):
@@ -73,6 +71,8 @@ def send_order(order):
 
     print(f"\n🧾 주문번호: {order.id}")
     print(f"🛍️ 거래처: {order.retailer.name} / 코드: {order.retailer.code}")
+
+    retailer_name = order.retailer.order_api_name or order.retailer.name
 
     for item in order.items.all():
         option = item.option
@@ -86,19 +86,16 @@ def send_order(order):
         print(f"   원가(price_org): {item.product.price_org}")
         print(f"   통화: EUR")
 
-        # ✅ 유효성 검사
-        is_valid = validate_barcode_and_size(
-            barcode=barcode,
-            size=size,
-            retailer=order.retailer.order_api_name or order.retailer.name
-        )
-        if not is_valid:
+        # ✅ 유효성 검사 + 상품 ID 추출
+        goods_id = get_goods_id_by_barcode(barcode, size, retailer_name)
+        if not goods_id:
             print(f"⚠️ 제외됨: 바코드 {barcode} - 사이즈 {size}")
             continue
 
         price_str = str(item.product.price_org).replace('.', ',')
+
         goods.append({
-            "ID": barcode,
+            "ID": goods_id,  # ✅ 상품 ID 사용
             "Size": size,
             "Qty": item.quantity,
             "Price": price_str,
@@ -117,8 +114,6 @@ def send_order(order):
     date_str = order.created_at.strftime("%Y%m%d")
     retailer_code = order.retailer.code.replace("IT-", "").replace("-", "")
     order_reference = f"{date_str}-ORDER-{order.id}-{item.id}-{retailer_code}"
-
-    retailer_name = order.retailer.order_api_name or order.retailer.name
 
     payload = {
         "USER_MKT": USER_MKT,
