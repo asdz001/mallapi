@@ -1,15 +1,22 @@
-import datetime
-from decimal import Decimal, InvalidOperation
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from django.db import transaction
-from shop.api.atelier.atelier_api import Atelier
+from decimal import Decimal
 from shop.models import RawProduct, RawProductOption
+from shop.api.atelier.atelier_api import Atelier
 
+# 설정값
+MAX_WORKERS = 20
+RETAILER = "BINI"
+RETAILER_CODE = "IT-B-02"
+
+# 안전하게 숫자로 바꾸는 함수 (오류 방지용)
 def safe_float(value):
     try:
         if value in (None, "null", "", "NaN"):
             return 0.0
         return float(str(value).replace(",", "."))
-    except Exception:
+    except Exception as e:
+        print(f"❌ [가격 변환 오류] value='{value}' → {e}")
         return 0.0
 
 def safe_decimal(value):
@@ -17,157 +24,154 @@ def safe_decimal(value):
         if value in (None, "", "null") or str(value).lower() == "nan":
             return Decimal("0.00")
         return Decimal(str(value).replace(",", "."))
-    except InvalidOperation:
+    except Exception as e:
+        print(f"❌ [Decimal 변환 오류] value='{value}' → {e}")
         return Decimal("0.00")
 
-def extract_image_urls(picture_list):
-    try:
-        return [p.get("PictureUrl") for p in picture_list if isinstance(p, dict) and p.get("PictureUrl")][:4]
-    except Exception:
-        return []
+# 1. 전체 상품 수집 함수 (재고 1개 이상만)
+def fetch_goods_data():
+    atelier = Atelier(RETAILER)
 
-def convert_bini_products(limit=None):
-    print(f"📦 BINI 수집 시작: {datetime.datetime.now()}")
-    atelier = Atelier("BINI")
+    print("📦 상품 기본 정보 수집 중...")
+    goods_list = atelier.get_goods_list().get("GoodsList", {}).get("Good", [])
+    print(f"✅ 전체 수집된 상품 수: {len(goods_list)}개")
 
-    try:
-        goods_list = atelier.get_goods_list()
-        details_list = atelier.get_goods_details()
-        prices_list = atelier.get_goods_prices()
-        brand_list = atelier.get_brand_list()
-        gender_list = atelier.get_gender_list()
-        subcat_list = atelier.get_subcategory_list()
-    except Exception as e:
-        print(f"❌ [수집 실패] API 호출 중 오류 발생: {e}")
-        return 0
+    goods_ids = [
+        item["ID"]
+        for item in goods_list
+        if item.get("ID") and int(item.get("InStock", 0)) > 0
+    ]
 
-    print(f"✅ 수집 완료 - 상품:{len(goods_list)} / 상세:{len(details_list)} / 가격:{len(prices_list)}")
+    print(f"🟢 재고 있는 상품 수: {len(goods_ids)}개")
 
-    # Step 2: 매핑 딕셔너리
-    brand_dict = {b["ID"]: b["Name"] for b in brand_list}
-    gender_dict = {g["ID"]: g["Name"] for g in gender_list}
+    print("📦 전체 상세 정보 및 가격 수집 중 (일괄)...")
+    detail_all = atelier.get_goods_detail_list().get("GoodsDetailList", {}).get("Good", [])
+    price_all = atelier.get_goods_price_list().get("GoodsPriceList", {}).get("Price", [])
 
-    subcat_dict = {}
-    for s in subcat_list:
-        try:
-            key = f"{s['GenderID']}|{s['ParentID']}|{s['ID']}"
-            subcat_dict[key] = s["Name"]
-        except KeyError as e:
-            print(f"⚠️ [서브카테고리 매핑 실패] 항목: {s} → {e}")
+    detail_map = {d["ID"]: d for d in detail_all if d.get("ID")}
+    price_map = {p["ID"]: p for p in price_all if p.get("ID")}
 
+    results = []
+    for gid in goods_ids:
+        detail = detail_map.get(gid)
+        price = price_map.get(gid)
+        if detail and price:
+            results.append({"ID": gid, "detail": detail, "price": price})
 
-    detail_dict = {str(d.get("GoodsID")): d for d in details_list if d.get("GoodsID")}
-    price_map = {
-        (str(p.get("GoodsID")), p.get("Barcode"), p.get("Size", "").upper()): p for p in prices_list
+    print(f"🎯 최종 수집 성공: {len(results)}개")
+    return results
+
+# 2. 정제 및 저장 함수
+def convert_atelier_products():
+    atelier = Atelier(RETAILER)
+
+    brand_map = {str(b.get("ID")): b.get("Name") for b in atelier.get_brand_list().get("BrandList", {}).get("Brand", [])}
+    gender_map = {str(g.get("ID")): g.get("Name") for g in atelier.get_gender_list().get("GenderList", {}).get("Gender", [])}
+    category_map = {
+        (str(c.get("CategoryID")), str(c.get("GenderID"))): (c.get("ParentName"), c.get("Name"))
+        for c in atelier.get_subcategory_list().get("SubCategoryList", {}).get("SubCategory", [])
+        if c.get("CategoryID") and c.get("GenderID") and c.get("ParentName") and c.get("Name")
     }
 
-    success, fail, option_total = 0, 0, 0
+    data = fetch_goods_data()
+    new_options = []
 
     with transaction.atomic():
-        for good in goods_list[:limit] if limit else goods_list:
-            gid = str(good.get("ID"))
+        for item in data:
+            gid = str(item["ID"])
+            detail = item.get("detail")
+            price_obj = item.get("price")
 
-
-            # ✅ InStock이 0 이하인 경우 무시
-            instock = good.get("InStock", 0)
-            try:
-                 instock = int(instock)
-            except (TypeError, ValueError):
-                 instock = 0
-            if instock <= 0:
-                print(f"⛔ 재고 없음으로 스킵: ID={gid}")
-                continue
-
-
-
-            detail = detail_dict.get(gid)
-            if not detail:
+            if not detail or not price_obj:
+                print(f"⚠️ 상세/가격 정보 없음: {gid}")
                 continue
 
             sizes = detail.get("Stock", {}).get("Item", [])
-            print(f"⚠️ 옵션 없음: {gid}")
             if not sizes:
+                print(f"⚠️ 옵션 없음: {gid}")
                 continue
 
-            brand_name = brand_dict.get(str(good.get("BrandID")))
-            gender = gender_dict.get(str(good.get("GenderID")))
-            key = f"{good.get('GenderID')}|{good.get('ParentCategoryID')}|{good.get('SubCategoryID')}"
-            category = subcat_dict.get(key)
-            if not (brand_name and category):
+            brand_name = brand_map.get(str(detail.get("BrandID")))
+            if not brand_name:
+                print(f"⚠️ 브랜드 매핑 실패: {gid}")
                 continue
 
-            category1 = category.split(">")[0].strip()
-            category2 = category.split(">")[-1].strip()
+            gender = gender_map.get(str(detail.get("GenderID")))
+            category1, category2 = category_map.get((str(detail.get("CategoryID")), str(detail.get("GenderID"))), (None, None))
+            if not category1 or not category2:
+                print(f"⚠️ 카테고리 매핑 실패: {gid}")
+                continue
 
-            images = extract_image_urls(detail.get("Pictures", {}).get("Picture", []))
-            image_url_1 = images[0] if len(images) > 0 else None
-            image_url_2 = images[1] if len(images) > 1 else None
-            image_url_3 = images[2] if len(images) > 2 else None
-            image_url_4 = images[3] if len(images) > 3 else None
+            pictures = detail.get("Pictures", {}).get("Picture", [])
+            image_urls = [p.get("PictureUrl") for p in pictures if isinstance(p, dict) and p.get("PictureUrl")][:4]
+            image_url_1 = image_urls[0] if len(image_urls) > 0 else None
+            image_url_2 = image_urls[1] if len(image_urls) > 1 else None
+            image_url_3 = image_urls[2] if len(image_urls) > 2 else None
+            image_url_4 = image_urls[3] if len(image_urls) > 3 else None
 
             price_org = max([
-                safe_float((price_map.get((gid, s.get("Barcode"), s.get("Size", "").upper())) or {}).get("NetPrice"))
-                for s in sizes
+                safe_float((p or {}).get("NetPrice", "0"))
+                for p in price_obj.get("Retailers", [])
+                if p.get("Retailer", "").lower() == RETAILER.lower()
             ] or [0])
 
-            first_key = (gid, sizes[0].get("Barcode"), sizes[0].get("Size", "").upper())
-            price_data = price_map.get(first_key, {})
-            price_retail = safe_decimal(price_data.get("BrandReferencePrice", "0"))
-            discount = safe_decimal(price_data.get("Discount", "0"))
+            first_price = next((p for p in price_obj.get("Retailers", [])
+                                if p.get("Retailer", "").lower() == RETAILER.lower()), {})
 
-            try:
-                product, _ = RawProduct.objects.update_or_create(
-                    external_product_id=gid,
-                    defaults={
-                        "retailer": "IT-B-02",
-                        "raw_brand_name": brand_name,
-                        "product_name": f"{good.get('GoodsName')} {good.get('Model', '')} {good.get('Variant', '')}",
-                        "gender": gender,
-                        "category1": category1,
-                        "category2": category2,
-                        "season": good.get("Season"),
-                        "sku": f"{good.get('Model', '')} {good.get('Variant', '')}",
-                        "color": detail.get("Color"),
-                        "origin": detail.get("MadeIn"),
-                        "material": detail.get("Composition"),
-                        "discount_rate": discount,
-                        "image_url_1": image_url_1,
-                        "image_url_2": image_url_2,
-                        "image_url_3": image_url_3,
-                        "image_url_4": image_url_4,
-                        "price_org": Decimal(price_org),
-                        "price_retail": price_retail,
-                        "status": "pending"
-                    }
-                )
+            retail_raw = first_price.get("BrandReferencePrice", "0")
+            price_retail = safe_decimal(retail_raw)
+            discount_raw = first_price.get("Discount", "0")
+            discount = safe_decimal(discount_raw)
 
-                product.options.all().delete()
-                options = []
-                for s in sizes:
-                    barcode = s.get("Barcode")
-                    size = s.get("Size", "").upper()
-                    qty = int(s.get("Qty", "0"))
-                    pkey = (gid, barcode, size)
-                    price_data = price_map.get(pkey, {})
-                    option_price_raw = price_data.get("SizeNetPrice") or price_data.get("NetPrice")
-                    option_price = safe_float(option_price_raw)
+            product, _ = RawProduct.objects.update_or_create(
+                external_product_id=gid,
+                defaults={
+                    "retailer": RETAILER_CODE,
+                    "raw_brand_name": brand_name,
+                    "product_name": f"{detail.get('GoodsName', '')} {detail.get('Model', '')} {detail.get('Variant', '')}",
+                    "gender": gender,
+                    "category1": category1,
+                    "category2": category2,
+                    "season": detail.get("Season"),
+                    "sku": f"{detail.get('Model', '')} {detail.get('Variant', '')}",
+                    "color": detail.get("Color"),
+                    "origin": detail.get("MadeIn"),
+                    "material": detail.get("Composition"),
+                    "discount_rate": discount,
+                    "image_url_1": image_url_1,
+                    "image_url_2": image_url_2,
+                    "image_url_3": image_url_3,
+                    "image_url_4": image_url_4,
+                    "price_org": Decimal(price_org),
+                    "price_retail": price_retail,
+                    "status": "pending"
+                }
+            )
 
-                    options.append(RawProductOption(
-                        product=product,
-                        external_option_id=barcode,
-                        option_name=size,
-                        stock=qty,
-                        price=Decimal(option_price)
-                    ))
-                    option_total += 1
+            product.options.all().delete()
+            for s in sizes:
+                barcode = s.get("Barcode")
+                size = s.get("Size", "").upper()
+                qty = int(s.get("Qty", "0"))
 
-                RawProductOption.objects.bulk_create(options)
-                success += 1
+                option_price_raw = next((r.get("SizeNetPrice") or r.get("NetPrice") for r in price_obj.get("Retailers", [])
+                                         if r.get("Retailer", "").lower() == RETAILER.lower()), "0")
+                option_price = safe_float(option_price_raw)
 
-            except Exception as e:
-                fail += 1
-                print(f"❌ 등록 실패: {gid} → {e}")
+                new_options.append(RawProductOption(
+                    product=product,
+                    external_option_id=barcode,
+                    option_name=size,
+                    stock=qty,
+                    price=Decimal(option_price)
+                ))
 
-    print(f"🎉 BINI 등록 완료: 상품 {success}개 / 실패 {fail}개 / 옵션 {option_total}개")
+        RawProductOption.objects.bulk_create(new_options)
+        print(f"✅ 상품 등록 완료: 상품 {len(data)}개 / 옵션 {len(new_options)}개")
 
-    return success
+        fetch_count = len(data)
+        return fetch_count
+
+if __name__ == "__main__":
+    fetch_count = convert_atelier_products()
+    print(f"📦 수집 완료: {fetch_count}개")
