@@ -11,7 +11,7 @@ class Command(BaseCommand):
         commands = [
             "fetch_and_register_baseblu",
             "fetch_and_register_bini",
-            #"fetch_and_register_cuccuini",
+            "fetch_and_register_cuccuini",
             "fetch_and_register_latti",
             "fetch_and_register_minetti",
         ]
