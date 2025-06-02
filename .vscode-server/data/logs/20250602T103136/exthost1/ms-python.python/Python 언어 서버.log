@@ -1,0 +1,24 @@
+2025-06-02 10:31:57.081 [info] (Client) Pylance async client (2025.5.1) started with python extension (2025.6.1)
+2025-06-02 10:32:09.900 [info] [Info  - 10:32:09 AM] (227988) Server root directory: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist
+2025-06-02 10:32:09.906 [info] [Info  - 10:32:09 AM] (227988) Pylance language server 2025.5.1 (pyright version 1.1.400, commit b962ffc2) starting
+2025-06-02 10:32:09.999 [info] [Info  - 10:32:09 AM] (227988) Starting service instance "root" for workspace "/root"
+2025-06-02 10:32:10.504 [info] [Info  - 10:32:10 AM] (227988) Setting environmentName for service "root": "3.10.12 (venv venv)"
+2025-06-02 10:32:10.506 [info] [Info  - 10:32:10 AM] (227988) Setting pythonPath for service "root": "/root/venv/bin/python"
+2025-06-02 10:32:10.506 [info] [Info  - 10:32:10 AM] (227988) No include entries specified; assuming /root
+2025-06-02 10:32:10.510 [info] [Info  - 10:32:10 AM] (227988) Auto-excluding **/node_modules
+2025-06-02 10:32:10.510 [info] [Info  - 10:32:10 AM] (227988) Auto-excluding **/__pycache__
+2025-06-02 10:32:10.510 [info] [Info  - 10:32:10 AM] (227988) Auto-excluding **/.*
+2025-06-02 10:32:10.803 [info] [Info  - 10:32:10 AM] (227988) Assuming Python version 3.10.12.final.0
+2025-06-02 10:32:12.317 [info] [Info  - 10:32:12 AM] (227988) Auto-excluding /root/venv
+2025-06-02 10:32:12.414 [info] [Info  - 10:32:12 AM] (227988) Found 139 source files
+2025-06-02 10:32:12.913 [info] [Info  - 10:32:12 AM] (227988) Setting environmentName for service "root": "3.10.12 (venv venv)"
+2025-06-02 10:32:12.913 [info] [Info  - 10:32:12 AM] (227988) Setting pythonPath for service "root": "/root/venv/bin/python"
+2025-06-02 10:32:12.914 [info] [Info  - 10:32:12 AM] (227988) No include entries specified; assuming /root
+2025-06-02 10:32:12.914 [info] [Info  - 10:32:12 AM] (227988) Auto-excluding **/node_modules
+2025-06-02 10:32:12.914 [info] [Info  - 10:32:12 AM] (227988) Auto-excluding **/__pycache__
+2025-06-02 10:32:12.914 [info] [Info  - 10:32:12 AM] (227988) Auto-excluding **/.*
+2025-06-02 10:32:13.306 [info] [Info  - 10:32:13 AM] (227988) Assuming Python version 3.10.12.final.0
+2025-06-02 10:32:14.520 [info] [Info  - 10:32:14 AM] (227988) Auto-excluding /root/venv
+2025-06-02 10:32:14.616 [info] [Info  - 10:32:14 AM] (227988) Found 139 source files
+2025-06-02 10:32:18.024 [info] [Info  - 10:32:18 AM] (227988) BG: Priority queue background worker(2) root directory: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist
+2025-06-02 10:32:18.025 [info] [Info  - 10:32:18 AM] (227988) BG: Priority queue background worker(2) started

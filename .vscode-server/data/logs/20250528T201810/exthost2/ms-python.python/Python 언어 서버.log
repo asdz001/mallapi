@@ -1,0 +1,36 @@
+2025-05-28 20:18:33.227 [info] (Client) Pylance async client (2025.5.1) started with python extension (2025.6.1)
+2025-05-28 20:18:41.745 [info] [Info  - 8:18:41 PM] (143226) Server root directory: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist
+2025-05-28 20:18:41.746 [info] [Info  - 8:18:41 PM] (143226) Pylance language server 2025.5.1 (pyright version 1.1.400, commit b962ffc2) starting
+2025-05-28 20:18:41.754 [info] [Info  - 8:18:41 PM] (143226) Starting service instance "root" for workspace "/root"
+2025-05-28 20:18:42.253 [info] [Info  - 8:18:42 PM] (143226) Setting environmentName for service "root": "3.10.12 (venv venv)"
+2025-05-28 20:18:42.253 [info] [Info  - 8:18:42 PM] (143226) Setting pythonPath for service "root": "/root/venv/bin/python"
+2025-05-28 20:18:42.253 [info] [Info  - 8:18:42 PM] (143226) No include entries specified; assuming /root
+2025-05-28 20:18:42.254 [info] [Info  - 8:18:42 PM] (143226) Auto-excluding **/node_modules
+2025-05-28 20:18:42.254 [info] [Info  - 8:18:42 PM] (143226) Auto-excluding **/__pycache__
+2025-05-28 20:18:42.254 [info] [Info  - 8:18:42 PM] (143226) Auto-excluding **/.*
+2025-05-28 20:18:42.448 [info] [Info  - 8:18:42 PM] (143226) Assuming Python version 3.10.12.final.0
+2025-05-28 20:18:44.557 [info] [Info  - 8:18:44 PM] (143226) Auto-excluding /root/venv
+2025-05-28 20:18:44.558 [info] [Info  - 8:18:44 PM] (143226) Found 127 source files
+2025-05-28 20:18:45.261 [info] [Info  - 8:18:45 PM] (143226) Setting environmentName for service "root": "3.10.12 (venv venv)"
+2025-05-28 20:18:45.450 [info] [Info  - 8:18:45 PM] (143226) Setting pythonPath for service "root": "/root/venv/bin/python"
+2025-05-28 20:18:45.454 [info] [Info  - 8:18:45 PM] (143226) No include entries specified; assuming /root
+2025-05-28 20:18:45.455 [info] [Info  - 8:18:45 PM] (143226) Auto-excluding **/node_modules
+2025-05-28 20:18:45.455 [info] [Info  - 8:18:45 PM] (143226) Auto-excluding **/__pycache__
+2025-05-28 20:18:45.455 [info] [Info  - 8:18:45 PM] (143226) Auto-excluding **/.*
+2025-05-28 20:18:45.455 [info] [Info  - 8:18:45 PM] (143226) Assuming Python version 3.10.12.final.0
+2025-05-28 20:18:46.562 [info] [Info  - 8:18:46 PM] (143226) Auto-excluding /root/venv
+2025-05-28 20:18:46.563 [info] [Info  - 8:18:46 PM] (143226) Found 127 source files
+2025-05-28 20:18:52.169 [info] [Info  - 8:18:52 PM] (143226) BG: Priority queue background worker(2) root directory: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist
+2025-05-28 20:18:52.169 [info] [Info  - 8:18:52 PM] (143226) BG: Priority queue background worker(2) started
+2025-05-28 20:18:55.280 [info] [Info  - 8:18:55 PM] (143226) BG: Indexer background runner(3) root directory: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist (index)
+2025-05-28 20:18:55.280 [info] [Info  - 8:18:55 PM] (143226) BG: Indexing(3) started
+2025-05-28 20:19:02.220 [info] [Info  - 8:19:02 PM] (143226) BG: [IDX(3)] Long operation: scan packages file:///root (6131ms)
+2025-05-28 20:19:02.220 [info] [Info  - 8:19:02 PM] (143226) BG: scanned(3) 48 files over 1 exec env
+2025-05-28 20:19:04.627 [info] [Info  - 8:19:04 PM] (143226) BG: indexed(3) 48 files over 1 exec env
+2025-05-28 20:19:04.924 [info] [Info  - 8:19:04 PM] (143226) BG: Indexing finished(3).
+2025-05-28 20:19:09.131 [info] [Info  - 8:19:09 PM] (143226) BG: [BG(1)] Long operation: checking: file:///root/shop/management/commands/fetch_and_register_minetti.py (3632ms)
+2025-05-28 20:19:09.131 [info] [Info  - 8:19:09 PM] (143226) BG: [BG(1)] Long operation: analyzing: file:///root/shop/management/commands/fetch_and_register_minetti.py (3709ms)
+2025-05-28 20:19:47.152 [info] [Info  - 8:19:47 PM] (143226) Auto-excluding /root/venv
+2025-05-28 20:19:47.235 [info] [Info  - 8:19:47 PM] (143226) Found 129 source files
+2025-05-28 20:19:53.550 [info] [Info  - 8:19:53 PM] (143226) BG: [BG(1)] Long operation: checking: file:///root/shop/management/commands/fetch_and_register_minetti.py (3415ms)
+2025-05-28 20:19:53.551 [info] [Info  - 8:19:53 PM] (143226) BG: [BG(1)] Long operation: analyzing: file:///root/shop/management/commands/fetch_and_register_minetti.py (3415ms)

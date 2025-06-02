@@ -1,0 +1,20 @@
+2025-05-27 18:26:48.405 [info] Extension host with pid 119976 started
+2025-05-27 18:26:48.604 [info] ExtensionService#_doActivateExtension vscode.git-base, startup: false, activationEvent: '*', root cause: vscode.git
+2025-05-27 18:26:48.606 [info] ExtensionService#_doActivateExtension vscode.emmet, startup: false, activationEvent: 'onLanguage'
+2025-05-27 18:26:48.606 [info] ExtensionService#_doActivateExtension vscode.tunnel-forwarding, startup: false, activationEvent: 'onTunnel'
+2025-05-27 18:26:48.607 [info] ExtensionService#_doActivateExtension ms-python.python, startup: false, activationEvent: 'onLanguage:python', root cause: ms-python.debugpy
+2025-05-27 18:26:48.609 [info] Lock '/root/.vscode-server/data/User/workspaceStorage/69b865ee5b39d8dd4400c31e5ed23100/vscode.lock': Lock acquired.
+2025-05-27 18:26:49.199 [info] ExtensionService#_doActivateExtension vscode.git, startup: false, activationEvent: '*'
+2025-05-27 18:26:49.200 [info] ExtensionService#_doActivateExtension vscode.github, startup: false, activationEvent: '*'
+2025-05-27 18:26:51.712 [info] ExtensionService#_doActivateExtension ms-python.debugpy, startup: false, activationEvent: 'onLanguage:python'
+2025-05-27 18:26:51.712 [info] ExtensionService#_doActivateExtension ms-python.vscode-pylance, startup: false, activationEvent: 'onLanguage:python'
+2025-05-27 18:26:56.007 [info] Eager extensions activated
+2025-05-27 18:26:56.007 [info] ExtensionService#_doActivateExtension vscode.debug-auto-launch, startup: false, activationEvent: 'onStartupFinished'
+2025-05-27 18:26:56.008 [info] ExtensionService#_doActivateExtension vscode.merge-conflict, startup: false, activationEvent: 'onStartupFinished'
+2025-05-27 18:27:02.533 [info] ExtensionService#_doActivateExtension vscode.npm, startup: false, activationEvent: 'onTerminalQuickFixRequest:ms-vscode.npm-command'
+2025-05-27 18:27:10.953 [info] ExtensionService#_doActivateExtension vscode.configuration-editing, startup: false, activationEvent: 'onLanguage:json'
+2025-05-27 18:27:10.954 [info] ExtensionService#_doActivateExtension vscode.extension-editing, startup: false, activationEvent: 'onLanguage:json'
+2025-05-27 18:27:10.954 [info] ExtensionService#_doActivateExtension vscode.json-language-features, startup: false, activationEvent: 'onLanguage:json'
+2025-05-27 18:59:07.981 [info] Extension host terminating: received terminate message from renderer
+2025-05-27 18:59:07.982 [info] Lock '/root/.vscode-server/data/User/workspaceStorage/69b865ee5b39d8dd4400c31e5ed23100/vscode.lock': Marking the lockfile as scheduled to be released in 6000 ms.
+2025-05-27 18:59:08.042 [info] Extension host with pid 119976 exiting with code 0

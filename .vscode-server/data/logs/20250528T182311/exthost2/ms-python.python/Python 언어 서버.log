@@ -1,0 +1,37 @@
+2025-05-28 18:23:36.104 [info] (Client) Pylance async client (2025.5.1) started with python extension (2025.6.1)
+2025-05-28 18:23:44.319 [info] [Info  - 6:23:44 PM] (135546) Server root directory: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist
+2025-05-28 18:23:44.408 [info] [Info  - 6:23:44 PM] (135546) Pylance language server 2025.5.1 (pyright version 1.1.400, commit b962ffc2) starting
+2025-05-28 18:23:44.419 [info] [Info  - 6:23:44 PM] (135546) Starting service instance "root" for workspace "/root"
+2025-05-28 18:23:46.615 [info] [Info  - 6:23:46 PM] (135546) Setting environmentName for service "root": "3.10.12 (venv venv)"
+2025-05-28 18:23:46.623 [info] [Info  - 6:23:46 PM] (135546) Setting pythonPath for service "root": "/root/venv/bin/python"
+2025-05-28 18:23:46.821 [info] [Info  - 6:23:46 PM] (135546) No include entries specified; assuming /root
+2025-05-28 18:23:46.822 [info] [Info  - 6:23:46 PM] (135546) Auto-excluding **/node_modules
+2025-05-28 18:23:47.119 [info] [Info  - 6:23:47 PM] (135546) Auto-excluding **/__pycache__
+2025-05-28 18:23:47.225 [info] [Info  - 6:23:47 PM] (135546) Auto-excluding **/.*
+2025-05-28 18:23:47.226 [info] [Info  - 6:23:47 PM] (135546) Assuming Python version 3.10.12.final.0
+2025-05-28 18:23:48.121 [info] [Info  - 6:23:48 PM] (135546) Auto-excluding /root/venv
+2025-05-28 18:23:48.519 [info] [Info  - 6:23:48 PM] (135546) Found 126 source files
+2025-05-28 18:23:49.624 [info] [Info  - 6:23:49 PM] (135546) Setting environmentName for service "root": "3.10.12 (venv venv)"
+2025-05-28 18:23:49.625 [info] [Info  - 6:23:49 PM] (135546) Setting pythonPath for service "root": "/root/venv/bin/python"
+2025-05-28 18:23:49.626 [info] [Info  - 6:23:49 PM] (135546) No include entries specified; assuming /root
+2025-05-28 18:23:49.626 [info] [Info  - 6:23:49 PM] (135546) Auto-excluding **/node_modules
+2025-05-28 18:23:49.627 [info] [Info  - 6:23:49 PM] (135546) Auto-excluding **/__pycache__
+2025-05-28 18:23:49.627 [info] [Info  - 6:23:49 PM] (135546) Auto-excluding **/.*
+2025-05-28 18:23:49.627 [info] [Info  - 6:23:49 PM] (135546) Assuming Python version 3.10.12.final.0
+2025-05-28 18:23:50.723 [info] [Info  - 6:23:50 PM] (135546) Auto-excluding /root/venv
+2025-05-28 18:23:50.822 [info] [Info  - 6:23:50 PM] (135546) Found 126 source files
+2025-05-28 18:23:53.033 [info] [Info  - 6:23:53 PM] (135546) [FG] Long operation: parsing: file:///root/shop/admin.py (2002ms)
+2025-05-28 18:23:58.044 [info] [Info  - 6:23:58 PM] (135546) BG: Priority queue background worker(2) root directory: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist
+2025-05-28 18:23:58.045 [info] [Info  - 6:23:58 PM] (135546) BG: Priority queue background worker(2) started
+2025-05-28 18:24:00.655 [info] [Info  - 6:24:00 PM] (135546) BG: Indexer background runner(3) root directory: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist (index)
+2025-05-28 18:24:00.655 [info] [Info  - 6:24:00 PM] (135546) BG: Indexing(3) started
+2025-05-28 18:24:09.570 [info] [Info  - 6:24:09 PM] (135546) BG: [IDX(3)] Long operation: scan packages file:///root (8016ms)
+2025-05-28 18:24:09.571 [info] [Info  - 6:24:09 PM] (135546) BG: scanned(3) 48 files over 1 exec env
+2025-05-28 18:24:12.066 [info] [Info  - 6:24:12 PM] (135546) BG: indexed(3) 48 files over 1 exec env
+2025-05-28 18:24:12.372 [info] [Info  - 6:24:12 PM] (135546) BG: Indexing finished(3).
+2025-05-28 18:36:15.993 [info] [Info  - 6:36:15 PM] (135546) BG: [BG(1)] Long operation: checking: file:///root/shop/management/commands/fetch_and_register_minetti.py (3703ms)
+2025-05-28 18:36:15.993 [info] [Info  - 6:36:15 PM] (135546) BG: [BG(1)] Long operation: analyzing: file:///root/shop/management/commands/fetch_and_register_minetti.py (3703ms)
+2025-05-28 18:59:19.277 [info] [Info  - 6:59:19 PM] (135546) Auto-excluding /root/venv
+2025-05-28 18:59:19.308 [info] [Info  - 6:59:19 PM] (135546) Found 127 source files
+2025-05-28 18:59:21.892 [info] [Info  - 6:59:21 PM] (135546) BG: [BG(1)] Long operation: checking: file:///root/shop/admin.py (2306ms)
+2025-05-28 18:59:21.893 [info] [Info  - 6:59:21 PM] (135546) BG: [BG(1)] Long operation: analyzing: file:///root/shop/admin.py (2554ms)

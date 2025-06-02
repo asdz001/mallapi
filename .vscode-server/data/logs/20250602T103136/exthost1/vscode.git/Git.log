@@ -1,0 +1,57 @@
+2025-06-02 10:31:45.438 [info] [main] 로그 수준: Info
+2025-06-02 10:31:45.438 [info] [main] "git"에서 찾은 git 유효성을 검사하는 중
+2025-06-02 10:31:45.438 [info] [main] "2.34.1"에서 git "git"을(를) 사용하는 중
+2025-06-02 10:31:45.438 [info] [Model][doInitialScan] Initial repository scan started
+2025-06-02 10:31:45.439 [info] > git rev-parse --show-toplevel [97ms]
+2025-06-02 10:31:45.445 [info] > git rev-parse --git-dir --git-common-dir [2ms]
+2025-06-02 10:31:45.542 [info] [Model][openRepository] Opened repository (path): /root
+2025-06-02 10:31:45.542 [info] [Model][openRepository] Opened repository (real path): /root
+2025-06-02 10:31:47.054 [info] > git config --get commit.template [1506ms]
+2025-06-02 10:31:48.655 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) refs/heads/main refs/remotes/main [1522ms]
+2025-06-02 10:31:48.841 [info] > git rev-parse --show-toplevel [97ms]
+2025-06-02 10:31:48.851 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [12ms]
+2025-06-02 10:31:48.855 [info] > git rev-parse --show-toplevel [8ms]
+2025-06-02 10:31:49.651 [info] > git check-ignore -v -z --stdin [1102ms]
+2025-06-02 10:31:49.652 [info] > git rev-parse --show-toplevel [496ms]
+2025-06-02 10:31:50.142 [info] > git rev-parse --show-toplevel [189ms]
+2025-06-02 10:31:50.243 [info] > git rev-parse --show-toplevel [93ms]
+2025-06-02 10:31:50.344 [info] > git rev-parse --show-toplevel [93ms]
+2025-06-02 10:31:53.655 [info] > git status -z -uall [4903ms]
+2025-06-02 10:31:53.862 [info] > git rev-parse --show-toplevel [3516ms]
+2025-06-02 10:31:54.265 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) refs/heads/main refs/remotes/main [407ms]
+2025-06-02 10:31:54.273 [info] > git config --get --local branch.main.vscode-merge-base [3ms]
+2025-06-02 10:31:54.273 [warning] [Git][config] git config failed: Failed to execute git
+2025-06-02 10:31:54.356 [info] > git rev-parse --show-toplevel [96ms]
+2025-06-02 10:31:54.357 [info] > git config --get commit.template [101ms]
+2025-06-02 10:31:54.761 [info] > git rev-parse --show-toplevel [397ms]
+2025-06-02 10:31:54.762 [info] > git reflog main --grep-reflog=branch: Created from *. [406ms]
+2025-06-02 10:31:54.772 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) refs/heads/main refs/remotes/main [12ms]
+2025-06-02 10:31:54.773 [info] > git rev-parse --show-toplevel [4ms]
+2025-06-02 10:31:54.774 [info] > git symbolic-ref --short refs/remotes/origin/HEAD [10ms]
+2025-06-02 10:31:54.774 [info] fatal: ref refs/remotes/origin/HEAD is not a symbolic ref
+2025-06-02 10:31:54.774 [warning] [Repository][getDefaultBranch] Failed to get default branch details: Failed to execute git.
+2025-06-02 10:31:54.872 [info] > git rev-parse --show-toplevel [13ms]
+2025-06-02 10:31:54.872 [info] > git merge-base refs/heads/main refs/remotes/origin/main [18ms]
+2025-06-02 10:31:55.174 [info] > git rev-parse --show-toplevel [120ms]
+2025-06-02 10:31:55.174 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [213ms]
+2025-06-02 10:31:55.254 [info] > git diff --name-status -z --diff-filter=ADMR 5707d73799d3c633f7c49dc7809baaee3902210b...refs/remotes/origin/main [301ms]
+2025-06-02 10:31:55.858 [info] > git status -z -uall [902ms]
+2025-06-02 10:31:55.858 [info] > git rev-parse --show-toplevel [96ms]
+2025-06-02 10:31:56.376 [info] > git rev-parse --show-toplevel [12ms]
+2025-06-02 10:31:56.462 [info] > git rev-parse --show-toplevel [4ms]
+2025-06-02 10:31:56.475 [info] > git rev-parse --show-toplevel [8ms]
+2025-06-02 10:31:56.968 [info] > git rev-parse --show-toplevel [490ms]
+2025-06-02 10:31:56.977 [info] > git rev-parse --show-toplevel [2ms]
+2025-06-02 10:31:56.979 [info] [Model][doInitialScan] Initial repository scan completed - repositories (1), closed repositories (0), parent repositories (0), unsafe repositories (0)
+2025-06-02 10:31:57.082 [info] > git show --textconv :명령어_전체정리.txt [21ms]
+2025-06-02 10:31:57.173 [info] > git ls-files --stage -- 명령어_전체정리.txt [106ms]
+2025-06-02 10:31:57.259 [info] > git cat-file -s fe70fc6fc827cd0df0700cf66e494b880dae332b [83ms]
+2025-06-02 10:31:57.466 [info] > git blame --root --incremental 5707d73799d3c633f7c49dc7809baaee3902210b -- 명령어_전체정리.txt [86ms]
+2025-06-02 10:32:43.504 [info] > git config --get commit.template [10ms]
+2025-06-02 10:32:43.514 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) refs/heads/main refs/remotes/main [10ms]
+2025-06-02 10:32:43.533 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [2ms]
+2025-06-02 10:32:43.888 [info] > git status -z -uall [365ms]
+2025-06-02 10:32:48.909 [info] > git config --get commit.template [2ms]
+2025-06-02 10:32:48.913 [info] > git for-each-ref --format=%(refname)%00%(upstream:short)%00%(objectname)%00%(upstream:track)%00%(upstream:remotename)%00%(upstream:remoteref) refs/heads/main refs/remotes/main [1ms]
+2025-06-02 10:32:48.921 [info] > git for-each-ref --sort -committerdate --format %(refname)%00%(objectname)%00%(*objectname) [1ms]
+2025-06-02 10:32:49.072 [info] > git status -z -uall [156ms]

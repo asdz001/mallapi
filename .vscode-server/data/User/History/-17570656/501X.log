@@ -1,0 +1,39 @@
+    from shop.services.product.latti import fetch_latti_raw_products_optimized
+  File "/root/shop/services/product/latti.py", line 83
+    stock=int(stocks[i])
+          ^^^^^^^^^^^^^^
+SyntaxError: invalid syntax. Perhaps you forgot a comma?
+✅ 2025-05-29 12:00:02 - 작업 완료
+------------------------------
+🛑 작업이 이미 실행 중입니다.
+🕒 2025-05-29 16:00:01 - 작업 시작
+Traceback (most recent call last):
+  File "/root/manage.py", line 22, in <module>
+    main()
+  File "/root/manage.py", line 18, in main
+    execute_from_command_line(sys.argv)
+  File "/root/venv/lib/python3.10/site-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+    utility.execute()
+  File "/root/venv/lib/python3.10/site-packages/django/core/management/__init__.py", line 436, in execute
+    self.fetch_command(subcommand).run_from_argv(self.argv)
+  File "/root/venv/lib/python3.10/site-packages/django/core/management/__init__.py", line 275, in fetch_command
+    klass = load_command_class(app_name, subcommand)
+  File "/root/venv/lib/python3.10/site-packages/django/core/management/__init__.py", line 48, in load_command_class
+    module = import_module("%s.management.commands.%s" % (app_name, name))
+  File "/usr/lib/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/root/shop/management/commands/fetch_and_register_latti.py", line 2, in <module>
+    from shop.services.product.latti import fetch_latti_raw_products_optimized
+  File "/root/shop/services/product/latti.py", line 83
+    stock=int(stocks[i])
+          ^^^^^^^^^^^^^^
+SyntaxError: invalid syntax. Perhaps you forgot a comma?
+✅ 2025-05-29 16:00:02 - 작업 완료
+------------------------------
+🛑 작업이 이미 실행 중입니다.

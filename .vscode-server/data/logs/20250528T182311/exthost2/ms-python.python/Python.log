@@ -1,0 +1,30 @@
+2025-05-28 18:23:31.687 [info] 실험 'pythonRecommendTensorboardExt'이(가) 활성 상태입니다.
+2025-05-28 18:23:31.687 [info] 실험 'pythonTerminalEnvVarActivation'이(가) 활성 상태입니다.
+2025-05-28 18:23:31.687 [info] Native locator: Refresh started
+2025-05-28 18:23:31.687 [info] Native locator: Refresh started
+2025-05-28 18:23:31.695 [info] > pyenv which python
+2025-05-28 18:23:31.695 [info] cwd: .
+2025-05-28 18:23:33.397 [info] Native locator: Refresh finished in 7210 ms
+2025-05-28 18:23:33.487 [info] Python 인터프리터 경로: ./venv/bin/python
+2025-05-28 18:23:36.500 [info] > . ./venv/bin/activate && echo 'e8b39361-0157-4923-80e1-22d70d46dee6' && python ./.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/printEnvVariables.py
+2025-05-28 18:23:36.500 [info] shell: bash
+2025-05-28 18:23:37.099 [info] > /bin/python2 ./.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/printEnvVariables.py
+2025-05-28 18:23:37.099 [info] shell: bash
+2025-05-28 18:23:37.308 [info] Setting environment variable VIRTUAL_ENV in collection to /root/venv {"applyAtShellIntegration":true,"applyAtProcessCreation":true}
+2025-05-28 18:23:37.308 [info] Setting environment variable VIRTUAL_ENV_PROMPT in collection to (venv)  {"applyAtShellIntegration":true,"applyAtProcessCreation":true}
+2025-05-28 18:23:37.308 [info] Prepending environment variable PS1 in collection with (venv)  {"applyAtShellIntegration":true,"applyAtProcessCreation":false}
+2025-05-28 18:23:37.308 [info] Prepending environment variable PATH in collection with /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/deactivate/bash:/root/venv/bin: {"applyAtShellIntegration":true,"applyAtProcessCreation":true}
+2025-05-28 18:23:37.309 [info] Send text to terminal: /bin/python2 /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/printEnvVariablesToFile.py /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/deactivate/bash/envVars.txt
+2025-05-28 18:23:45.118 [info] Pylance 언어 서버를 시작하는 중입니다.
+2025-05-28 18:24:07.357 [error] Failed to initialize deactivate script /bin/bash [Error: "/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/deactivate/bash/envVars.txt" file not created
+	at Timeout.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:310824)
+	at listOnTimeout (node:internal/timers:581:17)
+	at process.processTimers (node:internal/timers:519:7)]
+2025-05-28 18:48:43.692 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/bini/convert_bini_products.py
+2025-05-28 19:11:19.731 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/minetti/fetch_goods_list.py
+2025-05-28 19:13:01.067 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/minetti/fetch_goods_list_test.py
+2025-05-28 19:20:28.562 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/minetti/fetch_goods_list.py
+2025-05-28 19:20:44.540 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/minetti/fetch_goods_list.py
+2025-05-28 19:22:06.587 [info] Discover tests for workspace name: root - uri: /root/shop/management/commands/fetch_and_register_minetti.py
+2025-05-28 19:23:40.490 [info] Discover tests for workspace name: root - uri: /root/shop/management/commands/fetch_and_register_minetti.py
+2025-05-28 19:26:40.789 [info] Discover tests for workspace name: root - uri: /root/shop/management/commands/fetch_and_register_minetti.py

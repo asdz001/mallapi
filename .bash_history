@@ -339,3 +339,24 @@ deactivate
 source /root/venv/bin/activate
 pip install openpyxl
 df -h
+source venv/bin/activate
+git pull origin main
+(Gunicorn 재시작) - 코드 수정하면 작업해야함
+sudo systemctl restart gunicorn
+git pull origin main
+(Gunicorn 재시작) - 코드 수정하면 작업해야함
+sudo systemctl restart gunicorn
+git pull origin main
+git reset --hard
+git pull origin main
+crontab -e
+python manage.py fetch_and_register_cuccuini
+sudo systemctl restart gunicorn
+git pull origin main
+(Gunicorn 재시작) - 코드 수정하면 작업해야함
+sudo systemctl restart gunicorn
+/bin/python2 /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/printEnvVariablesToFile.py /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/deactivate/bash/envVars.txt
+/usr/bin/python2 /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/printEnvVariablesToFile.py /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/deactivate/bash/envVars.txt
+/bin/python2 /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/printEnvVariablesToFile.py /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/deactivate/bash/envVars.txt
+source venv/bin/activate
+python manage.py fetch_and_register_all

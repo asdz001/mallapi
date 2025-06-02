@@ -1,0 +1,29 @@
+2025-05-27 18:26:56.026 [info] Starting Python Locator /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python-env-tools/bin/pet server
+2025-05-27 18:26:57.126 [info] Discovered env: /root/venv/bin/python
+2025-05-27 18:26:57.412 [info] Discovered env: /bin/python2
+2025-05-27 18:26:57.412 [info] Discovered env: /usr/bin/python2
+2025-05-27 18:26:57.413 [info] Discovered env: /bin/python3
+2025-05-27 18:26:57.413 [info] Discovered env: /usr/bin/python3
+2025-05-27 18:26:57.414 [info] Locator Conda took 514.966753ms
+2025-05-27 18:26:57.414 [info] Locator Homebrew took 90.301µs
+2025-05-27 18:26:57.414 [info] Locator LinuxGlobal took 509.495038ms
+2025-05-27 18:26:57.414 [info] Locator PipEnv took 79.893666ms
+2025-05-27 18:26:57.414 [info] Locator Pixi took 1.93466ms
+2025-05-27 18:26:57.414 [info] Locator Poetry took 10.039407ms
+2025-05-27 18:26:57.414 [info] Locator PyEnv took 1.271726ms
+2025-05-27 18:26:57.414 [info] Locator Venv took 97.144869ms
+2025-05-27 18:26:57.414 [info] Locator VirtualEnv took 16.756µs
+2025-05-27 18:26:57.414 [info] Locator VirtualEnvWrapper took 39.028µs
+2025-05-27 18:26:57.414 [info] Locator GlobalVirtualEnvs took 1.024232ms
+2025-05-27 18:26:57.414 [info] Locator Locators took 518.383525ms
+2025-05-27 18:26:57.414 [info] Locator Path took 882.979145ms
+2025-05-27 18:26:57.422 [info] Locator Workspaces took 410.06721ms
+2025-05-27 18:26:57.422 [info] Refresh completed in 883ms
+2025-05-27 18:26:57.424 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-27 18:37:49.762 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-27 18:39:31.104 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-27 18:40:48.487 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-27 18:45:26.981 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-27 18:50:13.310 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-27 18:56:36.527 [info] Resolved Python Environment /root/venv/bin/python
+2025-05-27 18:58:38.828 [info] Resolved Python Environment /root/venv/bin/python
