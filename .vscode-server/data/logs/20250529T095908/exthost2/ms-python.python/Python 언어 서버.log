@@ -1,0 +1,36 @@
+2025-05-29 09:59:31.618 [info] (Client) Pylance async client (2025.5.1) started with python extension (2025.6.1)
+2025-05-29 09:59:40.147 [info] [Info  - 9:59:40 AM] (151338) Server root directory: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist
+2025-05-29 09:59:40.148 [info] [Info  - 9:59:40 AM] (151338) Pylance language server 2025.5.1 (pyright version 1.1.400, commit b962ffc2) starting
+2025-05-29 09:59:40.235 [info] [Info  - 9:59:40 AM] (151338) Starting service instance "root" for workspace "/root"
+2025-05-29 09:59:40.749 [info] [Info  - 9:59:40 AM] (151338) Setting environmentName for service "root": "3.10.12 (venv venv)"
+2025-05-29 09:59:40.749 [info] [Info  - 9:59:40 AM] (151338) Setting pythonPath for service "root": "/root/venv/bin/python"
+2025-05-29 09:59:40.750 [info] [Info  - 9:59:40 AM] (151338) No include entries specified; assuming /root
+2025-05-29 09:59:40.830 [info] [Info  - 9:59:40 AM] (151338) Auto-excluding **/node_modules
+2025-05-29 09:59:40.831 [info] [Info  - 9:59:40 AM] (151338) Auto-excluding **/__pycache__
+2025-05-29 09:59:40.831 [info] [Info  - 9:59:40 AM] (151338) Auto-excluding **/.*
+2025-05-29 09:59:40.943 [info] [Info  - 9:59:40 AM] (151338) Assuming Python version 3.10.12.final.0
+2025-05-29 09:59:41.845 [info] [Info  - 9:59:41 AM] (151338) Auto-excluding /root/venv
+2025-05-29 09:59:42.242 [info] [Info  - 9:59:42 AM] (151338) Found 129 source files
+2025-05-29 09:59:42.936 [info] [Info  - 9:59:42 AM] (151338) Setting environmentName for service "root": "3.10.12 (venv venv)"
+2025-05-29 09:59:42.936 [info] [Info  - 9:59:42 AM] (151338) Setting pythonPath for service "root": "/root/venv/bin/python"
+2025-05-29 09:59:42.936 [info] [Info  - 9:59:42 AM] (151338) No include entries specified; assuming /root
+2025-05-29 09:59:42.936 [info] [Info  - 9:59:42 AM] (151338) Auto-excluding **/node_modules
+2025-05-29 09:59:42.936 [info] [Info  - 9:59:42 AM] (151338) Auto-excluding **/__pycache__
+2025-05-29 09:59:42.936 [info] [Info  - 9:59:42 AM] (151338) Auto-excluding **/.*
+2025-05-29 09:59:43.135 [info] [Info  - 9:59:43 AM] (151338) Assuming Python version 3.10.12.final.0
+2025-05-29 09:59:44.347 [info] [Info  - 9:59:44 AM] (151338) Auto-excluding /root/venv
+2025-05-29 09:59:44.347 [info] [Info  - 9:59:44 AM] (151338) Found 129 source files
+2025-05-29 09:59:49.250 [info] [Info  - 9:59:49 AM] (151338) BG: Priority queue background worker(2) root directory: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist
+2025-05-29 09:59:49.250 [info] [Info  - 9:59:49 AM] (151338) BG: Priority queue background worker(2) started
+2025-05-29 09:59:51.453 [info] [Info  - 9:59:51 AM] (151338) BG: Indexer background runner(3) root directory: file:///root/.vscode-server/extensions/ms-python.vscode-pylance-2025.5.1/dist (index)
+2025-05-29 09:59:51.454 [info] [Info  - 9:59:51 AM] (151338) BG: Indexing(3) started
+2025-05-29 09:59:56.362 [info] [Info  - 9:59:56 AM] (151338) BG: [IDX(3)] Long operation: scan packages file:///root (4393ms)
+2025-05-29 09:59:56.362 [info] [Info  - 9:59:56 AM] (151338) BG: scanned(3) 48 files over 1 exec env
+2025-05-29 09:59:58.871 [info] [Info  - 9:59:58 AM] (151338) BG: indexed(3) 48 files over 1 exec env
+2025-05-29 09:59:59.172 [info] [Info  - 9:59:59 AM] (151338) BG: Indexing finished(3).
+2025-05-29 18:27:38.442 [info] [Info  - 6:27:38 PM] (151338) Auto-excluding /root/venv
+2025-05-29 18:27:38.535 [info] [Info  - 6:27:38 PM] (151338) Found 136 source files
+2025-05-29 18:27:43.643 [info] [Info  - 6:27:43 PM] (151338) BG: [BG(1)] Long operation: checking: file:///root/shop/services/product/latti.py (3111ms)
+2025-05-29 18:27:43.643 [info] [Info  - 6:27:43 PM] (151338) BG: [BG(1)] Long operation: analyzing: file:///root/shop/services/product/latti.py (4504ms)
+2025-05-29 18:34:37.220 [info] [Info  - 6:34:37 PM] (151338) BG: [BG(1)] Long operation: checking: file:///root/shop/management/commands/fetch_and_register_cuccuini.py (5222ms)
+2025-05-29 18:34:37.222 [info] [Info  - 6:34:37 PM] (151338) BG: [BG(1)] Long operation: analyzing: file:///root/shop/management/commands/fetch_and_register_cuccuini.py (5223ms)

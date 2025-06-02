@@ -1,0 +1,35 @@
+2025-05-30 15:20:41.160 [info] Extension host with pid 189973 started
+2025-05-30 15:20:41.464 [info] ExtensionService#_doActivateExtension vscode.git-base, startup: false, activationEvent: '*', root cause: vscode.git
+2025-05-30 15:20:41.465 [info] ExtensionService#_doActivateExtension vscode.emmet, startup: false, activationEvent: 'onLanguage'
+2025-05-30 15:20:41.466 [info] ExtensionService#_doActivateExtension vscode.tunnel-forwarding, startup: false, activationEvent: 'onTunnel'
+2025-05-30 15:20:41.469 [info] Lock '/root/.vscode-server/data/User/workspaceStorage/69b865ee5b39d8dd4400c31e5ed23100/vscode.lock': Lock acquired.
+2025-05-30 15:20:42.263 [info] ExtensionService#_doActivateExtension vscode.git, startup: false, activationEvent: '*'
+2025-05-30 15:20:42.264 [info] ExtensionService#_doActivateExtension vscode.github, startup: false, activationEvent: '*'
+2025-05-30 15:20:43.372 [info] ExtensionService#_doActivateExtension ms-python.python, startup: true, activationEvent: 'workspaceContains:requirements.txt'
+2025-05-30 15:20:46.278 [info] Eager extensions activated
+2025-05-30 15:20:46.278 [info] ExtensionService#_doActivateExtension vscode.debug-auto-launch, startup: false, activationEvent: 'onStartupFinished'
+2025-05-30 15:20:46.279 [info] ExtensionService#_doActivateExtension vscode.merge-conflict, startup: false, activationEvent: 'onStartupFinished'
+2025-05-30 15:20:47.691 [info] ExtensionService#_doActivateExtension ms-python.vscode-pylance, startup: false, activationEvent: 'api', root cause: ms-python.python
+2025-05-30 15:20:49.883 [warning] [Decorations] CAPPING events from decorations provider vscode.git 303
+2025-05-30 15:20:51.486 [warning] [Decorations] CAPPING events from decorations provider vscode.git 304
+2025-05-30 15:20:53.694 [info] ExtensionService#_doActivateExtension vscode.npm, startup: false, activationEvent: 'onTerminalQuickFixRequest:ms-vscode.npm-command'
+2025-05-30 15:20:55.995 [warning] [Decorations] CAPPING events from decorations provider vscode.git 304
+2025-05-30 15:21:00.502 [info] ExtensionService#_doActivateExtension vscode.configuration-editing, startup: false, activationEvent: 'onLanguage:json'
+2025-05-30 15:21:00.503 [info] ExtensionService#_doActivateExtension vscode.extension-editing, startup: false, activationEvent: 'onLanguage:json'
+2025-05-30 15:21:00.503 [info] ExtensionService#_doActivateExtension vscode.json-language-features, startup: false, activationEvent: 'onLanguage:json'
+2025-05-30 15:21:00.803 [info] ExtensionService#_doActivateExtension ms-python.debugpy, startup: false, activationEvent: 'onLanguage:python'
+2025-05-30 15:21:27.280 [warning] [Decorations] CAPPING events from decorations provider vscode.git 306
+2025-05-30 15:21:36.406 [warning] [Decorations] CAPPING events from decorations provider vscode.git 306
+2025-05-30 15:21:41.513 [warning] [Decorations] CAPPING events from decorations provider vscode.git 306
+2025-05-30 15:21:46.613 [warning] [Decorations] CAPPING events from decorations provider vscode.git 306
+2025-05-30 15:21:51.708 [warning] [Decorations] CAPPING events from decorations provider vscode.git 306
+2025-05-30 15:21:58.067 [warning] [Decorations] CAPPING events from decorations provider vscode.git 306
+2025-05-30 15:22:03.179 [warning] [Decorations] CAPPING events from decorations provider vscode.git 306
+2025-05-30 15:23:56.695 [warning] [Decorations] CAPPING events from decorations provider vscode.git 306
+2025-05-30 15:30:17.679 [warning] [Decorations] CAPPING events from decorations provider vscode.git 306
+2025-05-30 15:30:22.784 [warning] [Decorations] CAPPING events from decorations provider vscode.git 306
+2025-05-30 15:30:25.169 [info] Lock '/root/.vscode-server/data/User/workspaceStorage/69b865ee5b39d8dd4400c31e5ed23100/vscode.lock': The lock was lost unexpectedly.
+2025-05-30 15:30:25.679 [warning] [Decorations] CAPPING events from decorations provider vscode.git 306
+2025-05-30 19:42:24.636 [info] Extension host terminating: received terminate message from renderer
+2025-05-30 19:42:24.637 [info] Lock '/root/.vscode-server/data/User/workspaceStorage/69b865ee5b39d8dd4400c31e5ed23100/vscode.lock': Marking the lockfile as scheduled to be released in 6000 ms.
+2025-05-30 19:42:24.745 [info] Extension host with pid 189973 exiting with code 0

@@ -1,4 +1,0 @@
-2025-05-23 19:36:09.838 [info] [main] 로그 수준: Info
-2025-05-23 19:36:09.838 [info] [main] "git"에서 찾은 git 유효성을 검사하는 중
-2025-05-23 19:36:09.838 [warning] Unable to find git. Error: spawn git ENOENT
-2025-05-23 19:36:09.838 [warning] [main] Failed to create model: Error: Git installation not found.

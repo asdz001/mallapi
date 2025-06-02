@@ -1,0 +1,28 @@
+2025-05-28 20:18:10.373 [info] 
+
+
+
+
+2025-05-28 20:18:10.385 [info] Extension host agent started.
+2025-05-28 20:18:10.570 [info] [<unknown>][b02a1409][ExtensionHostConnection] New connection established.
+2025-05-28 20:18:10.571 [info] [<unknown>][5475846d][ManagementConnection] New connection established.
+2025-05-28 20:18:10.795 [info] [<unknown>][b02a1409][ExtensionHostConnection] <142806> Launched Extension Host Process.
+2025-05-28 20:18:11.083 [info] ComputeTargetPlatform: linux-x64
+2025-05-28 20:18:15.180 [info] ComputeTargetPlatform: linux-x64
+2025-05-28 20:18:16.178 [error] Error: read ECONNRESET
+    at Pipe.onStreamRead (node:internal/stream_base_commons:218:20)
+2025-05-28 20:18:16.179 [info] [<unknown>][5475846d][ManagementConnection] The client has disconnected, will wait for reconnection 3h before disposing...
+2025-05-28 20:18:19.645 [info] [<unknown>][5475846d][ManagementConnection] Another client has connected, will shorten the wait for reconnection 5m before disposing...
+2025-05-28 20:18:19.645 [info] [<unknown>][da8ba465][ExtensionHostConnection] New connection established.
+2025-05-28 20:18:19.649 [info] [<unknown>][da8ba465][ExtensionHostConnection] <142934> Launched Extension Host Process.
+2025-05-28 20:18:19.651 [info] [<unknown>][71b0ef4d][ManagementConnection] New connection established.
+2025-05-28 20:23:10.388 [info] New EH opened, aborting shutdown
+2025-05-28 20:23:10.391 [error] Error: Unexpected SIGPIPE
+    at process.<anonymous> (file:///root/.vscode-server/cli/servers/Stable-848b80aeb52026648a8ff9f7c45a9b0a80641e2e/server/out/server-main.js:190:1060)
+    at process.emit (node:events:536:35)
+2025-05-28 20:23:20.037 [info] [<unknown>][b02a1409][ExtensionHostConnection] <142806> Extension Host Process exited with code: 0, signal: null.
+2025-05-28 20:23:20.252 [info] [<unknown>][5475846d][ManagementConnection] The reconnection short grace time of 5m has expired, so the connection will be disposed.
+2025-05-28 21:30:38.516 [info] [<unknown>][71b0ef4d][ManagementConnection] The client has disconnected gracefully, so the connection will be disposed.
+2025-05-28 21:30:38.583 [info] [<unknown>][da8ba465][ExtensionHostConnection] <142934> Extension Host Process exited with code: 0, signal: null.
+2025-05-28 21:30:38.583 [info] Last EH closed, waiting before shutting down
+2025-05-28 21:35:38.584 [info] Last EH closed, shutting down

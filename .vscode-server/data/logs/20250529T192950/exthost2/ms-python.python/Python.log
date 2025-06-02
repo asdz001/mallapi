@@ -1,0 +1,63 @@
+2025-05-29 19:30:13.771 [info] 실험 'pythonRecommendTensorboardExt'이(가) 활성 상태입니다.
+2025-05-29 19:30:13.771 [info] 실험 'pythonSurveyNotificationcf'이(가) 활성 상태입니다.
+2025-05-29 19:30:13.771 [info] 실험 'pythonTerminalEnvVarActivation'이(가) 활성 상태입니다.
+2025-05-29 19:30:13.771 [info] Native locator: Refresh started
+2025-05-29 19:30:13.771 [info] Native locator: Refresh started
+2025-05-29 19:30:13.771 [info] > pyenv which python
+2025-05-29 19:30:13.771 [info] cwd: .
+2025-05-29 19:30:16.790 [info] Native locator: Refresh finished in 8521 ms
+2025-05-29 19:30:16.879 [info] Python 인터프리터 경로: ./venv/bin/python
+2025-05-29 19:30:17.783 [info] > . ./venv/bin/activate && echo 'e8b39361-0157-4923-80e1-22d70d46dee6' && python ./.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/printEnvVariables.py
+2025-05-29 19:30:17.783 [info] shell: bash
+2025-05-29 19:30:17.976 [info] > /bin/python2 ./.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/printEnvVariables.py
+2025-05-29 19:30:17.977 [info] shell: bash
+2025-05-29 19:30:18.175 [info] Setting environment variable VIRTUAL_ENV in collection to /root/venv {"applyAtShellIntegration":true,"applyAtProcessCreation":true}
+2025-05-29 19:30:18.175 [info] Setting environment variable VIRTUAL_ENV_PROMPT in collection to (venv)  {"applyAtShellIntegration":true,"applyAtProcessCreation":true}
+2025-05-29 19:30:18.175 [info] Prepending environment variable PS1 in collection with (venv)  {"applyAtShellIntegration":true,"applyAtProcessCreation":false}
+2025-05-29 19:30:18.175 [info] Prepending environment variable PATH in collection with /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/deactivate/bash:/root/venv/bin: {"applyAtShellIntegration":true,"applyAtProcessCreation":true}
+2025-05-29 19:30:18.176 [info] Send text to terminal: /bin/python2 /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/printEnvVariablesToFile.py /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/deactivate/bash/envVars.txt
+2025-05-29 19:30:25.702 [info] Pylance 언어 서버를 시작하는 중입니다.
+2025-05-29 19:30:48.236 [error] Failed to initialize deactivate script /bin/bash [Error: "/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/deactivate/bash/envVars.txt" file not created
+	at Timeout.<anonymous> (/root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/out/client/extension.js:2:310824)
+	at listOnTimeout (node:internal/timers:581:17)
+	at process.processTimers (node:internal/timers:519:7)]
+2025-05-29 22:39:34.111 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:39:36.164 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:39:38.620 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:39:39.098 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:39:52.697 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:41:23.066 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:41:49.916 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:41:58.533 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:42:00.187 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:42:05.304 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:42:05.703 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:43:49.244 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:43:59.884 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:44:03.352 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:44:03.772 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:44:31.067 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:44:54.065 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:44:58.048 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:45:02.173 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:45:18.312 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:45:26.779 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:45:37.436 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:45:39.120 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:45:41.265 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:45:43.979 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:46:22.236 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:46:24.591 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 22:47:19.207 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_cuccuini_products.py
+2025-05-29 22:47:38.084 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_cuccuini_products.py
+2025-05-29 22:47:41.300 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_cuccuini_products.py
+2025-05-29 22:47:55.498 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_cuccuini_products.py
+2025-05-29 22:48:00.774 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_cuccuini_products.py
+2025-05-29 22:49:43.080 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_cuccuini_products.py
+2025-05-29 22:49:43.348 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_cuccuini_products.py
+2025-05-29 22:50:08.971 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_cuccuini_products.py
+2025-05-29 22:50:10.321 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_cuccuini_products.py
+2025-05-29 22:50:13.837 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_cuccuini_products.py
+2025-05-29 22:50:14.354 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_cuccuini_products.py
+2025-05-29 23:08:14.328 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
+2025-05-29 23:08:20.225 [info] Discover tests for workspace name: root - uri: /root/shop/api/atelier/convert_bini_products.py
