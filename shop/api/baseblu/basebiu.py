@@ -5,16 +5,22 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from django.db import transaction
 from shop.models import RawProduct
+from shop.models import RawProductOption  # 옵션 모델 존재 시
+
+
 
 # 설정
 SHOP_ID = "BASE BLU"
 CONFIG = {
     "BASE BLU": {
-        "key": "61a61031e8107c472fc312f3-66013c37f598544a853a23fd:5d630d9844a6d0827d14247d6cafeec0",
+        # "key": "61a61031e8107c472fc312f3-66013c37f598544a853a23fd:5d630d9844a6d0827d14247d6cafeec0", #테스트 키키
+        'key': '61a61031e8107c472fc312f3-6791f518791ad1287012b863:b151b2e915b67e6bbafd22e230f959bb',
     }
 }
 
-API_BASE_URL = "https://sandbox.csplatform.io:9950"
+
+API_BASE_URL = "https://api.csplatform.io:9950"
+#API_BASE_URL = "https://sandbox.csplatform.io:9950" #테스트 주소
 EXPORT_DIR = Path("export") / SHOP_ID.upper().replace(" ", "")
 EXPORT_DIR.mkdir(parents=True, exist_ok=True)
 EXPORT_JSON = EXPORT_DIR / f"{SHOP_ID.lower().replace(' ', '_')}_raw_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
@@ -221,7 +227,6 @@ def run_full_baseblue_pipeline(limit=None):
             )
 
             # 옵션 저장
-            from shop.models import RawProductOption  # 옵션 모델 존재 시
             RawProductOption.objects.filter(product=product).delete()
             RawProductOption.objects.bulk_create([
                 RawProductOption(
