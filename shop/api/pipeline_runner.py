@@ -36,6 +36,7 @@ def run_full_pipeline_by_retailer(retailer_code):
         bulk_convert_or_update_products_by_retailer(retailer_code)
         register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
   
+  
 #아뜰리에 API 업체 
 
     #쿠쿠이니
