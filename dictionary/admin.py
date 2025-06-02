@@ -8,6 +8,8 @@ from io import BytesIO
 from django.http import HttpResponse
 
 
+
+
 def alias_list(obj):
     return ", ".join(alias.alias for alias in obj.aliases.all())
 alias_list.short_description = "치환 값들"
@@ -29,8 +31,33 @@ class BrandAdmin(admin.ModelAdmin):
         my_urls = [
             path('brand/import-alias/', self.admin_site.admin_view(self.import_alias), name='dictionary_brand_import_alias'),
             path('brand/import-alias/example/', self.admin_site.admin_view(self.download_example), name='dictionary_brand_import_alias_example'),
+            path('brand/export-alias/', self.admin_site.admin_view(self.export_all_excel), name='dictionary_brand_export_all'),  # ✅ 추가
         ]
         return my_urls + urls
+    
+    #전체 다운로드
+    def export_all_excel(self, request):
+        data = []
+        for brand in Brand.objects.all():
+            for alias in brand.aliases.all():  # ✅ 수정된 부분
+                data.append({
+                    "표준브랜드명": brand.name,
+                    "치환브랜드명": alias.alias,
+                })
+
+        df = pd.DataFrame(data)
+        buffer = BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False)
+        buffer.seek(0)
+        response = HttpResponse(
+            buffer,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response['Content-Disposition'] = 'attachment; filename=\"brand_alias_all.xlsx\"'
+        return response
+
+
 
     def import_alias(self, request):
         if request.method == "POST" and request.FILES.get("excel_file"):
@@ -83,19 +110,6 @@ class BrandAdmin(admin.ModelAdmin):
 
 
 # ✅ 카테고리매핑
-from django.contrib import admin
-from django.urls import path
-from django.shortcuts import render, redirect
-from django.http import HttpResponse
-import pandas as pd
-from io import BytesIO
-
-from .models import (
-    CategoryLevel1, CategoryLevel1Alias,
-    CategoryLevel2, CategoryLevel2Alias,
-    CategoryLevel3, CategoryLevel3Alias,
-    CategoryLevel4, CategoryLevel4Alias,
-)
 
 # 공통 인라인
 class BaseCategoryAliasInline(admin.TabularInline):
@@ -115,8 +129,35 @@ class BaseCategoryAdmin(admin.ModelAdmin):
         my_urls = [
             path('import-alias/', self.admin_site.admin_view(self.import_alias), name=f'dictionary_{self.category_slug}_import_alias'),
             path('import-alias/example/', self.admin_site.admin_view(self.download_example), name=f'dictionary_{self.category_slug}_import_alias_example'),
+            path('export-alias/', self.admin_site.admin_view(self.export_all_excel), name=f'dictionary_{self.category_slug}_export_all'),  # ✅ 추가
+    
         ]
         return my_urls + urls
+    
+    #전체 파일 다운로드
+    def export_all_excel(self, request):
+        data = []
+        for category in self.model.objects.all():
+            for alias in self.alias_model.objects.filter(category=category):
+                data.append({
+                    "표준카테고리명": category.name,
+                    "치환명": alias.alias,
+                })
+
+        df = pd.DataFrame(data)
+        buffer = BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False)
+        buffer.seek(0)
+        response = HttpResponse(
+            buffer,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response['Content-Disposition'] = f'attachment; filename=\"{self.category_slug}_alias_all.xlsx\"'
+        return response
+
+
+
 
     def changelist_view(self, request, extra_context=None):
         if extra_context is None:

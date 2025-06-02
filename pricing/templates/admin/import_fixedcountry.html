@@ -10,9 +10,8 @@
     </p>
 
     <p>
-      <a href="{{ example_url }}" class="button default">
-        ⬇ 예제 파일 다운로드
-      </a>
+      <a href="{{ example_url }}" class="button default">⬇ 예제 파일 다운로드</a>
+      <a href="{% url 'admin:dictionary_fixedcountry_export_all' %}" class="button default">📥 전체 엑셀 다운로드</a>
     </p>
 
     <form method="post" enctype="multipart/form-data" action="{{ upload_url }}">

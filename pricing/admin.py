@@ -24,15 +24,45 @@ class BrandSettingAdmin(admin.ModelAdmin):
         custom_urls = [
             path("import-excel/", self.admin_site.admin_view(self.import_excel), name="pricing_brandsetting_import_excel"),
             path("import-excel/example/", self.admin_site.admin_view(self.download_example), name="pricing_brandsetting_import_example"),
+            path('export-excel/', self.admin_site.admin_view(self.export_all_excel), name='pricing_brandsetting_export_all'),
+        
         ]
         return custom_urls + urls
+    
+    #전체파일 csv 다운
+    def export_all_excel(self, request):
+        queryset = BrandSetting.objects.all().select_related('retailer')
+        data = []
+        for obj in queryset:
+            data.append({
+                "업체코드": obj.retailer.code,
+                "업체명": obj.retailer.name,
+                "시즌": obj.season,
+                "브랜드명": obj.brand_name,
+                "카테고리": ", ".join(obj.category1 or []),
+                "마크업율": obj.markup,
+            })
+        df = pd.DataFrame(data)
+        buffer = BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False)
+        buffer.seek(0)
+        response = HttpResponse(
+            buffer,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response['Content-Disposition'] = 'attachment; filename="brandsetting_all.xlsx"'
+        return response
 
+
+    #csv 파일(대량등록)
     def changelist_view(self, request, extra_context=None):
         if extra_context is None:
             extra_context = {}
         extra_context["upload_url"] = "/admin/pricing/brandsetting/import-excel/"
         return super().changelist_view(request, extra_context=extra_context)
 
+    #(csv 업로드방식)
     def import_excel(self, request):
         if request.method == "POST" and request.FILES.get("excel_file"):
             df = pd.read_excel(request.FILES["excel_file"])
@@ -95,7 +125,8 @@ class BrandSettingAdmin(admin.ModelAdmin):
             return redirect("..")
 
         return render(request, "admin/import_brandsettings.html")
-
+  
+    #csv 샘플 다운
     def download_example(self, request):
         df = pd.DataFrame({
             "업체코드": ["IT-R-01", "IT-G-03"],
@@ -187,6 +218,8 @@ class CountryAliasInline(admin.TabularInline):
     verbose_name_plural = "원본 국가명 목록"
     show_change_link = True
 
+
+
 @admin.register(FixedCountry)
 class FixedCountryAdmin(admin.ModelAdmin):
     list_display = ['name', 'alias_list', 'fta_applicable']  # ← alias_list 추가!
@@ -201,15 +234,18 @@ class FixedCountryAdmin(admin.ModelAdmin):
         my_urls = [
             path('import-excel/', self.admin_site.admin_view(self.import_excel), name='dictionary_fixedcountry_import_excel'),
             path('import-excel/example/', self.admin_site.admin_view(self.download_example), name='dictionary_fixedcountry_import_example'),
+            path('export-excel/', self.admin_site.admin_view(self.export_all_excel), name='dictionary_fixedcountry_export_all'),  # ✅ 추가
         ]
         return my_urls + urls
 
+    #파일 업로드
     def changelist_view(self, request, extra_context=None):
         if extra_context is None:
             extra_context = {}
         extra_context["upload_url"] = reverse("admin:dictionary_fixedcountry_import_excel")
         return super().changelist_view(request, extra_context=extra_context)
-
+   
+    #대량등록
     def import_excel(self, request):
         context = {}
         if request.method == "POST" and request.FILES.get("excel_file"):
@@ -245,6 +281,7 @@ class FixedCountryAdmin(admin.ModelAdmin):
             "example_url": reverse("admin:dictionary_fixedcountry_import_example"),
         })
 
+    #샘플csv 다운로드드
     def download_example(self, request):
         df = pd.DataFrame({
             "표준국가명": ["이탈리아", "미국"],
@@ -259,10 +296,43 @@ class FixedCountryAdmin(admin.ModelAdmin):
         response['Content-Disposition'] = 'attachment; filename="fixedcountry_example.xlsx"'
         return response
 
+ 
+    #전체 다운로드
+    def export_all_excel(self, request):
+        data = []
+        for country in FixedCountry.objects.all().order_by('name'):
+            alias_list = country.countryalias_set.all().values_list("origin_name", flat=True)
+            if alias_list:
+                for alias in alias_list:
+                    data.append({
+                        "표준국가명": country.name,
+                        "FTA적용": "O" if country.fta_applicable else "X",
+                        "치환국가명": alias,
+                    })
+            else:
+                data.append({
+                    "표준국가명": country.name,
+                    "FTA적용": "O" if country.fta_applicable else "X",
+                    "치환국가명": "",
+                })
+
+        df = pd.DataFrame(data)
+        buffer = BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False)
+        buffer.seek(0)
+        response = HttpResponse(
+            buffer,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response['Content-Disposition'] = 'attachment; filename="fixedcountry_all.xlsx"'
+        return response
+
     def alias_list(self, obj):
         aliases = obj.countryalias_set.all().values_list('origin_name', flat=True)
         return ", ".join(aliases) if aliases else "-"
     alias_list.short_description = "원본 국가명"
+
 
 
 #표준계산식
