@@ -94,6 +94,12 @@
   git push origin main
   ```
 
+- github에 수정사항 전체 동기화
+git add -A
+git commit -m "🔁 수정내용정리 (수정/삭제 포함)"
+git push origin main
+
+
 ## 📥 GitHub → 로컬 클론
 - 프로젝트 초기 클론
   ```bash

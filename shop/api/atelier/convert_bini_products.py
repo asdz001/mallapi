@@ -75,7 +75,7 @@ def convert_atelier_products():
         for c in subcategory_items
         if c.get("CategoryID") and c.get("GenderID") and c.get("ParentName") and c.get("CategoryName")
     }
-    print("🔍 category_map 키 예시 (최대 5개):", list(category_map.keys())[:5])
+
 
     data, goods_dict = fetch_goods_data()
     new_options = []
@@ -98,10 +98,7 @@ def convert_atelier_products():
 
             brand_id = str(goods.get("BrandID"))
             brand_name = brand_map.get(brand_id)
-            if not brand_name:
-                print(f"⚠️ 브랜드 매핑 실패: {gid} (BrandID: {brand_id})")
-                print(f"💬 현재 브랜드맵 키 목록: {list(brand_map.keys())[:10]}")
-                continue
+
 
             gender = gender_map.get(str(goods.get("GenderID")))
             category_id = str(goods.get("CategoryID"))
