@@ -19,7 +19,7 @@ CONFIG = {
 }
 
 
-API_BASE_URL = "https://api.csplatform.io:9950"
+API_BASE_URL = "https://api.csplatform.io"
 #API_BASE_URL = "https://sandbox.csplatform.io:9950" #테스트 주소
 EXPORT_DIR = Path("export") / SHOP_ID.upper().replace(" ", "")
 EXPORT_DIR.mkdir(parents=True, exist_ok=True)
