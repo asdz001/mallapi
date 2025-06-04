@@ -1,5 +1,6 @@
 # Django DB
- db.sqlite3
+db.sqlite3
+db_backup.json
 
 # Python
 __pycache__/
@@ -15,12 +16,34 @@ venv/
 
 # VSCode
 .vscode/
+.vscode-server/
 
-
+# Settings
 settings_local.py
 
+# Archives
 mallapi.Zip
 
 # CUCCUINI/아뜰리에 수집 데이터 무시
 export/*
 !export/.gitkeep
+
+# 로그 파일
+*.log
+
+# 임시 파일
+*.tmp
+*.bak
+
+# OS 파일
+.DS_Store
+Thumbs.db
+
+# 환경 변수
+.env
+.env.local
+
+# 테스트
+coverage/
+.coverage
+htmlcov/
