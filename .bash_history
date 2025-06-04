@@ -360,3 +360,11 @@ sudo systemctl restart gunicorn
 /bin/python2 /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/printEnvVariablesToFile.py /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/deactivate/bash/envVars.txt
 source venv/bin/activate
 python manage.py fetch_and_register_all
+source venv/bin/activate
+crontab -l
+git fetch origin
+git reset --hard origin/main
+python manage.py shell
+python manage.py fetch_and_register_baseblu
+python manage.py shell
+/usr/bin/python2 /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/printEnvVariablesToFile.py /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/deactivate/bash/envVars.txt

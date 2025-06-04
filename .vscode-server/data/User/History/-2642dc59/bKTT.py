@@ -238,7 +238,7 @@ def run_full_baseblue_pipeline(limit=None):
                 RawProductOption(
                     product=product,
                     option_name=o["name"],
-                    external_option_id=o["id"],  # ✅ item_id로 저장
+                    external_option_id=o["barcode"],
                     stock=o["quantity"],
                     price=o["price"]
                 ) for o in options

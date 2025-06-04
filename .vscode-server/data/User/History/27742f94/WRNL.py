@@ -6,7 +6,7 @@ from pathlib import Path
 from shop.models import Order
 
 #BASE_URL = "https://sandbox.csplatform.io:9950" #테스트 주소
-BASE_URL = "https://api.csplatform.io"
+BASE_URL = "https://api.csplatform.io:9950"
 ORDER_ENDPOINT = f"{BASE_URL}/shop/v1/orders"
 #TOKEN = "61a61031e8107c472fc312f3-66013c37f598544a853a23fd:5d630d9844a6d0827d14247d6cafeec0" #테스트 토큰
 TOKEN = '61a61031e8107c472fc312f3-6791f518791ad1287012b863:b151b2e915b67e6bbafd22e230f959bb'

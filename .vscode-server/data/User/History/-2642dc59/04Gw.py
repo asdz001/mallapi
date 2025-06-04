@@ -122,12 +122,6 @@ def run_full_baseblue_pipeline(limit=None):
     if limit:
         raw_products = raw_products[:limit]
 
-    # 🔹 JSON 저장 추가
-    EXPORT_JSON = EXPORT_DIR / f"{SHOP_ID.lower().replace(' ', '_')}_raw_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    with open(EXPORT_JSON, "w", encoding="utf-8") as f:
-        json.dump(raw_products, f, ensure_ascii=False, indent=2)
-    print(f"📁 원본 상품 JSON 저장 완료: {EXPORT_JSON}")    
-
     product_list_f = {}
 
     # 🔹 1단계: 상품 그룹핑 + 옵션 정리
@@ -152,7 +146,7 @@ def run_full_baseblue_pipeline(limit=None):
             if stock <= 0:
                 continue
 
-            price = Decimal(str(raw.get("sale_price") or 0))
+            price = Decimal(str(props.get("buy_price") or 0))
 
             option = {
                 "id": raw["item_id"]["$oid"],
@@ -238,7 +232,7 @@ def run_full_baseblue_pipeline(limit=None):
                 RawProductOption(
                     product=product,
                     option_name=o["name"],
-                    external_option_id=o["id"],  # ✅ item_id로 저장
+                    external_option_id=o["barcode"],
                     stock=o["quantity"],
                     price=o["price"]
                 ) for o in options
