@@ -130,7 +130,7 @@ def send_order(order: Order):
         print("📤 전송 Payload:")
         print(json.dumps(payload, indent=2, ensure_ascii=False))
 
-        response = requests.post(ORDER_ENDPOINT, json=payload, headers=HEADERS, timeout=10)
+        response = requests.post(ORDER_ENDPOINT, json=payload, headers=HEADERS, timeout=30)
         print(f"📨 응답 코드: {response.status_code}")
         print("📨 응답 본문:", response.text)
 
