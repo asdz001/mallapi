@@ -11,16 +11,16 @@ from decimal import Decimal ,ROUND_HALF_UP
 from django.db.models import Count
 
 
-# ✅ 브랜드 필터 - 상위 20개만 표시 (A방안)
-class TopBrandListFilter(admin.SimpleListFilter):
+# ✅ 브랜드 필터 - 모든 브랜드 + 수량 표시
+class BrandCountListFilter(admin.SimpleListFilter):
     title = '브랜드'
     parameter_name = 'brand_name'
     
     def lookups(self, request, model_admin):
-        # 상품이 많은 상위 20개 브랜드만 필터에 표시
+        # 모든 브랜드를 상품 수와 함께 표시
         brands = Product.objects.values('brand_name').annotate(
             count=Count('id')
-        ).order_by('-count')[:20]
+        ).order_by('brand_name')
         
         result = []
         for brand in brands:
@@ -78,12 +78,6 @@ class RawProductAdmin(admin.ModelAdmin):
     # ✅ 페이지네이션 설정 (30초 → 2초 핵심)
     list_per_page = 50  # 페이지당 50개 항목
     list_max_show_all = 200  # "모두 보기" 최대 200개
-    
-    # ✅ CSS 추가 - ADD TO CART 우측 고정 (B안)
-    class Media:
-        css = {
-            'all': ('shop/admin_sticky_cart.css',)
-        }
     
     # ✅ 쿼리 최적화 - prefetch_related로 options를 미리 로드
     def get_queryset(self, request):
@@ -150,14 +144,14 @@ class ProductOptionInline(admin.TabularInline):
 # ✅ 성능 최적화된 가공상품 관리자
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    # ✅ 2번 요청: cart_button을 앞쪽으로 이동 + 우측 고정 CSS
+    # ✅ 2번 수정: cart_button을 맨 마지막으로 이동
     list_display = (
         'id', 'retailer', 'brand_name', 'image_tag', 'product_name', 
-        'cart_button',  # ✅ 앞쪽으로 이동
         'gender', 'category1', 'category2', 'season', 'sku', 'color', 
         'origin_display', 'price_retail', 'discount_rate', 'price_org', 
         'formatted_price_supply', 'markup_display', 'formatted_price_krw', 
-        'option_summary', 'material', 'status', 'created_at_short', 'updated_at_short'
+        'option_summary', 'material', 'status', 'created_at_short', 'updated_at_short',
+        'cart_button'  # ✅ 맨 마지막으로 이동
     )
 
     search_fields = (
@@ -165,8 +159,8 @@ class ProductAdmin(admin.ModelAdmin):
     )
 
     inlines = [ProductOptionInline]
-    # ✅ 3번 요청: 브랜드 필터를 커스텀 필터로 변경
-    list_filter = ('retailer', TopBrandListFilter, 'created_at')
+    # ✅ 3번 수정: 모든 브랜드 + 수량 표시 필터로 변경
+    list_filter = ('retailer', BrandCountListFilter, 'created_at')
     change_list_template = 'admin/shop/product/change_list_with_count.html'
     readonly_fields = ('image_tag',)
     
@@ -174,7 +168,7 @@ class ProductAdmin(admin.ModelAdmin):
     list_per_page = 50
     list_max_show_all = 200
     
-    # ✅ CSS 추가 - ADD TO CART 우측 고정 (B안)
+    # ✅ CSS 추가 - ADD TO CART 우측 고정 (마지막 컬럼)
     class Media:
         css = {
             'all': ('shop/admin_sticky_cart.css',)
