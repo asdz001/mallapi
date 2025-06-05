@@ -240,7 +240,56 @@ class OrderItem(models.Model):
         return f"{self.product.product_name} - {self.option.option_name} x {self.quantity}개"
 
 
+# ✅ 주문 대시보드 모델 추가
+class OrderDashboard(models.Model):
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, verbose_name="주문", related_name="dashboard")
+    order_reference = models.CharField(max_length=100, unique=True, verbose_name="주문번호", db_index=True)
+    retailer = models.ForeignKey(Retailer, on_delete=models.CASCADE, verbose_name="거래처")
+    
+    # 주문 요약 정보 (JSON으로 저장)
+    order_summary = models.JSONField(verbose_name="주문 요약", help_text="상품수, 총금액 등")
+    
+    # 거래처별 상태 관리
+    partner_status = models.CharField(
+        max_length=20, 
+        choices=[
+            ("PENDING", "확인대기"),
+            ("CONFIRMED", "확인완료"), 
+            ("PROCESSING", "처리중"),
+            ("SHIPPED", "배송중"),
+            ("DELIVERED", "배송완료"),
+            ("CANCELLED", "취소됨"),
+        ],
+        default="PENDING",
+        verbose_name="거래처 상태"
+    )
+    
+    # 자동 추천번호 생성 필드
+    auto_order_number = models.CharField(max_length=50, verbose_name="자동주문번호", help_text="20250605-ORDER-123-IT-CUCCINI")
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="생성일")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="수정일")
+    
+    def save(self, *args, **kwargs):
+        if not self.order_reference:
+            # 주문번호 자동 생성: 날짜-ORDER-ID-거래처코드
+            date_str = self.order.created_at.strftime("%Y%m%d")
+            retailer_code = self.retailer.code.replace("IT-", "").replace("-", "")
+            self.order_reference = f"{date_str}-ORDER-{self.order.id}-{retailer_code}"
+            
+        if not self.auto_order_number:
+            # 자동 추천번호 생성
+            date_str = self.order.created_at.strftime("%Y%m%d")
+            retailer_code = self.retailer.code.replace("IT-", "").replace("-", "")
+            self.auto_order_number = f"{date_str}-ORDER-{self.order.id}-{retailer_code}"
+            
+        super().save(*args, **kwargs)
 
+    def __str__(self):
+        return f"대시보드 - {self.order_reference}"
 
+    class Meta:
+        verbose_name = "주문 대시보드"
+        verbose_name_plural = "5. 주문 대시보드"
 
 
