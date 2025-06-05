@@ -8,6 +8,33 @@ from django.utils.html import format_html ,format_html_join
 from shop.utils.markup_util import get_markup_from_product
 from shop.services.product.conversion_service import convert_or_update_product
 from decimal import Decimal ,ROUND_HALF_UP
+from django.db.models import Count
+
+
+# ✅ 브랜드 필터 - 상위 20개만 표시 (A방안)
+class TopBrandListFilter(admin.SimpleListFilter):
+    title = '브랜드'
+    parameter_name = 'brand_name'
+    
+    def lookups(self, request, model_admin):
+        # 상품이 많은 상위 20개 브랜드만 필터에 표시
+        brands = Product.objects.values('brand_name').annotate(
+            count=Count('id')
+        ).order_by('-count')[:20]
+        
+        result = []
+        for brand in brands:
+            if brand['brand_name']:
+                result.append((
+                    brand['brand_name'], 
+                    f"{brand['brand_name']} ({brand['count']}개)"
+                ))
+        return result
+    
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(brand_name=self.value())
+        return queryset
 
 
 # ✅ 성능 최적화된 원본상품 재고 인라인
@@ -38,7 +65,7 @@ def convert_selected_raw_products(modeladmin, request, queryset):
 @admin.register(RawProduct)
 class RawProductAdmin(admin.ModelAdmin):
     list_display = ('retailer', 'external_product_id','combined_category', 'image_preview','season', 'raw_brand_name', 'product_name', 'sku',
-                      'price_retail','discount_rate', 'price_org' ,'origin' ,  'option_summary' ,  'status', 'created_at','updated_at' )
+                      'price_retail','discount_rate', 'price_org' ,'origin' ,  'option_summary' ,  'status', 'created_at_short','updated_at_short' )
 
     inlines = [RawProductOptionInline]
     list_filter = ('retailer' , 'status', 'created_at')
@@ -51,6 +78,12 @@ class RawProductAdmin(admin.ModelAdmin):
     # ✅ 페이지네이션 설정 (30초 → 2초 핵심)
     list_per_page = 50  # 페이지당 50개 항목
     list_max_show_all = 200  # "모두 보기" 최대 200개
+    
+    # ✅ CSS 추가 - ADD TO CART 우측 고정 (B안)
+    class Media:
+        css = {
+            'all': ('shop/admin_sticky_cart.css',)
+        }
     
     # ✅ 쿼리 최적화 - prefetch_related로 options를 미리 로드
     def get_queryset(self, request):
@@ -91,6 +124,15 @@ class RawProductAdmin(admin.ModelAdmin):
         ))
     option_summary.short_description = "재고옵션"
 
+    # ✅ 1번 요청: 날짜 형식 변경 (25.06.05 8:22AM)
+    def created_at_short(self, obj):
+        return obj.created_at.strftime("%y.%m.%d %I:%M%p")
+    created_at_short.short_description = "등록일"
+
+    def updated_at_short(self, obj):
+        return obj.updated_at.strftime("%y.%m.%d %I:%M%p")
+    updated_at_short.short_description = "수정일"
+
 
 # ✅ 성능 최적화된 가공상품 재고 인라인
 class ProductOptionInline(admin.TabularInline):
@@ -108,10 +150,14 @@ class ProductOptionInline(admin.TabularInline):
 # ✅ 성능 최적화된 가공상품 관리자
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
+    # ✅ 2번 요청: cart_button을 앞쪽으로 이동 + 우측 고정 CSS
     list_display = (
-        'id', 'retailer', 'brand_name', 'image_tag', 'product_name', 'gender',
-        'category1', 'category2', 'season', 'sku', 'color', 'origin_display', 'price_retail', 'discount_rate',
-        'price_org', 'formatted_price_supply',  'markup_display' , 'formatted_price_krw' , 'option_summary' , 'material', 'status', 'created_at' , 'updated_at' , 'cart_button',
+        'id', 'retailer', 'brand_name', 'image_tag', 'product_name', 
+        'cart_button',  # ✅ 앞쪽으로 이동
+        'gender', 'category1', 'category2', 'season', 'sku', 'color', 
+        'origin_display', 'price_retail', 'discount_rate', 'price_org', 
+        'formatted_price_supply', 'markup_display', 'formatted_price_krw', 
+        'option_summary', 'material', 'status', 'created_at_short', 'updated_at_short'
     )
 
     search_fields = (
@@ -119,13 +165,20 @@ class ProductAdmin(admin.ModelAdmin):
     )
 
     inlines = [ProductOptionInline]
-    list_filter = ('retailer' , 'brand_name', 'created_at')
+    # ✅ 3번 요청: 브랜드 필터를 커스텀 필터로 변경
+    list_filter = ('retailer', TopBrandListFilter, 'created_at')
     change_list_template = 'admin/shop/product/change_list_with_count.html'
     readonly_fields = ('image_tag',)
     
     # ✅ 페이지네이션 설정 (핵심 최적화)
     list_per_page = 50
     list_max_show_all = 200
+    
+    # ✅ CSS 추가 - ADD TO CART 우측 고정 (B안)
+    class Media:
+        css = {
+            'all': ('shop/admin_sticky_cart.css',)
+        }
     
     # ✅ 쿼리 최적화 - 관련 데이터를 미리 로드
     def get_queryset(self, request):
@@ -212,14 +265,14 @@ class ProductAdmin(admin.ModelAdmin):
 
         if in_cart:
             return format_html(
-                '<div style="text-align:center;">'
+                '<div style="text-align:center;" class="cart-button-cell">'
                 '<span style="font-size:20px;">✅🛒</span><br><br>'
                 '<span style="color: green; font-weight: bold;">등록됨</span>'
                 '</div>'
             )
         else:
             return format_html(
-                '<div style="text-align:center;">'
+                '<div style="text-align:center;" class="cart-button-cell">'
                 '<a href="/shop/cart/add-product/{}/" style="text-decoration: none;">'
                 '<span style="font-size:20px;">➕🛒</span><br><br>'
                 '<span style="color: blue; font-weight: bold;">담기</span>'
@@ -227,15 +280,14 @@ class ProductAdmin(admin.ModelAdmin):
             )
     cart_button.short_description = "ADD TO CART"
     
-    # 상품등록일
-    def created_display(self, obj):
-        return obj.created_at.strftime("%Y-%m-%d %H:%M")
-    created_display.short_description = "최초 등록일"
+    # ✅ 1번 요청: 날짜 형식 변경 (25.06.05 8:22AM)
+    def created_at_short(self, obj):
+        return obj.created_at.strftime("%y.%m.%d %I:%M%p")
+    created_at_short.short_description = "등록일"
     
-    # 상품수정일
-    def updated_display(self, obj):
-        return obj.updated_at.strftime("%Y-%m-%d %H:%M")
-    updated_display.short_description = "최종 수정일"
+    def updated_at_short(self, obj):
+        return obj.updated_at.strftime("%y.%m.%d %I:%M%p")
+    updated_at_short.short_description = "수정일"
 
 
 # ✅ 장바구니 주문 생성 액션 (최적화)
