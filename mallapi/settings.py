@@ -42,7 +42,8 @@ INSTALLED_APPS = [
     'shop',
     'pricing',
     'dictionary',
-    "eventlog",
+    'eventlog',
+    'partner',  # ✅ partner 앱 추가
 ]
 
 MIDDLEWARE = [
