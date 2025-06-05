@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 from multiselectfield import MultiSelectField
 
 
@@ -72,7 +73,6 @@ class CountryAlias(models.Model):
     def __str__(self):
         return f"{self.origin_name} → {self.standard_country.name}"
     
-    
 
 
 
@@ -104,5 +104,21 @@ class PriceFormulaRange(models.Model):
     
 
 
+# ✅ 거래처 사용자 모델 추가
+class PartnerUser(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name="Django 사용자")
+    retailer = models.ForeignKey(Retailer, on_delete=models.CASCADE, verbose_name="거래처")
+    department = models.CharField(max_length=100, blank=True, null=True, verbose_name="부서명")
+    phone = models.CharField(max_length=20, blank=True, null=True, verbose_name="연락처")
+    is_active = models.BooleanField(default=True, verbose_name="활성 상태")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="생성일")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="수정일")
+
+    def __str__(self):
+        return f"{self.retailer.name} - {self.user.username}"
+
+    class Meta:
+        verbose_name = "거래처 사용자"
+        verbose_name_plural = "5. 거래처 사용자"
 
 
