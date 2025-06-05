@@ -5,6 +5,7 @@ from dictionary.models import BrandAlias
 from shop.utils.markup_util import get_markup_from_product
 from decimal import Decimal
 from shop.services.price_calculator import calculate_final_price
+from django.contrib.auth.models import User
 
 
 
@@ -205,6 +206,8 @@ class CartOption(models.Model):
 
 
 
+
+
 #주문내역    
 class Order(models.Model):
     retailer = models.ForeignKey(Retailer, on_delete=models.CASCADE, verbose_name="거래처")
@@ -242,5 +245,145 @@ class OrderItem(models.Model):
 
 
 
+# ✅ 새로운 OrderDashboard 모델 - 거래처 주문 관리용
+class OrderDashboard(models.Model):
+    """주문 대시보드 - 거래처 확인용"""
+    
+    # 주문 연결
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='dashboard')
+    
+    # 기본 정보
+    date = models.DateField("주문일", auto_now_add=True)
+    tracking_number = models.CharField("운송장번호", max_length=50, unique=True)
+    retailer = models.ForeignKey(Retailer, on_delete=models.CASCADE, verbose_name="거래처")
+    
+    # 주문 상품 요약 정보 (JSON으로 저장 - 구글시트 형태)
+    order_summary = models.JSONField("주문요약", default=dict, help_text="주문 상품 요약 정보")
+    
+    # 상태 관리
+    STATUS_CHOICES = [
+        ('PENDING', '확인중'),
+        ('APPROVED', '주문가능'),
+        ('REJECTED', '주문불가'),
+        ('SHIPPED', '배송완료')
+    ]
+    status = models.CharField("상태", max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    
+    # 메타 정보
+    updated_by = models.CharField("확인자", max_length=100, blank=True)
+    updated_at = models.DateTimeField("확인일시", auto_now=True)
+    rejection_reason = models.TextField("거부 사유", blank=True)
+    notes = models.TextField("비고", blank=True)
+    
+    # 거래처 알림 관련
+    notified_at = models.DateTimeField("알림일시", null=True, blank=True)
+    notification_sent = models.BooleanField("알림전송여부", default=False)
+    
+    class Meta:
+        verbose_name = "주문 대시보드"
+        verbose_name_plural = "5. 주문 대시보드"
+        ordering = ['-date', '-id']
+    
+    def __str__(self):
+        return f"{self.tracking_number} - {self.retailer.name} ({self.get_status_display()})"
+    
+    @classmethod
+    def create_from_order(cls, order):
+        """주문 생성 시 자동으로 대시보드 항목 생성"""
+        tracking_number = f"{order.created_at.strftime('%Y%m%d')}-ORDER-{order.id}-{order.retailer.code}"
+        
+        # 주문 상품 요약 정보 생성 (구글시트 형태)
+        order_summary = {
+            "milanese_order_id": f"4e964b4c-f924-440d-a75d-77a4a636b7b_{order.id}",
+            "total_amount": 0,
+            "total_quantity": 0,
+            "brands": [],
+            "products": []
+        }
+        
+        # 주문 아이템들로부터 요약 정보 생성
+        total_amount = 0
+        total_quantity = 0
+        brands = set()
+        products = []
+        
+        for item in order.items.all():
+            total_quantity += item.quantity
+            item_amount = float(item.price_krw or 0) * item.quantity
+            total_amount += item_amount
+            
+            brands.add(item.product.brand_name)
+            products.append({
+                "product_id": item.product.external_product_id or f"PROD_{item.product.id}",
+                "brand": item.product.brand_name,
+                "size": item.option.option_name,
+                "quantity": item.quantity,
+                "amount": item_amount
+            })
+        
+        order_summary.update({
+            "total_amount": total_amount,
+            "total_quantity": total_quantity,
+            "brands": list(brands),
+            "products": products
+        })
+        
+        return cls.objects.create(
+            order=order,
+            retailer=order.retailer,
+            tracking_number=tracking_number,
+            order_summary=order_summary
+        )
+    
+    def get_order_items_display(self):
+        """주문 상품 목록을 구글시트 형태로 반환"""
+        items = []
+        for product in self.order_summary.get('products', []):
+            items.append({
+                'Date': self.date.strftime('%d.%m.%y'),
+                'Tracking Number': self.tracking_number,
+                'Milanese Korea Order #': self.order_summary.get('milanese_order_id', ''),
+                'BRANDS': product.get('brand', ''),
+                'Product ID': product.get('product_id', ''),
+                'Size': product.get('size', ''),
+                'Qty': product.get('quantity', 0),
+                'Amount': product.get('amount', 0),
+            })
+        return items
 
 
+# ✅ 거래처 사용자 모델 - 권한 관리용
+class PartnerUser(models.Model):
+    """거래처 담당자 계정"""
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    retailer = models.ForeignKey(Retailer, on_delete=models.CASCADE, verbose_name="담당 거래처")
+    is_active = models.BooleanField("활성 상태", default=True)
+    phone = models.CharField("연락처", max_length=20, blank=True)
+    department = models.CharField("부서", max_length=50, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "거래처 사용자"
+        verbose_name_plural = "거래처 사용자 목록"
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.retailer.name}"
+
+
+
+
+# ✅ 시그널 추가 - 주문 생성 시 자동으로 대시보드 생성
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=Order)
+def create_order_dashboard(sender, instance, created, **kwargs):
+    """주문 생성 시 자동으로 대시보드 항목 생성"""
+    if created:
+        try:
+            OrderDashboard.create_from_order(instance)
+        except Exception as e:
+            # 로그 기록 (실제 환경에서는 logger 사용)
+            print(f"OrderDashboard 생성 실패: {e}")
