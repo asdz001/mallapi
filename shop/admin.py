@@ -1,13 +1,13 @@
 from django.contrib import admin
-from .models import Product, Order ,ProductOption  , OrderItem , RawProduct , RawProductOption 
-from .models import Cart
+from .models import Product, Order, ProductOption, OrderItem, RawProduct, RawProductOption
+from .models import Cart, OrderDashboard  # ✅ OrderDashboard 추가
 from django.contrib import messages
-from pricing.models import CountryAlias
+from pricing.models import CountryAlias, PartnerUser  # ✅ PartnerUser 추가
 from shop.services.order_service import create_orders_from_carts
-from django.utils.html import format_html ,format_html_join 
+from django.utils.html import format_html, format_html_join
 from shop.utils.markup_util import get_markup_from_product
 from shop.services.product.conversion_service import convert_or_update_product
-from decimal import Decimal ,ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP
 from django.db.models import Count
 
 
@@ -566,3 +566,42 @@ class OrderAdmin(admin.ModelAdmin):
             return format_html("<span style='color:red;'>오류 발생: {}</span>", e)
 
     order_summary.short_description = "주문 요약"
+
+
+# ✅ OrderDashboard Admin 추가
+@admin.register(OrderDashboard)
+class OrderDashboardAdmin(admin.ModelAdmin):
+    list_display = (
+        'order_reference', 'retailer', 'auto_order_number', 
+        'partner_status', 'order_summary_display', 'created_at_short'
+    )
+    list_filter = ('retailer', 'partner_status', 'created_at')
+    search_fields = ('order_reference', 'auto_order_number', 'retailer__name')
+    ordering = ('-created_at',)
+    readonly_fields = ('order_reference', 'auto_order_number', 'order_summary_display')
+    fields = ('order', 'retailer', 'partner_status', 'order_summary', 'order_reference', 'auto_order_number')
+    
+    def order_summary_display(self, obj):
+        if obj.order_summary:
+            total_qty = obj.order_summary.get('total_quantity', 0)
+            total_amount = obj.order_summary.get('total_amount_krw', 0)
+            return format_html(
+                "<strong>수량:</strong> {}개<br><strong>금액:</strong> {:,}원",
+                total_qty, total_amount
+            )
+        return "-"
+    order_summary_display.short_description = "주문 요약"
+    
+    def created_at_short(self, obj):
+        return obj.created_at.strftime("%y.%m.%d %I:%M%p")
+    created_at_short.short_description = "생성일"
+    
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        
+        # PartnerUser인 경우 자신의 거래처 주문만 보기
+        if hasattr(request.user, 'partneruser'):
+            partner_user = request.user.partneruser
+            return queryset.filter(retailer=partner_user.retailer)
+        
+        return queryset
