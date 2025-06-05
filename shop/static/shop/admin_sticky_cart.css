@@ -1,4 +1,4 @@
-/* ✅ ADD TO CART 컬럼 우측 고정 CSS */
+/* ✅ ADD TO CART 컬럼 우측 고정 CSS - 마지막 컬럼용 */
 
 /* ProductAdmin의 ADD TO CART 컬럼을 우측에 고정 */
 .change-list #result_list {
@@ -6,9 +6,9 @@
     overflow-x: auto;
 }
 
-/* ADD TO CART 컬럼 (6번째 컬럼) 우측 고정 */
-.change-list #result_list th:nth-child(6),
-.change-list #result_list td:nth-child(6) {
+/* ADD TO CART 컬럼 (마지막 컬럼) 우측 고정 */
+.change-list #result_list th:last-child,
+.change-list #result_list td:last-child {
     position: sticky !important;
     right: 0 !important;
     background: #f8f9fa !important;
@@ -19,7 +19,7 @@
 }
 
 /* 헤더 배경색 조정 */
-.change-list #result_list th:nth-child(6) {
+.change-list #result_list th:last-child {
     background: #417690 !important;
     color: white !important;
     text-align: center !important;
@@ -59,8 +59,8 @@
 
 /* 반응형 대응 - 작은 화면에서는 고정 해제 */
 @media (max-width: 768px) {
-    .change-list #result_list th:nth-child(6),
-    .change-list #result_list td:nth-child(6) {
+    .change-list #result_list th:last-child,
+    .change-list #result_list td:last-child {
         position: static !important;
         background: white !important;
         border-left: none !important;
@@ -91,6 +91,25 @@
     background-color: #f5f5f5;
 }
 
-.change-list #result_list tbody tr:hover td:nth-child(6) {
+.change-list #result_list tbody tr:hover td:last-child {
     background-color: #e8f4f8 !important;
+}
+
+/* ADD TO CART 컬럼 폭 고정 */
+.change-list #result_list th:last-child,
+.change-list #result_list td:last-child {
+    width: 110px !important;
+    text-align: center !important;
+}
+
+/* 장바구니 아이콘 크기 조정 */
+.cart-button-cell span {
+    font-size: 18px !important;
+    line-height: 1.2;
+}
+
+/* 장바구니 텍스트 스타일 */
+.cart-button-cell span[style*="font-weight: bold"] {
+    font-size: 12px !important;
+    font-weight: 600 !important;
 }
