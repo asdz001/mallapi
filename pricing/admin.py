@@ -9,7 +9,9 @@ from .models import Retailer
 from .models import FixedCountry, CountryAlias
 from .models import GlobalPricingSetting
 from .models import PriceFormulaRange
+from .models import PartnerUser  # ✅ PartnerUser 추가
 from django.utils.html import format_html
+from django.contrib.auth.models import User  # ✅ User 모델 추가
 
 #브랜드
 @admin.register(BrandSetting)
@@ -348,3 +350,60 @@ class GlobalPricingSettingAdmin(admin.ModelAdmin):
         'exchange_rate', 'shipping_fee', 'VAT', 'margin_rate', 'special_tax_rate'
     )
     inlines = [PriceFormulaRangeInline]
+
+
+# ✅ 거래처 사용자 관리 Admin (완성된 코드)
+@admin.register(PartnerUser)
+class PartnerUserAdmin(admin.ModelAdmin):
+    list_display = (
+        'username', 'email', 'retailer', 'department', 
+        'phone', 'is_active', 'created_at_short'
+    )
+    list_filter = ('retailer', 'is_active', 'created_at')
+    search_fields = ('user__username', 'user__email', 'retailer__name', 'department')
+    ordering = ('-created_at',)
+    fields = ('retailer', 'department', 'phone', 'is_active')
+    
+    def username(self, obj):
+        return obj.user.username
+    username.short_description = "사용자명"
+    
+    def email(self, obj):
+        return obj.user.email
+    email.short_description = "이메일"
+    
+    def created_at_short(self, obj):
+        return obj.created_at.strftime("%y.%m.%d %I:%M%p")
+    created_at_short.short_description = "생성일"
+    
+    def save_model(self, request, obj, form, change):
+        if not change:  # 새로 생성할 때만
+            # 자동으로 Django User 생성
+            username = f"partner_{obj.retailer.code.lower()}"
+            email = f"{obj.retailer.code.lower()}@partner.mallapi.com"
+            
+            # 이미 존재하는 사용자명이면 숫자 추가
+            counter = 1
+            original_username = username
+            while User.objects.filter(username=username).exists():
+                username = f"{original_username}_{counter}"
+                counter += 1
+            
+            # 사용자 생성
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password="mallapi2025!",  # 초기 비밀번호
+                first_name=obj.retailer.name,
+                is_staff=True  # Admin 접근 권한
+            )
+            
+            # PartnerUser에 User 연결
+            obj.user = user
+        
+        super().save_model(request, obj, form, change)
+    
+    def get_readonly_fields(self, request, obj=None):
+        if obj:  # 수정할 때
+            return self.readonly_fields + ('retailer',)
+        return self.readonly_fields
