@@ -9,6 +9,8 @@ from shop.utils.markup_util import get_markup_from_product
 from shop.services.product.conversion_service import convert_or_update_product
 from decimal import Decimal, ROUND_HALF_UP
 from django.db.models import Count
+from django.contrib.staticfiles.storage import staticfiles_storage
+from django.conf import settings
 
 
 # ✅ 브랜드 필터 - 모든 브랜드 + 수량 표시
@@ -54,10 +56,15 @@ def convert_selected_raw_products(modeladmin, request, queryset):
     queryset = queryset.prefetch_related('options')
     
     for raw_product in queryset:
-        if convert_or_update_product(raw_product):
-            success_count += 1
-        else:
+        try:
+            if convert_or_update_product(raw_product):
+                success_count += 1
+            else:
+                fail_count += 1
+        except Exception as e:
             fail_count += 1
+            messages.error(request, f"상품 {raw_product.product_name} 변환 중 오류: {str(e)}")
+    
     messages.success(request, f"{success_count}건 등록 성공, {fail_count}건 실패 (로그 확인 필요)")
 
 
@@ -109,7 +116,7 @@ class RawProductAdmin(admin.ModelAdmin):
     def option_summary(self, obj):
         options = getattr(obj, '_prefetched_objects_cache', {}).get('options')
         if options is None:
-            options = obj.options.all()
+            options = list(obj.options.all())
         
         if not options:
             return "-"
@@ -168,10 +175,10 @@ class ProductAdmin(admin.ModelAdmin):
     list_per_page = 50
     list_max_show_all = 200
     
-    # ✅ CSS 추가 - ADD TO CART 우측 고정 (마지막 컬럼)
+    # ✅ CSS 추가 - ADD TO CART 우측 고정 (마지막 컬럼) - 수정된 경로
     class Media:
         css = {
-            'all': ('shop/admin_sticky_cart.css',)
+            'all': ('admin/css/shop/admin_sticky_cart.css',) if settings.DEBUG else (staticfiles_storage.url('admin/css/shop/admin_sticky_cart.css'),)
         }
     
     # ✅ 쿼리 최적화 - 관련 데이터를 미리 로드
@@ -224,7 +231,7 @@ class ProductAdmin(admin.ModelAdmin):
     def option_summary(self, obj):
         options = getattr(obj, '_prefetched_objects_cache', {}).get('options')
         if options is None:
-            options = obj.options.all()
+            options = list(obj.options.all())
 
         if not options:
             return "-"
@@ -255,7 +262,7 @@ class ProductAdmin(admin.ModelAdmin):
         if carts is None:
             in_cart = Cart.objects.filter(product=obj).exists()
         else:
-            in_cart = bool(carts)
+            in_cart = bool(list(carts))
 
         if in_cart:
             return format_html(
@@ -289,8 +296,11 @@ class ProductAdmin(admin.ModelAdmin):
 def create_order_action(modeladmin, request, queryset):
     # ✅ 관련 데이터를 미리 로드
     queryset = queryset.select_related('product').prefetch_related('options__product_option')
-    orders = create_orders_from_carts(queryset, request)
-    messages.success(request, f"{len(orders)}건의 주문이 생성되었습니다.")
+    try:
+        orders = create_orders_from_carts(queryset, request)
+        messages.success(request, f"{len(orders)}건의 주문이 생성되었습니다.")
+    except Exception as e:
+        messages.error(request, f"주문 생성 중 오류 발생: {str(e)}")
 
 
 # ✅ 성능 최적화된 장바구니 관리자
@@ -319,8 +329,9 @@ class CartAdmin(admin.ModelAdmin):
             'product__options'  # Product의 모든 옵션들
         )
 
+    # ✅ JavaScript 파일 경로 수정
     class Media:
-        js = ('shop/admin_cart.js',)
+        js = ('admin/js/shop/admin_cart.js',) if settings.DEBUG else (staticfiles_storage.url('admin/js/shop/admin_cart.js'),)
 
     def get_retailer(self, obj):
         return obj.product.retailer
@@ -372,7 +383,7 @@ class CartAdmin(admin.ModelAdmin):
         # ✅ prefetch된 데이터 사용 (N+1 쿼리 방지)
         cart_options = getattr(obj, '_prefetched_objects_cache', {}).get('options')
         if cart_options is None:
-            cart_options = obj.options.all()
+            cart_options = list(obj.options.all())
 
         for opt in cart_options:
             option = opt.product_option
@@ -461,7 +472,7 @@ class OrderItemInline(admin.TabularInline):
         return obj.product.product_name
     
     def option_name(self, obj):
-        return obj.option.option_name
+        return obj.option.option_name if obj.option else "-"
     
     def quantity(self, obj):
         return obj.quantity
@@ -502,69 +513,4 @@ class OrderItemInline(admin.TabularInline):
     price_supply.short_description = "공급가"
     markup.short_description = "브랜드 마크업"
     price_krw.short_description = "주문금액"
-    barcode.short_description = "주문바코드"
-    order_reference.short_description = "주문번호(날짜-고유번호-업체명)"
-
-
-# ✅ 성능 최적화된 주문 관리자
-@admin.register(Order)
-class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'retailer', 'status', 'order_summary' , 'created_at')
-    list_filter = ('retailer', 'status')
-    readonly_fields = ('created_at',)
-    inlines = [OrderItemInline]
-    
-    # ✅ 페이지네이션 설정
-    list_per_page = 50
-    list_max_show_all = 200
-    
-    # ✅ 쿼리 최적화 - 관련 데이터를 미리 로드
-    def get_queryset(self, request):
-        queryset = super().get_queryset(request)
-        return queryset.select_related(
-            'retailer'  # Retailer 테이블 조인
-        ).prefetch_related(
-            'items__product',  # OrderItem -> Product 관계
-            'items__option'    # OrderItem -> ProductOption 관계
-        )
-
-    def order_summary(self, obj):
-        try:
-            # ✅ prefetch된 데이터 사용
-            items = getattr(obj, '_prefetched_objects_cache', {}).get('items')
-            if items is None:
-                items = obj.items.all()
-
-            total_qty = 0
-            total_supply = 0
-            total_krw = 0
-
-            for item in items:
-                qty = int(item.quantity or 0)
-                if item.option and item.option.price is not None:
-                    markup = get_markup_from_product(item.product) or 1
-                    supply = (
-                        item.option.get_calculated_supply().quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-                        if item.option else Decimal(str(item.product.price_supply or 0)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-                    )
-                krw = int(item.price_krw or 0)
-
-                total_qty += qty
-                total_supply += qty * supply
-                total_krw += qty * krw
-
-            return format_html(
-                "<strong>총 수량:</strong> {}개<br>"
-                "<strong>총 공급가:</strong> {} €<br>"
-                "<strong>총 원화가:</strong> {}원",
-                f"{total_qty:,}",
-                f"{total_supply:,}",
-                f"{total_krw:,}"
-            )
-
-        except Exception as e:
-            return format_html("<span style='color:red;'>오류 발생: {}</span>", e)
-
-    order_summary.short_description = "주문 요약"
-
-# ✅ OrderDashboard Admin은 partner 앱으로 이동했으므로 여기서 제거됨
+    barcode.short_description = "주
