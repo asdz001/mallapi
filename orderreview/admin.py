@@ -1,0 +1,144 @@
+from django.contrib import admin
+from .models import OrderReview
+from django.utils.html import format_html
+from .models import RetailerUser
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+
+#유저생성
+@admin.register(RetailerUser)
+class RetailerUserAdmin(admin.ModelAdmin):
+    list_display = ['user', 'retailer']
+    list_filter = ['retailer']
+    search_fields = ['user__username']
+
+
+
+#주문확인
+@admin.register(OrderReview)
+class OrderReviewAdmin(admin.ModelAdmin):
+    list_display = (
+        'order_id', 'retailer_name', 'barcode', 'brand_name', 'product_name', 'option_name',
+        'quantity', 'cost_price', 'status', 'order_date','last_updated_by', 'last_updated_at' 
+    )
+    list_editable = ('status',)  # ✅ 상태 필드를 인라인에서 수정 가능하게 설정
+    list_filter = ('retailer', 'status')
+    search_fields = ('order_item__product__product_name', 'order_item__option__external_option_id')
+    
+    list_per_page = 50
+
+    # ✅ 주문 추가/수정 시 아래에 보여줄 필드
+    readonly_fields = ['order_item', 'retailer', 'last_updated_by', 'last_updated_at', 'display_info']  # 수정 불가하게 표시만
+
+    # ✅ 필드 순서 재정렬 (폼 화면에서 순서대로 나옴)
+    fields = ('order_item', 'retailer', 'status', 'memo', 'display_info','last_updated_by', 'last_updated_at')
+
+    def order_id(self, obj):
+        date = obj.order_item.order.created_at.strftime("%Y%m%d")
+        retailer = obj.order_item.order.retailer.code.replace("IT-", "").replace("-", "")
+        return f"{date}-ORDER-{obj.order_item.order.id}-{obj.order_item.id}-{retailer}"
+    order_id.short_description = _("주문번호")
+
+
+
+    def retailer_display(self, obj):
+        return obj.retailer.name
+    retailer_display.short_description = _("거래처")
+
+    
+    # ✅ 읽기 전용 필드 설정
+    def get_readonly_fields(self, request, obj=None):
+        base = ['last_updated_by', 'last_updated_at', 'display_info']
+        if not request.user.is_superuser:
+            return base + ['retailer', 'order_item']
+        return base
+     
+
+    
+
+
+    def retailer_name(self, obj):
+        return obj.retailer.name
+    retailer_name.short_description = _("거래처")
+
+    def barcode(self, obj):
+        return obj.order_item.option.external_option_id if obj.order_item.option else "-"
+    barcode.short_description = _("바코드")
+
+    def brand_name(self, obj):
+        return obj.order_item.product.brand_name
+    brand_name.short_description = _("브랜드")
+
+    def product_name(self, obj):
+        return obj.order_item.product.product_name
+    product_name.short_description = _("상품명")
+
+    def option_name(self, obj):
+        return obj.order_item.option.option_name if obj.order_item.option else "-"
+    option_name.short_description = _("옵션")
+
+    def quantity(self, obj):
+        return obj.order_item.quantity
+    quantity.short_description = _("수량")
+
+    def cost_price(self, obj):
+        if obj.order_item.option and obj.order_item.option.price:
+            return f"{obj.order_item.option.price:,.2f} €"
+        return "-"
+    cost_price.short_description = _("COST")
+
+    def order_date(self, obj):
+        local_time = timezone.localtime(obj.order_item.order.created_at)
+        return local_time.strftime("%y.%m.%d %I:%M%p")  # ✅ 한국 시간 기준으로 변환
+    order_date.short_description = _("주문일")
+
+
+    # ✅ 하단에 보여줄 자동 표시 정보
+    def display_info(self, obj):
+        if not obj.order_item:
+            return _("주문 항목을 먼저 선택하세요.")
+
+        return format_html(
+            "<b>거래처:</b> {}<br>"
+            "<b>브랜드:</b> {}<br>"
+            "<b>모델명:</b> {}<br>"
+            "<b>옵션:</b> {}<br>"
+            "<b>수량:</b> {}개<br>"
+            "<b>COST:</b> {} €<br>"
+            "<b>주문일:</b> {}",
+            obj.order_item.order.retailer.name,
+            obj.order_item.product.brand_name,
+            obj.order_item.product.product_name,
+            obj.order_item.option.option_name if obj.order_item.option else "-",
+            obj.order_item.quantity,
+            f"{obj.order_item.option.price:,.2f}" if obj.order_item.option and obj.order_item.option.price else "-",
+            obj.order_item.order.created_at.strftime("%y.%m.%d %I:%M%p")
+        )
+    display_info.short_description = _("주문 상세 정보")
+    
+
+    # ✅ 주문 상태 변경 시 마지막 수정자와 시간을 기록
+    def save_model(self, request, obj, form, change):
+        if 'status' in form.changed_data:
+            obj.last_updated_by = request.user
+            from django.utils import timezone
+            obj.last_updated_at = timezone.now()
+        super().save_model(request, obj, form, change)
+
+
+    # ✅ 거래처에 따라 주문 필터링
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+
+        # ✅ 슈퍼유저는 전체 주문을 볼 수 있음
+        if request.user.is_superuser:
+            return qs
+
+        # ✅ 일반 유저는 본인의 거래처만 볼 수 있음
+        from .models import RetailerUser
+        try:
+            retailer_user = RetailerUser.objects.get(user=request.user)
+            return qs.filter(retailer=retailer_user.retailer)
+        except RetailerUser.DoesNotExist:
+            # 거래처 연결이 안 되어 있으면 아무것도 안 보여줌
+            return qs.none()    

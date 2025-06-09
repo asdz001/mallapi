@@ -9,11 +9,12 @@ from shop.utils.markup_util import get_markup_from_product
 from shop.services.product.conversion_service import convert_or_update_product
 from decimal import Decimal ,ROUND_HALF_UP
 from django.db.models import Count
+from django.utils.translation import gettext_lazy as _
 
 
 # ✅ 브랜드 필터 - 모든 브랜드 + 수량 표시
 class BrandCountListFilter(admin.SimpleListFilter):
-    title = '브랜드'
+    title = _('브랜드')
     parameter_name = 'brand_name'
     
     def lookups(self, request, model_admin):
@@ -45,7 +46,7 @@ class RawProductOptionInline(admin.TabularInline):
 
 
 # ✅ 원본상품 가공상품으로 전송버튼 (액션 최적화)
-@admin.action(description="선택한 상품을 가공상품으로 등록/수정")
+@admin.action(description=_("선택한 상품을 가공상품으로 등록/수정"))
 def convert_selected_raw_products(modeladmin, request, queryset):
     success_count = 0
     fail_count = 0
@@ -64,8 +65,11 @@ def convert_selected_raw_products(modeladmin, request, queryset):
 # ✅ 성능 최적화된 원본상품 관리자
 @admin.register(RawProduct)
 class RawProductAdmin(admin.ModelAdmin):
-    list_display = ('retailer', 'external_product_id','combined_category', 'image_preview','season', 'raw_brand_name', 'product_name', 'sku',
-                      'price_retail','discount_rate', 'price_org' ,'origin' ,  'option_summary' ,  'status', 'created_at_short','updated_at_short' )
+    list_display = (
+        'retailer', 'external_product_id', 'combined_category', 'image_preview', 'season',
+        'raw_brand_name', 'product_name', 'sku', 'price_retail', 'discount_rate', 'price_org',
+        'origin', 'option_summary', 'status', 'created_at_short', 'updated_at_short'
+    )
 
     inlines = [RawProductOptionInline]
     list_filter = ('retailer' , 'status', 'created_at')
@@ -88,7 +92,7 @@ class RawProductAdmin(admin.ModelAdmin):
     def combined_category(self, obj):
         parts = [obj.gender, obj.category1, obj.category2]
         return " > ".join([p for p in parts if p])
-    combined_category.short_description = "카테고리"
+    combined_category.short_description = _("카테고리")
 
     # 이미지
     def image_preview(self, obj):
@@ -103,7 +107,7 @@ class RawProductAdmin(admin.ModelAdmin):
             ) for url in urls if url
         ]
         return format_html(''.join(tags)) if tags else "-"
-    image_preview.short_description = "이미지"
+    image_preview.short_description = _("이미지")
     
     # ✅ 재고옵션 (이미 prefetch된 데이터 사용)
     def option_summary(self, obj):
@@ -116,16 +120,16 @@ class RawProductAdmin(admin.ModelAdmin):
         return format_html("<br>".join(
             f"{opt.option_name} : {opt.stock}" for opt in options
         ))
-    option_summary.short_description = "재고옵션"
+    option_summary.short_description = _("재고옵션")
 
     # ✅ 1번 요청: 날짜 형식 변경 (25.06.05 8:22AM)
     def created_at_short(self, obj):
         return obj.created_at.strftime("%y.%m.%d %I:%M%p")
-    created_at_short.short_description = "등록일"
+    created_at_short.short_description = _("등록일")
 
     def updated_at_short(self, obj):
         return obj.updated_at.strftime("%y.%m.%d %I:%M%p")
-    updated_at_short.short_description = "수정일"
+    updated_at_short.short_description = _("수정일")
 
 
 # ✅ 성능 최적화된 가공상품 재고 인라인
@@ -138,7 +142,7 @@ class ProductOptionInline(admin.TabularInline):
     def calculated_supply(self, obj):
         supply = obj.get_calculated_supply()
         return f"{supply:,.2f} €"
-    calculated_supply.short_description = "공급가 (자동계산)"
+    calculated_supply.short_description = _("공급가 (자동계산)")
 
 
 # ✅ 성능 최적화된 가공상품 관리자
@@ -191,25 +195,25 @@ class ProductAdmin(admin.ModelAdmin):
                      onmouseout="this.style.transform='scale(1)'"/>
             ''', obj.image_url)
         return "-"
-    image_tag.short_description = '이미지'
+    image_tag.short_description = _('이미지')
     
     # 원화가
     def formatted_price_krw(self, obj):
         if obj.calculated_price_krw is not None:
             return f"{obj.calculated_price_krw:,.0f}"
         return "-"
-    formatted_price_krw.short_description = "원화가"
+    formatted_price_krw.short_description = _("원화가")
 
     # 공급가
     def formatted_price_supply(self, obj):
         return f"{obj.price_supply:,.2f}"
-    formatted_price_supply.short_description = "공급가"
+    formatted_price_supply.short_description = _("공급가")
 
     # 마크업
     def markup_display(self, obj):
         markup = get_markup_from_product(obj)
         return f"{markup:.2f}" if markup else "-"
-    markup_display.short_description = "마크업"
+    markup_display.short_description = _("마크업")
     
     # ✅ 원산지 (select_related 최적화 필요시 추가 가능)
     def origin_display(self, obj):
@@ -218,7 +222,7 @@ class ProductAdmin(admin.ModelAdmin):
             return f"{obj.origin} (FTA: {'O' if alias.standard_country.fta_applicable else 'X'})"
         except CountryAlias.DoesNotExist:
             return f"{obj.origin} (FTA: X)"
-    origin_display.short_description = "원산지 (FTA)"
+    origin_display.short_description = _("원산지 (FTA)")
 
     # ✅ 옵션재고 (이미 prefetch된 데이터 사용)
     def option_summary(self, obj):
@@ -247,7 +251,7 @@ class ProductAdmin(admin.ModelAdmin):
             rows.append(row)
 
         return format_html("<br>".join(rows))
-    option_summary.short_description = "재고"
+    option_summary.short_description = _("재고")
     
     # ✅ 장바구니 버튼 (이미 prefetch된 데이터 사용)
     def cart_button(self, obj):
@@ -272,25 +276,25 @@ class ProductAdmin(admin.ModelAdmin):
                 '<span style="color: blue; font-weight: bold;">담기</span>'
                 '</a></div>', obj.id
             )
-    cart_button.short_description = "ADD TO CART"
+    cart_button.short_description = _("ADD TO CART")
     
     # ✅ 1번 요청: 날짜 형식 변경 (25.06.05 8:22AM)
     def created_at_short(self, obj):
         return obj.created_at.strftime("%y.%m.%d %I:%M%p")
-    created_at_short.short_description = "등록일"
+    created_at_short.short_description = _("등록일")
     
     def updated_at_short(self, obj):
         return obj.updated_at.strftime("%y.%m.%d %I:%M%p")
-    updated_at_short.short_description = "수정일"
+    updated_at_short.short_description = _("수정일")
 
 
 # ✅ 장바구니 주문 생성 액션 (최적화)
-@admin.action(description="선택한 상품 주문 생성하기")
+@admin.action(description=_("선택한 상품 주문 생성하기"))
 def create_order_action(modeladmin, request, queryset):
     # ✅ 관련 데이터를 미리 로드
     queryset = queryset.select_related('product').prefetch_related('options__product_option')
     orders = create_orders_from_carts(queryset, request)
-    messages.success(request, f"{len(orders)}건의 주문이 생성되었습니다.")
+    messages.success(request, _(f"{len(orders)}건의 주문이 생성되었습니다."))
 
 
 # ✅ 성능 최적화된 장바구니 관리자
@@ -324,45 +328,45 @@ class CartAdmin(admin.ModelAdmin):
 
     def get_retailer(self, obj):
         return obj.product.retailer
-    get_retailer.short_description = "부티크"
+    get_retailer.short_description = _("부티크")
 
     def get_category(self, obj):
         g = obj.product.gender or "-"
         c1 = obj.product.category1 or "-"
         c2 = obj.product.category2
         return f"{g} > {c1} > {c2}" if c2 else f"{g} > {c1}"
-    get_category.short_description = "카테고리"
+    get_category.short_description = _("카테고리")
 
     def get_product_name(self, obj):
         return obj.product.product_name
-    get_product_name.short_description = "상품명"
+    get_product_name.short_description = _("상품명")
 
     def get_image(self, obj):
         if obj.product.image_url:
             return format_html(f'<img src="{obj.product.image_url}" width="50" height="50">')
         return "-"
-    get_image.short_description = "이미지"
+    get_image.short_description = _("이미지")
 
     def product_brand(self, obj):
         return obj.product.brand_name
-    product_brand.short_description = "브랜드"
+    product_brand.short_description = _("브랜드")
 
     def product_price_org(self, obj):
         return obj.product.price_org
-    product_price_org.short_description = "COST"
+    product_price_org.short_description = _("COST")
 
     def product_price_supply(self, obj):
         return obj.product.price_supply
-    product_price_supply.short_description = "공급가"
+    product_price_supply.short_description = _("공급가")
 
     def product_markup(self, obj):
         markup = get_markup_from_product(obj.product)
         return f"{markup:.2f}" if markup else "-"
-    product_markup.short_description = "마크업"
+    product_markup.short_description = _("마크업")
 
     def product_price_krw(self, obj):
         return f"{obj.product.calculated_price_krw:,.0f}" if obj.product.calculated_price_krw else "-"
-    product_price_krw.short_description = "원화가"
+    product_price_krw.short_description = _("원화가")
 
     # ✅ 옵션 테이블 (이미 prefetch된 데이터 사용)
     def display_option_table(self, obj):
@@ -393,7 +397,7 @@ class CartAdmin(admin.ModelAdmin):
             html += f"""
             <tr>
                 <td>{option.option_name}</td>
-                <td>{stock}개 (장바구니: {cart_qty}개, 주문됨: {order_qty}개)</td>
+                <td>_({stock}개 (장바구니: {cart_qty}개, 주문됨: {order_qty}개))</td>
                 <td>{price_display}</td>
                 <td>{supply_display}</td>
                 <td>
@@ -492,18 +496,18 @@ class OrderItemInline(admin.TabularInline):
         retailer = obj.order.retailer.code.replace("IT-", "").replace("-", "")
         return f"{date}-ORDER-{obj.order.id}-{obj.id}-{retailer}"
 
-    retailer_name.short_description = "거래처"
-    category.short_description = "카테고리"
-    brand_name.short_description = "브랜드"
-    product_name.short_description = "상품명"
-    option_name.short_description = "옵션"
-    quantity.short_description = "수량"
-    price_org.short_description = "COST"
-    price_supply.short_description = "공급가"
-    markup.short_description = "브랜드 마크업"
-    price_krw.short_description = "주문금액"
-    barcode.short_description = "주문바코드"
-    order_reference.short_description = "주문번호(날짜-고유번호-업체명)"
+    retailer_name.short_description = _("거래처")
+    category.short_description = _("카테고리")
+    brand_name.short_description = _("브랜드")
+    product_name.short_description = _("상품명")
+    option_name.short_description = _("옵션")
+    quantity.short_description = _("수량")
+    price_org.short_description = _("COST")
+    price_supply.short_description = _("공급가")
+    markup.short_description = _("브랜드 마크업")
+    price_krw.short_description = _("주문금액")
+    barcode.short_description = _("주문바코드")
+    order_reference.short_description = _("주문번호(날짜-고유번호-업체명)")
 
 
 # ✅ 성능 최적화된 주문 관리자
@@ -565,4 +569,4 @@ class OrderAdmin(admin.ModelAdmin):
         except Exception as e:
             return format_html("<span style='color:red;'>오류 발생: {}</span>", e)
 
-    order_summary.short_description = "주문 요약"
+    order_summary.short_description = _("주문 요약")
