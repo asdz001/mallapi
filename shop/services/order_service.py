@@ -3,10 +3,13 @@ from pricing.models import Retailer
 from collections import defaultdict
 from django.db import transaction
 from importlib import import_module
+from orderreview.models import OrderReview
 
 
 
 @transaction.atomic
+
+
 def create_orders_from_carts(selected_carts, request):
     cart_groups = defaultdict(list)
     for cart in selected_carts:
@@ -38,7 +41,7 @@ def create_orders_from_carts(selected_carts, request):
 
                 if quantity > 0:
                     # ✅ 1. 주문 항목 생성
-                    OrderItem.objects.create(
+                    order_item = OrderItem.objects.create(
                         order=order,
                         product=cart.product,
                         option=cart_option.product_option,
@@ -46,13 +49,17 @@ def create_orders_from_carts(selected_carts, request):
                         price_krw=cart.product.calculated_price_krw,
                     )
 
+                    # ✅ 2. 주문리뷰 자동 생성
+                    create_order_review_from_order_item(order_item)
+
                     # ✅ 2. 재고 차감
                     product_option = cart_option.product_option
                     product_option.stock = max(product_option.stock - quantity, 0)  # 음수 방지
                     product_option.save()
 
-        send_order_to_api(order)
+        #send_order_to_api(order)
         orders_created.append(order)
+        
 
     # ✅ 3. 장바구니 삭제
     for cart in selected_carts:
@@ -94,3 +101,15 @@ def send_order_to_api(order):
 
     finally:
         order.save()
+
+
+def create_order_review_from_order_item(order_item):
+    """
+    SHOP에서 주문이 생성될 때 호출되어, 주문 항목당 OrderReview를 자동 생성
+    """
+    if not OrderReview.objects.filter(order_item=order_item).exists():
+        OrderReview.objects.create(
+            order_item=order_item,
+            retailer=order_item.order.retailer,  # 주문에 있는 거래처 정보
+            status="PENDING",  # 초기 상태는 미확인
+        )        

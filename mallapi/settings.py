@@ -29,6 +29,19 @@ DEBUG = True
 ALLOWED_HOSTS = ['114.207.245.20', 'localhost', '127.0.0.1', 'linkplusx.cafe24.com']
 
 
+LANGUAGE_CODE = 'ko-kr'  # 한국어 기본값
+
+# 지원할 언어들
+LANGUAGES = [
+    ('ko', 'Korean'),
+    ('en', 'English'),
+    ('it', 'Italian'),
+]
+
+USE_I18N = True
+
+
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -39,15 +52,17 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    'shop',
-    'pricing',
-    'dictionary',
-    "eventlog",
+    'shop.apps.ShopConfig',
+    'pricing.apps.PricingConfig',
+    'dictionary.apps.DictionaryConfig',
+    'eventlog.apps.EventlogConfig',
+    'orderreview.apps.OrderreviewConfig',  
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',           # ✅ 바로 여기!
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -56,6 +71,12 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'mallapi.urls'
+
+
+LOCALE_PATHS = [
+    Path(BASE_DIR) / "locale",
+]
+
 
 TEMPLATES = [
     {
