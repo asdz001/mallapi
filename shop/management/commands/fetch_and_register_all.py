@@ -14,7 +14,7 @@ class Command(BaseCommand):
             "fetch_and_register_cuccuini",
             "fetch_and_register_latti",
             "fetch_and_register_minetti",
-            "fetch_and_register_gaudenzi",
+            #"fetch_and_register_gaudenzi",
         ]
 
         for cmd in commands:

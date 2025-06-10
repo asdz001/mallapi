@@ -53,12 +53,25 @@ class APIClient:
     def _create_session(self) -> requests.Session:
         """재시도 로직이 포함된 세션 생성"""
         session = requests.Session()
-        retry_strategy = Retry(
-            total=config.MAX_RETRIES,
-            status_forcelist=[429, 500, 502, 503, 504],
-            method_whitelist=["HEAD", "GET", "OPTIONS"],
-            backoff_factor=1
-        )
+        
+        # urllib3 버전에 따라 다른 파라미터 사용
+        try:
+            # 새로운 버전 (urllib3 >= 1.26)
+            retry_strategy = Retry(
+                total=config.MAX_RETRIES,
+                status_forcelist=[429, 500, 502, 503, 504],
+                allowed_methods=["HEAD", "GET", "OPTIONS"],
+                backoff_factor=1
+            )
+        except TypeError:
+            # 이전 버전 (urllib3 < 1.26)
+            retry_strategy = Retry(
+                total=config.MAX_RETRIES,
+                status_forcelist=[429, 500, 502, 503, 504],
+                method_whitelist=["HEAD", "GET", "OPTIONS"],
+                backoff_factor=1
+            )
+        
         adapter = HTTPAdapter(max_retries=retry_strategy)
         session.mount("http://", adapter)
         session.mount("https://", adapter)
@@ -76,6 +89,26 @@ class APIClient:
                 params=params, 
                 timeout=config.TIMEOUT
             )
+            
+            # 403 에러 특별 처리 (할당량 초과)
+            if response.status_code == 403:
+                error_data = response.json()
+                message = error_data.get('message', '')
+                
+                # 할당량 초과 메시지에서 대기 시간 추출
+                if "Out of call volume quota" in message:
+                    import re
+                    match = re.search(r'(\d{2}):(\d{2}):(\d{2})', message)
+                    if match:
+                        hours, minutes, seconds = map(int, match.groups())
+                        wait_seconds = hours * 3600 + minutes * 60 + seconds + 60  # 여유 60초 추가
+                        logger.warning(f"⏳ API 할당량 초과. {wait_seconds}초 ({wait_seconds//60}분) 대기 필요")
+                        logger.info(f"💤 {datetime.now().strftime('%H:%M:%S')}부터 대기 시작...")
+                        time.sleep(wait_seconds)
+                        return self.call_api(url, headers, params)  # 재시도
+                
+                logger.error(f"❌ 403 에러: {message}")
+                return None
             
             # 429 에러 특별 처리
             if response.status_code == 429:
@@ -261,7 +294,7 @@ class ProductCollector:
                     "product_name", "raw_brand_name", "season", "gender",
                     "category1", "category2", "material", "origin",
                     "price_org", "price_supply", "price_retail", "sku",
-                    "created_at", "description", "image_url_1", "image_url_2",
+                    "created_at", "image_url_1", "image_url_2",
                     "image_url_3", "image_url_4"
                 ]
                 RawProduct.objects.bulk_update(to_update, update_fields, batch_size=config.BATCH_SIZE)
@@ -291,11 +324,6 @@ class ProductCollector:
             for i in range(4)
         }
         
-        # 설명 조합
-        size_type = safe_get(item, "sizeType")
-        description = safe_get(item, "description")
-        full_description = f"{size_type} | {description}".strip(" |")
-        
         # 날짜 처리
         created_at = item.get("productLastUpdated")
         if not created_at:
@@ -316,7 +344,6 @@ class ProductCollector:
             "price_retail": safe_float(item.get("retailPrice")),
             "sku": safe_get(item, "sku"),
             "created_at": created_at,
-            "description": full_description,
             **image_data
         }
     
@@ -443,52 +470,37 @@ def fetch_daily():
     return result
 
 def fetch_full_history(days: int = 6):
-    """전체 이력 수집 - 일별로 나누어 수집"""
+    """전체 이력 수집 - 한 번에 수집"""
     logger.info("=" * 60)
     logger.info(f"🗂️  [최근 {days}일 수집 모드] 시작")
     logger.info("=" * 60)
     
-    total_collected = 0
-    total_registered = 0
-    total_errors = 0
+    collector = ProductCollector()
     
-    # 일별로 나누어 수집 (API 부하 분산)
-    for day_offset in range(days, 0, -1):
-        collector = ProductCollector()
-        
-        date = datetime.now(timezone.utc) - timedelta(days=day_offset)
-        from_str = date.strftime("%Y-%m-%dT00:00:00.000Z")
-        to_str = (date + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00.000Z")
-        
-        logger.info(f"\n📅 {date.strftime('%Y-%m-%d')} 데이터 수집 중...")
-        
-        try:
-            result = collector.fetch_products(from_str, to_str)
-            total_collected += result.get("collected_count", 0)
-            total_registered += result.get("registered_count", 0)
-            total_errors += collector.stats["errors"]
-            
-            # 일별 수집 후 대기 (마지막 날 제외)
-            if day_offset > 1:
-                logger.info("🌙 다음 날짜 수집 전 대기 중... (3초)")
-                time.sleep(3)
-                
-        except Exception as e:
-            logger.error(f"❌ {date.strftime('%Y-%m-%d')} 수집 실패: {e}", exc_info=True)
-            total_errors += 1
+    # 시작 날짜 계산 (days일 전부터)
+    start_date = datetime.now(timezone.utc) - timedelta(days=days)
+    from_str = start_date.strftime("%Y-%m-%dT00:00:00.000Z")
     
-    # 최종 통계
-    logger.info("\n" + "=" * 60)
-    logger.info("📊 전체 수집 결과")
-    logger.info(f"  📦 총 수집된 상품: {total_collected}개")
-    logger.info(f"  💾 총 등록된 상품: {total_registered}개")
-    logger.info(f"  ❌ 총 에러 발생: {total_errors}개")
-    logger.info("=" * 60)
+    logger.info(f"📅 {start_date.strftime('%Y-%m-%d')}부터 오늘까지 데이터 수집 중...")
     
-    return {
-        "collected_count": total_collected,
-        "registered_count": total_registered
-    }
+    try:
+        # 한 번의 API 호출로 전체 기간 수집
+        result = collector.fetch_products(from_str)
+        collector.print_summary()
+        
+        return {
+            "collected_count": result.get("collected_count", 0),
+            "registered_count": result.get("registered_count", 0)
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ 수집 실패: {e}", exc_info=True)
+        collector.print_summary()
+        
+        return {
+            "collected_count": 0,
+            "registered_count": 0
+        }
 
 def main():
     """메인 함수"""
