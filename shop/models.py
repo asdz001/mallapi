@@ -34,6 +34,7 @@ class RawProduct(models.Model):
     price_supply = models.DecimalField(max_digits=12, decimal_places=2, verbose_name=_("판매가"), default=0)
     discount_rate = models.DecimalField(_("할인율 (%)"), max_digits=5, decimal_places=2, null=True, blank=True)
     price_retail = models.DecimalField(max_digits=12, decimal_places=2, verbose_name=_("소비자가"), default=0)
+    description = models.TextField(blank=True, null=True, verbose_name="설명")
     status = models.CharField(
         max_length=10,
         choices=[('pending', _("미등록")), ('converted', _("등록됨"))],
@@ -88,6 +89,7 @@ class Product(models.Model):
     price_retail = models.DecimalField(max_digits=12, decimal_places=2, verbose_name=_("소비자가"), default=0)
     calculated_price_krw = models.DecimalField(_("원화가"), max_digits=12, decimal_places=0, null=True, blank=True)
     material = models.CharField(max_length=255, verbose_name=_("소재"), blank=True, null=True)
+    description = models.TextField(blank=True, null=True, verbose_name="설명")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("최초 등록일"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("수정일"))
 
