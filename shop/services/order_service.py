@@ -57,7 +57,7 @@ def create_orders_from_carts(selected_carts, request):
                     product_option.stock = max(product_option.stock - quantity, 0)  # 음수 방지
                     product_option.save()
 
-        #send_order_to_api(order)
+        send_order_to_api(order)
         orders_created.append(order)
         
 

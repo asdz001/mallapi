@@ -1,5 +1,3 @@
-# shop/api/pipeline_runner.py
-
 from django.utils import timezone
 from pricing.models import Retailer
 from shop.models import RawProduct  # ✅ 이거 꼭 필요!
@@ -15,8 +13,8 @@ def run_full_pipeline_by_retailer(retailer_code):
     retailer.last_fetch_started_at = timezone.now()
     retailer.save()
 
-# 거래처별 분기
-    #라띠
+    # 거래처별 분기
+    # 라띠
     if retailer_code == "IT-R-01":  # LATTI
         from shop.api.latti.latti import fetch_latti_raw_products_optimized
         from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer
@@ -25,9 +23,7 @@ def run_full_pipeline_by_retailer(retailer_code):
         bulk_convert_or_update_products_by_retailer(retailer_code)
         register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
 
-
-
-    #바제블루
+    # 바제블루
     elif retailer_code == "IT-B-01":  # BASEBLU
         from shop.api.baseblu.basebiu import run_full_baseblue_pipeline
         from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer
@@ -35,31 +31,46 @@ def run_full_pipeline_by_retailer(retailer_code):
         fetch_count = run_full_baseblue_pipeline()  # limit 생략 or 넣을 수 있음
         bulk_convert_or_update_products_by_retailer(retailer_code)
         register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
-  
-  
-#아뜰리에 API 업체 
 
-    #쿠쿠이니
+
+
+#드레스코드
+
+    # 가우덴찌
+    elif retailer_code == "IT-G-03":
+        from shop.api.dresscode import gaudenzi
+        from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer
+
+        # 가우덴찌 상품 수집(1일전부터)
+        result = gaudenzi.fetch_daily()
+        #전체 상품 수집 7일기준으로 반복
+        #result = gaudenzi.fetch_full_history()
+        fetch_count = result["collected_count"]
+
+        bulk_convert_or_update_products_by_retailer(retailer_code)
+        register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
+
+
+
+#아뜰리에
+
+    # 쿠쿠이니
     elif retailer_code == "IT-C-02":
         from shop.management.commands.fetch_and_register_minetti import Command
         cmd = Command()
         return cmd.handle()
-    
 
-    #비니실비아
+    # 비니실비아
     elif retailer_code == "IT-B-02":
         from shop.management.commands.fetch_and_register_minetti import Command
         cmd = Command()
         return cmd.handle()
-    
 
-    #미네띠
+    # 미네띠
     elif retailer_code == "IT-M-01":
         from shop.management.commands.fetch_and_register_minetti import Command
         cmd = Command()
         return cmd.handle()
-
-
 
     else:
         raise ValueError(f"알 수 없는 거래처 코드: {retailer_code}")
@@ -74,6 +85,5 @@ def run_full_pipeline_by_retailer(retailer_code):
         retailer.save()
     except Exception as e:
         print(f"❌ Retailer 저장 실패: {e}")
-
 
     return fetch_count or 0, register_count or 0
