@@ -32,6 +32,25 @@ def run_full_pipeline_by_retailer(retailer_code):
         bulk_convert_or_update_products_by_retailer(retailer_code)
         register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
 
+   # 엘레노라
+    elif retailer_code == "IT-E-01":  # 엘레노라
+        from shop.api.eleonorabonucci import eleonorabonucci
+        from shop.api.eleonorabonucci import register_raw_products
+        from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer
+
+        # 1. 수집 및 병합 → JSON
+        product_count, _ = eleonorabonucci.fetch_and_merge_all()
+        fetch_count = product_count
+
+        # 2. JSON → RawProduct 등록
+        register_raw_products.register_raw_products_from_json(test_mode=False)
+
+        # 3. Raw → Product 가공 등록
+        bulk_convert_or_update_products_by_retailer(retailer_code)
+
+        # 등록된 개수 측정
+        register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
+
 
 
 #드레스코드
