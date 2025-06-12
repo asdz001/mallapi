@@ -37,13 +37,13 @@ class OrderReviewAdmin(admin.ModelAdmin):
         date = obj.order_item.order.created_at.strftime("%Y%m%d")
         retailer = obj.order_item.order.retailer.code.replace("IT-", "").replace("-", "")
         return f"{date}-ORDER-{obj.order_item.order.id}-{obj.order_item.id}-{retailer}"
-    order_id.short_description = _("주문번호")
+    #order_id.short_description = _("주문번호")
 
 
 
     def retailer_display(self, obj):
         return obj.retailer.name
-    retailer_display.short_description = _("거래처")
+    #retailer_display.short_description = _("거래처")
 
     
     # ✅ 읽기 전용 필드 설정
@@ -59,27 +59,27 @@ class OrderReviewAdmin(admin.ModelAdmin):
 
     def retailer_name(self, obj):
         return obj.retailer.name
-    retailer_name.short_description = _("거래처")
+    #retailer_name.short_description = _("retailer_거래처")
 
     def barcode(self, obj):
         return obj.order_item.option.external_option_id if obj.order_item.option else "-"
-    barcode.short_description = _("바코드")
+    #barcode.short_description = _("barcode_바코드")
 
     def brand_name(self, obj):
         return obj.order_item.product.brand_name
-    brand_name.short_description = _("브랜드")
+    #brand_name.short_description = _("brand_브랜드")
 
     def product_name(self, obj):
         return obj.order_item.product.product_name
-    product_name.short_description = _("상품명")
+    #product_name.short_description = _("name_상품명")
 
     def option_name(self, obj):
         return obj.order_item.option.option_name if obj.order_item.option else "-"
-    option_name.short_description = _("옵션")
+    #option_name.short_description = _("option_옵션")
 
     def quantity(self, obj):
         return obj.order_item.quantity
-    quantity.short_description = _("수량")
+    #quantity.short_description = _("quantity_수량")
 
     def cost_price(self, obj):
         if obj.order_item.option and obj.order_item.option.price:
@@ -90,7 +90,7 @@ class OrderReviewAdmin(admin.ModelAdmin):
     def order_date(self, obj):
         local_time = timezone.localtime(obj.order_item.order.created_at)
         return local_time.strftime("%y.%m.%d %I:%M%p")  # ✅ 한국 시간 기준으로 변환
-    order_date.short_description = _("주문일")
+    #order_date.short_description = _("order_date_주문일")
 
 
     # ✅ 하단에 보여줄 자동 표시 정보
@@ -114,7 +114,7 @@ class OrderReviewAdmin(admin.ModelAdmin):
             f"{obj.order_item.option.price:,.2f}" if obj.order_item.option and obj.order_item.option.price else "-",
             obj.order_item.order.created_at.strftime("%y.%m.%d %I:%M%p")
         )
-    display_info.short_description = _("주문 상세 정보")
+    #display_info.short_description = _("주문 상세 정보")
     
 
     # ✅ 주문 상태 변경 시 마지막 수정자와 시간을 기록
