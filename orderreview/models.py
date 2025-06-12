@@ -21,22 +21,22 @@ class RetailerUser(models.Model):
 
 
 class OrderReview(models.Model):
-    order_item = models.OneToOneField(OrderItem, on_delete=models.CASCADE, verbose_name="주문 항목")
-    retailer = models.ForeignKey(Retailer, on_delete=models.CASCADE, verbose_name="거래처")  # ✅ 명시적으로 저장
+    order_item = models.OneToOneField(OrderItem, on_delete=models.CASCADE) #verbose_name="주문 항목"
+    retailer = models.ForeignKey(Retailer, on_delete=models.CASCADE)  # verbose_name="거래처"
     status = models.CharField(
         max_length=20,
         choices=[
             ('PENDING', 'PENDING - 미확인'),
             ('CONFIRMED', 'CONFIRMED - 확인됨'),
             ('SHIPPED', 'SHIPPED - 출고됨'),
-            ('FAILED', 'FAILED - 오류'),
+            ('CANCELED', 'CANCELED - 주문취소'),
         ],
         default='PENDING',
-        verbose_name= _("진행 상태")
+        verbose_name= _("status")
     )
-    memo = models.TextField(blank=True, null=True, verbose_name=_("비고"))
-    last_updated_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL,verbose_name=_("마지막 변경자"))
-    last_updated_at = models.DateTimeField(null=True, blank=True, verbose_name=_("마지막 변경시각"))    
+    memo = models.TextField(blank=True, null=True, verbose_name=_("Memo"))  # 주문 확인 메모
+    last_updated_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL) #verbose_name=_("마지막 변경자")
+    last_updated_at = models.DateTimeField(null=True, blank=True)    #verbose_name=_("마지막 변경시각")
 
     def __str__(self):
         return f"{self.order_item} - {self.status}"

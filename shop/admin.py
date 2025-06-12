@@ -412,7 +412,7 @@ class CartAdmin(admin.ModelAdmin):
         html += """
         <tr>
             <td colspan="5" style='text-align: right; padding-top: 8px;'>
-                <strong id="cart-total-display">총 주문금액: ₩0</strong><br>
+                <strong id="cart-total-display">총 주문금액: 0</strong><br>
                 <button type="button" onclick="saveAllCartOptions()" style="padding: 4px 10px;">💾 전체 저장</button>
             </td>
         </tr>
@@ -570,3 +570,5 @@ class OrderAdmin(admin.ModelAdmin):
             return format_html("<span style='color:red;'>오류 발생: {}</span>", e)
 
     order_summary.short_description = _("주문 요약")
+
+
