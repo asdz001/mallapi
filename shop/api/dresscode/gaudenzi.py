@@ -461,7 +461,7 @@ def fetch_daily():
     collector = ProductCollector()
     
     # 어제 00:00부터
-    yesterday = datetime.now(timezone.utc) - timedelta(days=1)
+    yesterday = datetime.now(timezone.utc) - timedelta(days=2)
     from_str = yesterday.strftime("%Y-%m-%dT00:00:00.000Z")
     
     result = collector.fetch_products(from_str)
