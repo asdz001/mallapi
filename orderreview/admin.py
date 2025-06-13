@@ -142,3 +142,11 @@ class OrderReviewAdmin(admin.ModelAdmin):
         except RetailerUser.DoesNotExist:
             # 거래처 연결이 안 되어 있으면 아무것도 안 보여줌
             return qs.none()    
+        
+
+    def get_list_filter(self, request):
+        if request.user.is_superuser:
+            return ['retailer', 'status']
+        else:
+            return ['status']  # retailer 필터 숨김
+        
