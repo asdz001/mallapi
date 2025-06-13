@@ -19,11 +19,12 @@ class Command(BaseCommand):
             # ✅ 수집 + 원본 등록까지 수행
             fetch_count = gnb.main()  # gnb.py의 main 함수는 수집 및 등록 처리
 
-            # ✅ 가공상품 등록
-            bulk_convert_or_update_products_by_retailer(RETAILER_CODE)
 
             # ✅ 등록된 가공상품 수량 확인
             register_count = RawProduct.objects.filter(retailer=RETAILER_CODE, status="converted").count()
+            
+            # ✅ 가공상품 등록
+            bulk_convert_or_update_products_by_retailer(RETAILER_CODE)
 
             self.stdout.write(f"\n📦 수집된 상품 수: {fetch_count}")
             self.stdout.write(f"🛠️  등록된 가공상품 수: {register_count}")

@@ -10,6 +10,12 @@ from .models import FixedCountry, CountryAlias
 from .models import GlobalPricingSetting
 from .models import PriceFormulaRange
 from django.utils.html import format_html
+from django.utils import timezone
+from .models import Retailer
+from shop.api.pipeline_runner import run_full_pipeline_by_retailer
+import traceback
+import logging
+
 
 #브랜드
 @admin.register(BrandSetting)
@@ -173,6 +179,10 @@ class RetailerAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
     def run_auto_pipeline_button(self, obj):
+        if obj.is_running:
+            return format_html(
+                '<a class="button" style="pointer-events:none; background:#ccc;">⏳ 작업 중...</a>'
+            )
         return format_html(
             '<a class="button" href="{}">수집 → 등록 실행</a>',
             f"{obj.id}/run_pipeline/"
@@ -180,31 +190,32 @@ class RetailerAdmin(admin.ModelAdmin):
     run_auto_pipeline_button.short_description = "자동 실행"
 
     def run_pipeline(self, request, retailer_id):
-        from django.utils import timezone
-        from .models import Retailer
 
+
+        logger = logging.getLogger(__name__)
         retailer = Retailer.objects.get(id=retailer_id)
         retailer.last_fetch_started_at = timezone.now()
+        retailer.is_running = True   # ✅ 실행 시작 표시
         retailer.save()
 
         try:
-            # 👇 여기에 실제 수집 및 등록 함수 연결 예정
-            fetch_count = 100  # 임시 숫자
-            register_count = 98  # 임시 숫자
+            fetch_count, register_count = run_full_pipeline_by_retailer(retailer.code)
 
-            retailer.last_fetch_finished_at = timezone.now()
-            retailer.last_register_finished_at = timezone.now()
-            retailer.last_fetched_count = fetch_count
-            retailer.last_registered_count = register_count
+            retailer.is_running = False  # ✅ 작업 완료 시
             retailer.save()
 
-            messages.success(request, f"{retailer.name} 수집 및 등록 완료: 수집 {fetch_count}개, 등록 {register_count}개")
+            messages.success(
+                request,
+                f"{retailer.name} 수집 및 등록 완료: 수집 {fetch_count}개, 등록 {register_count}개"
+            )
         except Exception as e:
-            messages.error(request, f"오류 발생: {str(e)}")
+            logger.error("❌ 파이프라인 실행 중 오류 발생", exc_info=True)
+            retailer.is_running = False  # ✅ 실패 시에도 False 처리
+            retailer.save()
+            messages.error(request, f"❌ 오류 발생: {str(e)}")
 
         return redirect("..")
-
-
+    
 
 #FTA적용여부
 

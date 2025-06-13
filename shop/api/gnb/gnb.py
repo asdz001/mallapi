@@ -703,6 +703,7 @@ def main():
                 logger.error(f"  - {error}")
         
         logger.info("=== GNB 상품 동기화 완료 ===")
+        return stats.total_products  # ✅ 필수
 
 if __name__ == "__main__":
     main()
