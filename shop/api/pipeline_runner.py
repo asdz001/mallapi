@@ -29,6 +29,8 @@ def run_full_pipeline_by_retailer(retailer_code):
             bulk_convert_or_update_products_by_retailer(retailer_code)
             register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
 
+
+
         # 바제블루
         elif retailer_code == "IT-B-01":  # BASEBLU
             from shop.api.baseblu.basebiu import run_full_baseblue_pipeline
@@ -39,7 +41,9 @@ def run_full_pipeline_by_retailer(retailer_code):
             register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
 
 
-       # 지앤비
+
+
+        # 지앤비
         elif retailer_code == "IT-G-01":
             from shop.api.gnb.gnb import main  # gnb.py의 main 함수만 불러옴
             from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer
@@ -56,7 +60,10 @@ def run_full_pipeline_by_retailer(retailer_code):
 
 
 
-       # 엘레노라
+
+
+
+        # 엘레노라
         elif retailer_code == "IT-E-01":  # 엘레노라
             from shop.api.eleonorabonucci import eleonorabonucci
             from shop.api.eleonorabonucci import register_raw_products
@@ -77,7 +84,8 @@ def run_full_pipeline_by_retailer(retailer_code):
 
 
 
-    #드레스코드
+
+        #드레스코드
 
         # 가우덴찌
         elif retailer_code == "IT-G-03":
@@ -92,22 +100,13 @@ def run_full_pipeline_by_retailer(retailer_code):
 
             bulk_convert_or_update_products_by_retailer(retailer_code)
             register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
+
+
     
 
 
-    #아뜰리에
+        #아뜰리에
 
-        # 쿠쿠이니
-        elif retailer_code == "IT-C-02":
-            from shop.management.commands.fetch_and_register_minetti import Command
-            cmd = Command()
-            cmd.handle()  # 리턴은 문자열이지만 무시됨
-            
-            fetch_count = RawProduct.objects.filter(retailer=retailer_code).count()
-            register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
-
-            return fetch_count, register_count
-        
         # 쿠쿠이니
         elif retailer_code == "IT-C-02":
             from shop.api.atelier.convert_cuccuini_products import convert_atelier_products
@@ -120,7 +119,7 @@ def run_full_pipeline_by_retailer(retailer_code):
             register_count = bulk_convert_or_update_products_by_retailer(retailer_code)
 
             print(f"✅ CUCCUINI 전체 프로세스 완료 - 수집: {fetch_count}개 / 등록: {register_count}개")
-            return fetch_count, register_count
+
 
              
         # 비니실비아
@@ -135,7 +134,7 @@ def run_full_pipeline_by_retailer(retailer_code):
             register_count = bulk_convert_or_update_products_by_retailer(retailer_code)
 
             print(f"✅ bini 전체 프로세스 완료 - 수집: {fetch_count}개 / 등록: {register_count}개")
-            return fetch_count, register_count
+
 
         # 미네띠
         elif retailer_code == "IT-M-01":
@@ -149,7 +148,7 @@ def run_full_pipeline_by_retailer(retailer_code):
             register_count = bulk_convert_or_update_products_by_retailer(retailer_code)
 
             print(f"✅ MINETTI 전체 프로세스 완료 - 수집: {fetch_count}개 / 등록: {register_count}개")
-            return fetch_count, register_count
+
 
 
         # 완료 시간 및 수량 기록
@@ -160,12 +159,22 @@ def run_full_pipeline_by_retailer(retailer_code):
         retailer.is_running = False
         retailer.save()
 
+
+
+        
+
     except Exception as e:
+        print(f"❌ 파이프라인 실행 중 오류: {e}")
+        # 에러를 로그로 남기되 return은 살림
+    finally:
         retailer.is_running = False
-        retailer.save()
-        raise e
+        try:
+            retailer.save()
+        except Exception as save_error:
+            print(f"❌ Retailer 저장 실패 (finally): {save_error}")
 
-    return fetch_count or 0, register_count or 0
 
+    return fetch_count, register_count        
 
+    
 

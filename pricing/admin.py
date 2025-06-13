@@ -201,7 +201,9 @@ class RetailerAdmin(admin.ModelAdmin):
         try:
             fetch_count, register_count = run_full_pipeline_by_retailer(retailer.code)
 
-            retailer.is_running = False  # ✅ 작업 완료 시
+            # ✅ 최신 DB 상태로 다시 불러오기
+            retailer.refresh_from_db()
+            retailer.is_running = False
             retailer.save()
 
             messages.success(
@@ -215,6 +217,7 @@ class RetailerAdmin(admin.ModelAdmin):
             messages.error(request, f"❌ 오류 발생: {str(e)}")
 
         return redirect("..")
+
     
 
 #FTA적용여부
