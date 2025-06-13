@@ -4,7 +4,7 @@ from shop.models import Order
 from datetime import datetime
 
 # ✅ 설정값 (실제 API KEY는 환경변수나 DB에서 불러오는 구조로 대체 가능)
-PERSONAL_CODE = "9d82bdbb-2636-4791-b445-353a26a87f2f"
+PERSONAL_CODE = "da3e1b50-8ce1-433d-a7a5-6353b0c969d3"
 ORDER_INPUT_URL = "https://order.eleonorabonucci.com/ws/order.asmx/Order_Input"
 ORDER_ADDRESS_URL = "https://api.eleonorabonucci.com/API/Order/Insert/Address"
 
