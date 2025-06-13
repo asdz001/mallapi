@@ -252,3 +252,4 @@ def run_full_baseblue_pipeline(limit=None):
 
 
     print(f"🏁 전체 완료: 등록 {saved}개 / 실패 {skipped}개")
+    return saved
