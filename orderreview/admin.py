@@ -8,9 +8,18 @@ from django.utils.translation import gettext_lazy as _
 #유저생성
 @admin.register(RetailerUser)
 class RetailerUserAdmin(admin.ModelAdmin):
-    list_display = ['user', 'retailer']
-    list_filter = ['retailer']
+    list_display = ['user', 'get_retailers']
+    list_filter = ['retailers']
     search_fields = ['user__username']
+    filter_horizontal = ['retailers']
+
+    def get_retailers(self, obj):
+        return ", ".join([r.name for r in obj.retailers.all()])
+    get_retailers.short_description = "연결된 거래처"
+
+    
+
+
 
 
 
@@ -138,7 +147,7 @@ class OrderReviewAdmin(admin.ModelAdmin):
         from .models import RetailerUser
         try:
             retailer_user = RetailerUser.objects.get(user=request.user)
-            return qs.filter(retailer=retailer_user.retailer)
+            return qs.filter(retailer__in=retailer_user.retailers.all())
         except RetailerUser.DoesNotExist:
             # 거래처 연결이 안 되어 있으면 아무것도 안 보여줌
             return qs.none()    
