@@ -74,34 +74,55 @@ def send_order_to_api(order):
     try:
         print(f"\n🛰️ [API 전송 시작] 주문번호: {order.id}, 거래처: {order.retailer.name}")
 
-        # ✅ 고정된 아뜰리에 거래처 리스트
-        ATELIER_CODES = {"MINETTI", "CUCCUINI", "BINI", "IT-C-02", "IT-M-01", "IT-B-02","TEST-HUB"}
-
-        if order.retailer.code.upper() in ATELIER_CODES:
-            module_key = "atelier"  # 아뜰리에 공통 처리
-        else:
-            module_key = order.retailer.code.lower().replace("-", "_")
-
+        # 거래처별 모듈 import
+        ATELIER_CODES = {"MINETTI", "CUCCUINI", "BINI", "IT-C-02", "IT-M-01", "IT-B-02", "TEST-HUB"}
+        module_key = "atelier" if order.retailer.code.upper() in ATELIER_CODES else order.retailer.code.lower().replace("-", "_")
         module_path = f"shop.services.order.{module_key}"
         send_order = import_module(module_path).send_order
 
+        # ✅ 거래처 API에 주문 전송 → 결과는 무조건 표준 형태여야 함
         result = send_order(order)
 
-        if all(r.get('success') for r in result):
+        has_failed = False
+
+        for res in result:
+            barcode = res.get("sku")
+            item_id = res.get("item_id")
+            success = res.get("success", False)
+            reason = res.get("reason", "")
+
+
+            item = order.items.filter(id=item_id, option__external_option_id=barcode).first()
+            if not item:
+                continue
+
+            item.order_status = "SENT" if success else "FAILED"
+            item.order_message = "" if success else reason
+            item.save()
+
+            if not success:
+                has_failed = True
+
+        if has_failed:
+            order.status = "FAILED"
+            order.memo = "일부 상품 전송 실패"
+        else:
             order.status = "SENT"
             order.memo = "API 전송 성공"
-        else:
-            order.status = "FAILED"
-            order.memo = "일부 항목 전송 실패"
 
     except Exception as e:
         print("❌ 오류 발생:", str(e))
         order.status = "FAILED"
         order.memo = f"전송 실패: {str(e)}"
 
+        # 예외 발생 시 전체 상품 실패 처리
+        for item in order.items.all():
+            item.order_status = "FAILED"
+            item.order_message = str(e)
+            item.save()
+
     finally:
         order.save()
-
 
 def create_order_review_from_order_item(order_item):
     """

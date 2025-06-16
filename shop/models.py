@@ -222,6 +222,26 @@ class OrderItem(models.Model):
             return f"{date}-ORDER-{self.order.id}-{self.id}-{retailer} | {product_name} | {option_name} | x {qty}개"
         except Exception:
             return f"OrderItem #{self.id}"
+        
+
+
+    ORDER_STATUS_CHOICES = [
+        ("SENT", "전송 완료"),
+        ("FAILED", "전송 실패"),
+    ]
+
+    order_status = models.CharField(
+        max_length=10,
+        choices=ORDER_STATUS_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name="주문 전송 상태"
+    )
+    order_message = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="주문 전송 메시지 (실패 사유 등)"
+    )        
 
 
 
