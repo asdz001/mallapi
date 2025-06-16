@@ -1,51 +1,60 @@
 import requests
-from django.conf import settings
 from datetime import datetime
+from shop.models import Order
 
 
-def send_order(order):
+def send_order(order: Order):
     """
-    MILAN 거래처 주문 요청 (데모 API)
-    - 각 OrderItem에서 옵션별 바코드, 수량, 사이즈 추출
-    - 데모 API: http://lab.modacheva.com/demo_getorder
+    라띠(LATTI) API 주문 전송
+    Returns:
+        list: [{"sku": 바코드, "success": bool, "reason": 실패 사유}]
     """
     endpoint = "https://lab.modacheva.com/mil_getorder"  # 운영 시 교체 가능
-
     results = []
 
     for item in order.items.all():
         option = item.option
-        retailer_code = order.retailer.code.replace("IT-", "").replace("-", "")  # "R01"
-        order_date = order.created_at.strftime("%Y%m%d")  # "20250526"
+        barcode = option.external_option_id
+        size = option.option_name
+        qty = item.quantity
 
+        retailer_code = order.retailer.code.replace("IT-", "").replace("-", "")
+        order_date = order.created_at.strftime("%Y%m%d")
         order_code = f"{order_date}-ORDER-{order.id}-{item.id}-{retailer_code}"
 
         payload = {
-            "Barcode": option.external_option_id,     # 옵션 바코드
-            "Qty": item.quantity,                     # 주문 수량
-            "Size": option.option_name,               # 사이즈
-            "Order": order_code  # ✅ 여기에 주문번호 반영
+            "Barcode": barcode,
+            "Qty": qty,
+            "Size": size,
+            "Order": order_code
         }
 
-        # ✅ 디버깅용 로그 출력
         print(f"📤 전송 Payload: {payload}")
 
         try:
             response = requests.post(endpoint, data=payload, timeout=10)
             response.raise_for_status()
+            response_text = response.text.strip()
+
+            print(f"📬 응답: {response_text}")
+
+            # 성공 여부 판별: 단순 문자열 비교
+            is_success = "OK" in response_text.upper()
 
             results.append({
-                "option": option.option_name,
-                "response": response.text,
-                "success": True
+                "sku": barcode,
+                "item_id": item.id,
+                "success": is_success,
+                "reason": "" if is_success else response_text
             })
-            print(f"📬 응답: {response.text}")
 
-        except requests.RequestException as e:
+        except Exception as e:
+            print(f"❌ 예외 발생: {str(e)}")
             results.append({
-                "option": option.option_name,
-                "response": str(e),
-                "success": False
+                "sku": barcode,
+                "item_id": item.id,
+                "success": False,
+                "reason": str(e)
             })
 
     return results

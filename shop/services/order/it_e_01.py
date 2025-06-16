@@ -1,32 +1,25 @@
 import requests
 import json
-from shop.models import Order
 from datetime import datetime
 
-# ✅ 설정값 (실제 API KEY는 환경변수나 DB에서 불러오는 구조로 대체 가능)
 PERSONAL_CODE = "da3e1b50-8ce1-433d-a7a5-6353b0c969d3"
 ORDER_INPUT_URL = "https://order.eleonorabonucci.com/ws/order.asmx/Order_Input"
 ORDER_ADDRESS_URL = "https://api.eleonorabonucci.com/API/Order/Insert/Address"
 
-
-def send_order(order: Order):
+def send_order(order):
     """
-    엘레오노라(IT-E-01) 주문 API 전송
-    1단계: GET 방식 주문 (상품/수량/가격)
-    2단계: POST 방식 주소 전송
-    
+    엘레오노라 주문 전송
     Returns:
-        list: 성공 시 주문 아이템 리스트, 실패 시 빈 리스트
+        list: [{"sku": 바코드, "item_id": 주문항목ID, "success": bool, "reason": str}]
     """
-    
     order_date = datetime.now().strftime("%Y%m%d")
     retailer_code = order.retailer.code.replace("IT-", "").replace("-", "")
     reference = f"{order_date}-ORDER-{order.id}-{order.items.first().id}-{retailer_code}"
+
     print("🧾 주문 전송 시작 →", reference)
 
-    # ✅ 장바구니 아이템 구성
     basket = []
-    item_map = {}  # SKU_item -> order item
+    item_map = {}  # SKU_item → item
     for item in order.items.all():
         option = item.option
         sku_item = option.external_option_id
@@ -40,7 +33,6 @@ def send_order(order: Order):
     print(f"🧺 장바구니 항목 수: {len(basket)}개")
     print(json.dumps(basket, indent=2))
 
-    # ✅ 1단계: 주문 전송
     order_input_payload = {
         "Personal_Code": PERSONAL_CODE,
         "Reference": reference,
@@ -55,20 +47,31 @@ def send_order(order: Order):
         print("✅ Step 1 완료 응답:")
         print(json.dumps(result1, indent=2))
 
-        # ✅ 응답 내 Qty_added 확인
-        failed_items = []
+        response_map = {}
         for entry in result1.get("SKU_item", []):
-            if entry.get("Qty_added", 0) <= 0:
-                failed_items.append(entry.get("SKU_item"))
-
-        if failed_items:
-            raise Exception(f"재고 부족 또는 실패 항목: {failed_items}")
+            sku = entry.get("SKU_item")
+            qty_added = entry.get("Qty_added", 0)
+            item = item_map.get(sku)
+            if not item:
+                continue
+            response_map[sku] = {
+                "item_id": item.id,
+                "success": qty_added > 0
+            }
 
     except Exception as e:
-        print("❌ Step 1 실패:", e)   
-        return []  # 빈 리스트 반환
+        print("❌ Step 1 실패:", e)
+        return [
+            {
+                "sku": item.option.external_option_id,
+                "item_id": item.id,
+                "success": False,
+                "reason": str(e)
+            }
+            for item in order.items.all()
+        ]
 
-    # ✅ 2단계: 주소 정보 전송 - address_info 기반 가공
+    # ✅ Step 2: 주소 정보 전송
     address_info = {
         "last_name": "CHO",
         "first_name": "JD",
@@ -113,62 +116,37 @@ def send_order(order: Order):
 
     try:
         print("📡 Step 2: ORDER_ADDRESS 호출 중...")
-        # 🔧 핵심 수정: 로그에서 확인된 성공 방식 사용
-        headers = {"Authorization": PERSONAL_CODE}  # Bearer 제거!
+        headers = {"Authorization": PERSONAL_CODE}
         print("📤 요청 Payload:")
         print(json.dumps(address_payload, indent=2))
 
         res2 = requests.post(ORDER_ADDRESS_URL, headers=headers, json=address_payload)
         res2.raise_for_status()
 
-        print("📥 응답 status_code:", res2.status_code)
-        print("📥 응답 Content-Type:", res2.headers.get("Content-Type"))
-        print("📥 응답 raw text:")
-        print(res2.text)
+        result2 = res2.json() if res2.headers.get("Content-Type") == "application/json" else res2.text
 
-        try:
-            result2 = res2.json()
-            print("📥 res2.json() 파싱 성공!")
-            print("📥 result2 타입:", type(result2))
-        except Exception as json_error:
-            print("❌ res2.json() 파싱 실패:", json_error)
-            result2 = res2.text
-
-        # 🔧 핵심 수정: 매뉴얼에 따른 정확한 성공 판정
-        if isinstance(result2, dict):
-            print("✅ Step 2 응답 (dict):")
-            print(json.dumps(result2, indent=2))
-            
-            # 매뉴얼에 따른 성공 확인: {"Success": true}
-            if result2.get("Success") is True:
-                print("🎉 주문 전송 완료!")
-                # 성공 시 주문 아이템 정보 반환
-                return [{"order_id": order.id, "reference": reference, "success": True}]
-            else:
-                print("❌ API 응답에서 Success가 true가 아님")
-                return []
-                
-        elif isinstance(result2, bool):
-            print(f"✅ Step 2 응답 (bool): {result2}")
-            if result2:
-                print("🎉 주문 전송 완료!")
-                return [{"order_id": order.id, "reference": reference, "success": True}]
-            else:
-                print("❌ EB 응답이 False → 실패 처리")
-                return []
-        else:
-            print(f"⚠️ Step 2 응답이 예상 외 타입입니다: {type(result2)} → {result2}")
-            # 200 응답이고 에러가 없으면 성공으로 처리
-            if res2.status_code == 200:
-                print("🎉 주문 전송 완료!")
-                return [{"order_id": order.id, "reference": reference, "success": True}]
-            else:
-                return []
+        if isinstance(result2, dict) and result2.get("Success") is not True:
+            raise Exception("주소 정보 전송 실패")
 
     except Exception as e:
         print("❌ Step 2 예외 발생:", e)
-        return []
+        return [
+            {
+                "sku": sku,
+                "item_id": data["item_id"],
+                "success": False,
+                "reason": f"주소 전송 실패: {str(e)}"
+            }
+            for sku, data in response_map.items()
+        ]
 
-    # 이 라인은 실행되지 않지만 안전을 위해 유지
-    print("🎉 주문 전송 완료!")
-    return [{"order_id": order.id, "reference": reference, "success": True}]
+    # ✅ 최종 표준 응답 반환
+    return [
+        {
+            "sku": sku,
+            "item_id": data["item_id"],
+            "success": data["success"],
+            "reason": "" if data["success"] else "재고 없음"
+        }
+        for sku, data in response_map.items()
+    ]

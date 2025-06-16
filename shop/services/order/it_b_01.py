@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from shop.models import Order
 
+
 #BASE_URL = "https://sandbox.csplatform.io:9950" #테스트 주소
 BASE_URL = "https://api.csplatform.io"
 ORDER_ENDPOINT = f"{BASE_URL}/shop/v1/orders"
@@ -15,7 +16,6 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-# ✅ SKU + item_id 매핑: 최신 JSON에서 item_id 기준으로 SKU 조회
 def load_optionid_to_sku_map_from_latest_json():
     folder = Path("export/BASEBLU")
     json_files = sorted(folder.glob("base_blu_raw_*.json"), reverse=True)
@@ -33,27 +33,23 @@ def load_optionid_to_sku_map_from_latest_json():
             sku = item.get("sku")
             item_id = item.get("item_id", {}).get("$oid")
             if item_id and sku:
-                sku_map[item_id] = {
-                    "sku": sku,
-                    "item_id": item_id
-                }
+                sku_map[item_id] = {"sku": sku, "item_id": item_id}
     return sku_map
 
 def send_order(order: Order):
     print(f"\n🛰️ [API 전송 시작] 주문번호: {order.id}, 거래처: BASEBLU")
-    print(f"📦 바제블루 주문 전송 시작: {order.id}")
-
-    sku_map = load_optionid_to_sku_map_from_latest_json()  # ✅ 새 매핑 함수 사용
+    sku_map = load_optionid_to_sku_map_from_latest_json()
 
     items = []
+    results = []
+
     total_qty = 0
     total_amount = Decimal("0.00")
 
     for item in order.items.all():
-        option_id = item.option.external_option_id  # ✅ 실제 item_id
+        option_id = item.option.external_option_id
         info = sku_map.get(option_id, {})
         sku = info.get("sku", "-")
-        item_id = option_id  # ✅ 그대로 사용
 
         qty = item.quantity
         price = item.product.price_org or Decimal("0.00")
@@ -61,10 +57,9 @@ def send_order(order: Order):
         unit_price_tax_excl = price
         unit_price_tax = Decimal("0.00")
         unit_price_tax_incl = unit_price_tax_excl + unit_price_tax
-
+        total_price_tax_incl = unit_price_tax_incl * qty
         total_price_tax_excl = unit_price_tax_excl * qty
         total_price_tax = unit_price_tax * qty
-        total_price_tax_incl = unit_price_tax_incl * qty
 
         total_qty += qty
         total_amount += total_price_tax_incl
@@ -76,7 +71,7 @@ def send_order(order: Order):
         print(f"   통화: EUR")
 
         items.append({
-            "item_id": {"$oid": item_id},
+            "item_id": {"$oid": option_id},
             "sku": sku,
             "qty": qty,
             "price": float(total_price_tax_incl),
@@ -86,6 +81,14 @@ def send_order(order: Order):
             "total_price_tax_excl": {"amount": float(total_price_tax_excl), "currency": "EUR"},
             "total_price_tax": {"amount": float(total_price_tax), "currency": "EUR"},
             "total_price_tax_incl": {"amount": float(total_price_tax_incl), "currency": "EUR"}
+        })
+
+        # 결과 리스트에 항목 추가 (성공 여부는 후처리)
+        results.append({
+            "sku": option_id,
+            "item_id": item.id,
+            "success": True,
+            "reason": ""
         })
 
     item = order.items.first()
@@ -133,21 +136,18 @@ def send_order(order: Order):
         response = requests.post(ORDER_ENDPOINT, json=payload, headers=HEADERS, timeout=10)
         print(f"📨 응답 코드: {response.status_code}")
         print("📨 응답 본문:", response.text)
-
         response.raise_for_status()
 
-        order.status = "SENT"
-        order.save(update_fields=["status"])
-
-        return [{"success": True, "message": "주문 전송 성공"}]
+        # 성공일 경우에도 result 리턴만 함 (order 저장 X)
+        return results
 
     except Exception as e:
         error_message = str(e)
         print("❌ 전송 실패:", error_message)
 
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        order.status = "FAILED"
-        order.memo = f"[{now_str}] 바제블루 전송 실패: {error_message}"
-        order.save(update_fields=["status", "memo"])
+        # 결과 항목의 success = False, reason에 오류 메시지 기입
+        for r in results:
+            r["success"] = False
+            r["reason"] = f"바제블루 전송 실패: {error_message}"
 
-        return [{"success": False, "message": error_message}]
+        return results

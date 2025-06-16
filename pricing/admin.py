@@ -189,6 +189,7 @@ class RetailerAdmin(admin.ModelAdmin):
         )
     run_auto_pipeline_button.short_description = "자동 실행"
 
+
     def run_pipeline(self, request, retailer_id):
 
 

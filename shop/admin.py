@@ -10,6 +10,7 @@ from shop.services.product.conversion_service import convert_or_update_product
 from decimal import Decimal ,ROUND_HALF_UP
 from django.db.models import Count
 from django.utils.translation import gettext_lazy as _
+from django.utils.timezone import localtime
 
 
 # ✅ 브랜드 필터 - 모든 브랜드 + 수량 표시
@@ -124,11 +125,13 @@ class RawProductAdmin(admin.ModelAdmin):
 
     # ✅ 1번 요청: 날짜 형식 변경 (25.06.05 8:22AM)
     def created_at_short(self, obj):
-        return obj.created_at.strftime("%y.%m.%d %I:%M%p")
+        local_dt = localtime(obj.created_at)  # 👉 한국시간으로 변환
+        return local_dt.strftime("%y.%m.%d %I:%M%p")
     created_at_short.short_description = _("등록일")
 
     def updated_at_short(self, obj):
-        return obj.updated_at.strftime("%y.%m.%d %I:%M%p")
+        local_dt = localtime(obj.updated_at)  # 👉 한국시간으로 변환
+        return local_dt.strftime("%y.%m.%d %I:%M%p")
     updated_at_short.short_description = _("수정일")
 
 
@@ -280,11 +283,13 @@ class ProductAdmin(admin.ModelAdmin):
     
     # ✅ 1번 요청: 날짜 형식 변경 (25.06.05 8:22AM)
     def created_at_short(self, obj):
-        return obj.created_at.strftime("%y.%m.%d %I:%M%p")
+        local_dt = localtime(obj.created_at)  # 👉 한국시간으로 변환
+        return local_dt.strftime("%y.%m.%d %I:%M%p")
     created_at_short.short_description = _("등록일")
-    
+
     def updated_at_short(self, obj):
-        return obj.updated_at.strftime("%y.%m.%d %I:%M%p")
+        local_dt = localtime(obj.updated_at)  # 👉 한국시간으로 변환
+        return local_dt.strftime("%y.%m.%d %I:%M%p")
     updated_at_short.short_description = _("수정일")
 
 
@@ -445,7 +450,7 @@ class OrderItemInline(admin.TabularInline):
 
     fields = (
         'retailer_name', 'category', 'brand_name', 'product_name',
-        'option_name', 'quantity', 'price_org', 'price_supply' , 'markup', 'price_krw' , 'barcode', 'order_reference' 
+        'option_name', 'quantity', 'price_org', 'price_supply' , 'markup', 'price_krw' , 'barcode', 'order_reference' ,'item_status', 'item_message'
     )
     readonly_fields = fields
 
@@ -495,6 +500,18 @@ class OrderItemInline(admin.TabularInline):
         date = obj.order.created_at.strftime("%Y%m%d")
         retailer = obj.order.retailer.code.replace("IT-", "").replace("-", "")
         return f"{date}-ORDER-{obj.order.id}-{obj.id}-{retailer}"
+    
+    # ✅ 주문 전송 상태
+    def item_status(self, obj):
+        return obj.order_status or "-"
+    
+
+    # ✅ 전송 메시지
+    def item_message(self, obj):
+        return obj.order_message or "-"
+    
+
+
 
     retailer_name.short_description = _("거래처")
     category.short_description = _("카테고리")
@@ -508,6 +525,8 @@ class OrderItemInline(admin.TabularInline):
     price_krw.short_description = _("주문금액")
     barcode.short_description = _("주문바코드")
     order_reference.short_description = _("주문번호(날짜-고유번호-업체명)")
+    item_message.short_description = _("전송 메시지")
+    item_status.short_description = _("전송 상태")
 
 
 # ✅ 성능 최적화된 주문 관리자
