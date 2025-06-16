@@ -10,10 +10,11 @@ User = get_user_model()
 
 class RetailerUser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name="유저")
-    retailer = models.ForeignKey(Retailer, on_delete=models.CASCADE, verbose_name="거래처")
+    retailers = models.ManyToManyField(Retailer, verbose_name="거래처")
 
     def __str__(self):
-        return f"{self.user.username} ({self.retailer.name})"
+        retailers = ", ".join([r.name for r in self.retailers.all()])
+        return f"{self.user.username} ({retailers})"
 
     class Meta:
         verbose_name = _("거래처 유저")
