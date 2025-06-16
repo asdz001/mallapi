@@ -9,7 +9,7 @@ class ConversionLog(models.Model):
 
     class Meta:
         verbose_name = "실패 로그"
-        verbose_name_plural = "3. 실패 로그"
+        verbose_name_plural = "3. 가공 실패 로그"
 
     def __str__(self):
         return f"[{self.source}] {self.retailer} - {self.raw_product.id} - {self.reason[:30]}"

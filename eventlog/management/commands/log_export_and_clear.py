@@ -20,7 +20,7 @@ class Command(BaseCommand):
         filepath = os.path.join("log_backups", filename)
         os.makedirs("log_backups", exist_ok=True)
 
-        with open(filepath, "w", newline="", encoding="utf-8") as f:
+        with open(filepath, "w", newline="", encoding="utf-8-sig") as f:
             writer = csv.writer(f)
             writer.writerow(["상품 ID", "브랜드", "성별", "카테고리1", "카테고리2", "원산지", "실패 사유"])
             for log in logs:
