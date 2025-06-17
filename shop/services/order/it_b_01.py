@@ -92,9 +92,8 @@ def send_order(order: Order):
         })
 
     item = order.items.first()
-    order_date = order.created_at.strftime("%Y%m%d")
-    retailer_code = order.retailer.code.replace("IT-", "").replace("-", "")
-    shop_order_id = f"{order_date}-ORDER-{order.id}-{item.id}-{retailer_code}"
+    shop_order_id = item.external_order_number
+ 
 
     order_dt = order.created_at.astimezone(timezone.utc).isoformat(timespec='milliseconds').replace("+00:00", "Z")
 

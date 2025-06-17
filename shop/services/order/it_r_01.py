@@ -18,9 +18,7 @@ def send_order(order: Order):
         size = option.option_name
         qty = item.quantity
 
-        retailer_code = order.retailer.code.replace("IT-", "").replace("-", "")
-        order_date = order.created_at.strftime("%Y%m%d")
-        order_code = f"{order_date}-ORDER-{order.id}-{item.id}-{retailer_code}"
+        order_code = item.external_order_number
 
         payload = {
             "Barcode": barcode,

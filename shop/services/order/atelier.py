@@ -128,9 +128,7 @@ def send_order(order):
         return results
 
     item = order.items.first()
-    date_str = order.created_at.strftime("%Y%m%d")
-    retailer_code = order.retailer.code.replace("IT-", "").replace("-", "")
-    order_reference = f"{date_str}-ORDER-{order.id}-{item.id}-{retailer_code}"
+    order_reference = item.external_order_number
 
     payload = {
         "USER_MKT": USER_MKT,

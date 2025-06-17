@@ -6,6 +6,7 @@ from shop.utils.markup_util import get_markup_from_product
 from decimal import Decimal
 from shop.services.price_calculator import calculate_final_price
 from django.utils.translation import gettext_lazy as _  # 이미 있음
+from django.contrib.auth.models import User
 
 # 🔧 브랜드 자동 치환 함수
 def resolve_standard_brand(raw_name):
@@ -167,6 +168,8 @@ class ProductOption(models.Model):
 class Cart(models.Model):
     product = models.ForeignKey('shop.Product', on_delete=models.CASCADE, verbose_name=_("상품"))
     added_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="created_%(class)s")
+    updated_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="updated_%(class)s")
 
     def __str__(self):
         return f"{self.product.product_name}"
@@ -188,6 +191,8 @@ class CartOption(models.Model):
 class Order(models.Model):
     retailer = models.ForeignKey(Retailer, on_delete=models.CASCADE, verbose_name=_("거래처"))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("주문일시"))
+    created_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="created_%(class)s")
+    updated_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="updated_%(class)s")
 
     STATUS_CHOICES = [
         ("PENDING", _("대기중")),
@@ -211,6 +216,7 @@ class OrderItem(models.Model):
     option = models.ForeignKey(ProductOption, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
     price_krw = models.DecimalField(_("원화가"), max_digits=12, decimal_places=0, null=True, blank=True)
+    external_order_number = models.CharField(max_length=100,blank=True,null=True,verbose_name="	order_number(날짜-고유번호-업체명)" )  # 관리자 페이지 표시 이름
 
     def __str__(self):
         try:
