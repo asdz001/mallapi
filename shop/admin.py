@@ -11,6 +11,7 @@ from decimal import Decimal ,ROUND_HALF_UP
 from django.db.models import Count
 from django.utils.translation import gettext_lazy as _
 from django.utils.timezone import localtime
+from django.db import transaction
 
 
 # ✅ 브랜드 필터 - 모든 브랜드 + 수량 표시
@@ -308,16 +309,26 @@ class CartAdmin(admin.ModelAdmin):
     list_display = (
         'get_retailer', 'get_category', 'get_product_name', 'get_image', 'product_brand',
         'product_price_org', 'product_price_supply', 'product_markup', 'product_price_krw',
-        'display_option_table', 'added_at'
+        'display_option_table', 'added_at','created_by', 'updated_by'
     )
     actions = [create_order_action]
+    readonly_fields = ('created_by', 'updated_by')    
     list_filter = ('product__retailer',)
     list_display_links = None
     
     # ✅ 페이지네이션 설정 (핵심 최적화)
     list_per_page = 30
     list_max_show_all = 100
-    
+
+
+    # ✅ 주문 생성자/수정자 표시
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:
+            obj.created_by = request.user  # ✅ 최초 생성자
+        obj.updated_by = request.user  # ✅ 매 저장시 수정자 기록
+        super().save_model(request, obj, form, change)
+
+
     # ✅ 쿼리 최적화 - 모든 관련 데이터를 미리 로드
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
@@ -437,6 +448,13 @@ class CartAdmin(admin.ModelAdmin):
                         opt.save()
                     except ValueError:
                         pass
+
+                    # ✅ 여기서 수정자 저장
+            cart.updated_by = request.user
+            cart.save()
+
+            transaction.on_commit(lambda: cart.refresh_from_db())
+
             self.message_user(request, "주문 수량이 저장되었습니다.", level=messages.SUCCESS)
 
         return super().change_view(request, object_id, form_url, extra_context)
@@ -450,9 +468,11 @@ class OrderItemInline(admin.TabularInline):
 
     fields = (
         'retailer_name', 'category', 'brand_name', 'product_name',
-        'option_name', 'quantity', 'price_org', 'price_supply' , 'markup', 'price_krw' , 'barcode', 'order_reference' ,'item_status', 'item_message'
+        'option_name', 'quantity', 'price_org', 'price_supply' , 'markup', 'price_krw' , 'barcode', 'external_order_number','item_status', 'item_message'
     )
     readonly_fields = fields
+
+
 
     def has_add_permission(self, request, obj):
         return False
@@ -496,10 +516,6 @@ class OrderItemInline(admin.TabularInline):
     def barcode(self, obj):
         return obj.option.external_option_id if obj.option else "-"
 
-    def order_reference(self, obj):
-        date = obj.order.created_at.strftime("%Y%m%d")
-        retailer = obj.order.retailer.code.replace("IT-", "").replace("-", "")
-        return f"{date}-ORDER-{obj.order.id}-{obj.id}-{retailer}"
     
     # ✅ 주문 전송 상태
     def item_status(self, obj):
@@ -510,6 +526,7 @@ class OrderItemInline(admin.TabularInline):
     def item_message(self, obj):
         return obj.order_message or "-"
     
+
 
 
 
@@ -524,17 +541,18 @@ class OrderItemInline(admin.TabularInline):
     markup.short_description = _("브랜드 마크업")
     price_krw.short_description = _("주문금액")
     barcode.short_description = _("주문바코드")
-    order_reference.short_description = _("주문번호(날짜-고유번호-업체명)")
     item_message.short_description = _("전송 메시지")
     item_status.short_description = _("전송 상태")
+
+
 
 
 # ✅ 성능 최적화된 주문 관리자
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'retailer', 'status', 'order_summary' , 'created_at')
+    list_display = ('id', 'retailer', 'status', 'order_summary' , 'created_at','created_by', 'updated_by')
     list_filter = ('retailer', 'status')
-    readonly_fields = ('created_at',)
+    readonly_fields = ('created_at','created_by', 'updated_by')
     inlines = [OrderItemInline]
     
     # ✅ 페이지네이션 설정
@@ -550,7 +568,29 @@ class OrderAdmin(admin.ModelAdmin):
             'items__product',  # OrderItem -> Product 관계
             'items__option'    # OrderItem -> ProductOption 관계
         )
+    
+    # ✅ 주문 생성자/수정자 표시
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:
+            obj.created_by = request.user  # ✅ 최초 생성자
+        obj.updated_by = request.user  # ✅ 매 저장시 수정자 기록
+        super().save_model(request, obj, form, change)
 
+
+    # ✅ 주문 저장 후 외부 주문번호 생성
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+
+        order = form.instance
+        order_date = localtime(order.created_at).strftime("%Y%m%d")
+        retailer = order.retailer.code.replace("IT-", "").replace("-", "")
+
+        for item in order.items.all():
+            item.external_order_number = f"{order_date}-ORDER-{order.id}-{item.id}-{retailer}"
+            item.save()    
+
+
+    # ✅ 주문 요약 (prefetch된 데이터 사용)
     def order_summary(self, obj):
         try:
             # ✅ prefetch된 데이터 사용

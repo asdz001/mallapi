@@ -161,14 +161,22 @@ class BrandSettingAdmin(admin.ModelAdmin):
 @admin.register(Retailer)
 class RetailerAdmin(admin.ModelAdmin):
     list_display = ('name', 'code',"order_api_name",  "last_fetched_count","last_registered_count",
-                    "last_fetch_started_at","last_register_finished_at","run_auto_pipeline_button")
+                    "last_fetch_started_at","last_register_finished_at",'created_by', 'updated_by',"run_auto_pipeline_button")
     search_fields = ('name',)
-
     readonly_fields = [
         "last_fetch_started_at", "last_fetch_finished_at",
         "last_register_finished_at",
-        "last_fetched_count", "last_registered_count",
+        "last_fetched_count", "last_registered_count",'created_by', 'updated_by',
     ]
+
+
+    # ✅ 주문 생성자/수정자 표시
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:
+            obj.created_by = request.user  # ✅ 최초 생성자
+        obj.updated_by = request.user  # ✅ 매 저장시 수정자 기록
+        super().save_model(request, obj, form, change)
+
 
 
     def get_urls(self):

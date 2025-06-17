@@ -1,5 +1,6 @@
 from django.db import models
 from multiselectfield import MultiSelectField
+from django.contrib.auth.models import User
 
 
 
@@ -14,6 +15,8 @@ class Retailer(models.Model):
     last_register_finished_at = models.DateTimeField(null=True, blank=True, verbose_name="등록 완료 시간")
     last_fetched_count = models.PositiveIntegerField(default=0, verbose_name="수집 상품 수")
     last_registered_count = models.PositiveIntegerField(default=0, verbose_name="등록 상품 수")
+    created_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="created_%(class)s")
+    updated_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="updated_%(class)s")
     is_running = models.BooleanField(default=False)
 
 

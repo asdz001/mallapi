@@ -12,9 +12,10 @@ def send_order(order):
     Returns:
         list: [{"sku": 바코드, "item_id": 주문항목ID, "success": bool, "reason": str}]
     """
-    order_date = datetime.now().strftime("%Y%m%d")
-    retailer_code = order.retailer.code.replace("IT-", "").replace("-", "")
-    reference = f"{order_date}-ORDER-{order.id}-{order.items.first().id}-{retailer_code}"
+
+    item = order.items.first()
+    reference = item.external_order_number
+
 
     print("🧾 주문 전송 시작 →", reference)
 
@@ -116,7 +117,7 @@ def send_order(order):
 
     try:
         print("📡 Step 2: ORDER_ADDRESS 호출 중...")
-        headers = {"Authorization": PERSONAL_CODE}
+        headers = {"Authorization": f"Bearer {PERSONAL_CODE}"}
         print("📤 요청 Payload:")
         print(json.dumps(address_payload, indent=2))
 
