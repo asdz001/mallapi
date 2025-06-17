@@ -4,6 +4,33 @@ from django.utils.html import format_html
 from .models import RetailerUser
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django.contrib.admin import SimpleListFilter
+
+
+
+#거래처별 필터링
+class RetailerLimitedFilter(SimpleListFilter):
+    title = "거래처"
+    parameter_name = "retailer"
+
+    def lookups(self, request, model_admin):
+        from .models import RetailerUser
+        if request.user.is_superuser:
+            # 슈퍼유저는 전체 거래처
+            return [(retailer_id, retailer_name) for (retailer_id, retailer_name) in model_admin.model.objects.values_list('retailer__id', 'retailer__name').distinct()]
+        else:
+            try:
+                ru = RetailerUser.objects.get(user=request.user)
+                return [(r.id, r.name) for r in ru.retailers.all()]
+            except RetailerUser.DoesNotExist:
+                return []
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(retailer__id=self.value())
+        return queryset
+    
+
 
 #유저생성
 @admin.register(RetailerUser)
@@ -18,8 +45,6 @@ class RetailerUserAdmin(admin.ModelAdmin):
     get_retailers.short_description = "연결된 거래처"
 
     
-
-
 
 
 
@@ -136,34 +161,23 @@ class OrderReviewAdmin(admin.ModelAdmin):
     # ✅ 거래처에 따라 주문 필터링
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-
-        # ✅ 슈퍼유저는 전체 주문을 볼 수 있음
         if request.user.is_superuser:
             return qs
 
-        # ✅ 일반 유저는 본인의 거래처만 볼 수 있음
-        from .models import RetailerUser
-        try:
-            retailer_user = RetailerUser.objects.get(user=request.user)
-            return qs.filter(retailer__in=retailer_user.retailers.all())
-        except RetailerUser.DoesNotExist:
-            # 거래처 연결이 안 되어 있으면 아무것도 안 보여줌
-            return qs.none()    
+        retailers = RetailerUser.objects.filter(user=request.user).values_list('retailers', flat=True)
+        return qs.filter(retailer__in=retailers) if retailers else qs.none()  
         
-
+    # ✅ 필터링 거래처만 확인
     def get_list_filter(self, request):
-        if request.user.is_superuser:
-            return ['retailer', 'status']
-        else:
-            return ['status']  # retailer 필터 숨김
+        return [RetailerLimitedFilter, 'status']
         
 
     def status_colored(self, obj):
         color_map = {
-            'PENDING': "#f7f4f1",  # 주황
+            'PENDING': "#f7f4f1",  # 흰색
             'CONFIRMED': '#5cb85c',  # 녹색
-            'SHIPPED': "#6eafeb",    # 빨강
-            'CANCELED': "#FF0000", # 회색
+            'SHIPPED': "#6eafeb",    # 하늘
+            'CANCELED': "#FF0000", # 빨강
         }
         status = obj.status
         bg_color = color_map.get(status, '#f0f0f0')  # 기본 배경색 (없을 경우)

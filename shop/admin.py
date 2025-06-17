@@ -550,7 +550,7 @@ class OrderItemInline(admin.TabularInline):
 # ✅ 성능 최적화된 주문 관리자
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'retailer', 'status', 'order_summary' , 'created_at','created_by', 'updated_by')
+    list_display = ('id', 'retailer', 'status','status_colored' , 'order_summary' , 'created_at','created_by', 'updated_by')
     list_filter = ('retailer', 'status')
     readonly_fields = ('created_at','created_by', 'updated_by')
     inlines = [OrderItemInline]
@@ -631,3 +631,17 @@ class OrderAdmin(admin.ModelAdmin):
     order_summary.short_description = _("주문 요약")
 
 
+    def status_colored(self, obj):
+        color_map = {
+            'SENT': "#2dfd2d",  # 흰색
+            'FAILED': "#FF0000", # 빨강
+            'PENDING' : "#FFA500", # 주황
+        }
+        status = obj.status
+        bg_color = color_map.get(status, '#f0f0f0')  # 기본 배경색 (없을 경우)
+        return format_html(
+            '<div style="background-color: {}; padding: 4px 8px; border-radius: 4px; text-align: center;">{}</div>',
+            bg_color,
+            status
+        )
+    status_colored.short_description = "status"    
