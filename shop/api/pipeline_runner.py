@@ -18,12 +18,17 @@ def run_full_pipeline_by_retailer(retailer_code):
     retailer.save()
 
 
+    fetch_count = 0
+    register_count = 0    
+
+
     try:
         # 거래처별 분기
         # 라띠
         if retailer_code == "IT-R-01":  # LATTI
             from shop.api.latti.latti import fetch_latti_raw_products_optimized
             from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer
+
 
             fetch_count = fetch_latti_raw_products_optimized()
             bulk_convert_or_update_products_by_retailer(retailer_code)

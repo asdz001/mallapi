@@ -577,17 +577,6 @@ class OrderAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
-    # ✅ 주문 저장 후 외부 주문번호 생성
-    def save_related(self, request, form, formsets, change):
-        super().save_related(request, form, formsets, change)
-
-        order = form.instance
-        order_date = localtime(order.created_at).strftime("%Y%m%d")
-        retailer = order.retailer.code.replace("IT-", "").replace("-", "")
-
-        for item in order.items.all():
-            item.external_order_number = f"{order_date}-ORDER-{order.id}-{item.id}-{retailer}"
-            item.save()    
 
 
     # ✅ 주문 요약 (prefetch된 데이터 사용)

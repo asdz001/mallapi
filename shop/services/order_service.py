@@ -8,8 +8,6 @@ from orderreview.models import OrderReview
 
 
 @transaction.atomic
-
-
 def create_orders_from_carts(selected_carts, request):
     cart_groups = defaultdict(list)
     for cart in selected_carts:
@@ -22,25 +20,21 @@ def create_orders_from_carts(selected_carts, request):
         order = Order.objects.create(retailer=retailer_obj)
 
         print(f"📦 장바구니 {cart.id} 처리 중")
+        
+        order_items = []
+        order_date = order.created_at.strftime("%Y%m%d")
+        retailer_short = retailer_obj.code.replace("IT-", "").replace("-", "")
 
+        print(f"📦 장바구니 묶음 생성 중: {retailer_obj.name} → {len(carts)}개")
+
+        item_counter = 1  # ✅ 항목별 고유 번호 부여
         for cart in carts:
             for cart_option in cart.options.all():
-                print(f" - 옵션: {cart_option.product_option.option_name}")
-
                 if cart_option.product_option.product_id != cart.product.id:
                     continue
 
-                quantity = cart_option.quantity  # ✅ DB에서 직접 가져오기
+                quantity = cart_option.quantity
                 if quantity > 0:
-                    ...
-
-
-                if quantity > 0:
-                    print(f"✅ 주문 생성: {cart.product.product_name} - {cart_option.product_option.option_name} x {quantity}")
-                    ...
-
-                if quantity > 0:
-                    # ✅ 1. 주문 항목 생성
                     order_item = OrderItem.objects.create(
                         order=order,
                         product=cart.product,
@@ -49,19 +43,23 @@ def create_orders_from_carts(selected_carts, request):
                         price_krw=cart.product.calculated_price_krw,
                     )
 
-                    # ✅ 2. 주문리뷰 자동 생성
+                    # ✅ 고유 external_order_number 생성
+                    code = f"{order_date}-ORDER-{order.id}-{order_item.id}-{retailer_short}"
+                    order_item.external_order_number = code
+                    order_item.save()
+
+                    # ✅ 리뷰 생성 및 재고 차감
                     create_order_review_from_order_item(order_item)
+                    cart_option.product_option.stock = max(cart_option.product_option.stock - quantity, 0)
+                    cart_option.product_option.save()
 
-                    # ✅ 2. 재고 차감
-                    product_option = cart_option.product_option
-                    product_option.stock = max(product_option.stock - quantity, 0)  # 음수 방지
-                    product_option.save()
+                    item_counter += 1
 
+        # ✅ 주문 API 전송
         send_order_to_api(order)
         orders_created.append(order)
-        
 
-    # ✅ 3. 장바구니 삭제
+    # ✅ 장바구니 비우기
     for cart in selected_carts:
         cart.options.all().delete()
         cart.delete()
