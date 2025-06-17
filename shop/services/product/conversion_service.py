@@ -141,6 +141,20 @@ class OptimizedConversionService:
     def convert_single_product(self, raw_product: RawProduct) -> bool:
         """단일 상품 변환 (최적화)"""
         try:
+
+        # ✅ 관리자 페이지 등에서 호출 시 rawoptions가 없을 수 있음 → 직접 붙여줌
+            if not hasattr(raw_product, 'rawoptions'):
+                raw_product.rawoptions = type('MockManager', (), {
+                    'aggregate': lambda self, **kwargs: {
+                        'total': sum(opt.stock for opt in raw_product.options.all())
+                    },
+                    'filter': lambda self, **kwargs: [
+                        opt for opt in raw_product.options.all()
+                        if opt.stock > 0
+                    ]
+                })()
+
+
             # 1. 검증
             is_valid, error_reason = self.validate_raw_product(raw_product)
             if not is_valid:

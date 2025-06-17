@@ -53,7 +53,7 @@ class RetailerUserAdmin(admin.ModelAdmin):
 class OrderReviewAdmin(admin.ModelAdmin):
     list_display = (
         'order_id', 'retailer_name', 'barcode', 'brand_name', 'product_name', 'option_name',
-        'quantity', 'cost_price', 'status', 'status_colored', 'order_date','last_updated_by', 'last_updated_at' 
+        'quantity', 'cost_price', 'status', 'status_colored', 'memo_flag', 'order_date','last_updated_by', 'last_updated_at' 
     )
     list_editable = ('status',)  # ✅ 상태 필드를 인라인에서 수정 가능하게 설정
     list_filter = ('retailer', 'status')
@@ -188,3 +188,10 @@ class OrderReviewAdmin(admin.ModelAdmin):
         )
     status_colored.short_description = "status"    
         
+
+
+    def memo_flag(self, obj):
+        if obj.memo:
+            return "⭕"
+        return "❌"
+    memo_flag.short_description = "MEMO"    
