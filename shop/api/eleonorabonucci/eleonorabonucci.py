@@ -212,6 +212,10 @@ def fetch_and_merge_all():
         return 0, OUTPUT_JSON
     
     print(f"\n📦 총 수집된 상품: {len(articles):,}개")
+
+    # ✅ [추가] 중복 SKU 병합 처리
+    articles = merge_articles_by_sku(articles)
+    print(f"✅ SKU 병합 완료 → 최종 상품 수: {len(articles)}개")
     
     # 2. 재고/가격 매핑 및 저장
     product_count, output_path = merge_and_save_data(articles)
@@ -233,6 +237,46 @@ def fetch_and_merge_all():
             print(f"   ... 및 {len(failed_pages) - 10}개 더")
     
     return product_count, output_path
+
+
+# ✅ 중복 SKU를 하나의 상품으로 병합하고 옵션도 통합
+def merge_articles_by_sku(articles: list) -> list:
+    merged_map = {}
+
+    for item in articles:
+        sku = item.get("SKU")
+        if not sku:
+            continue
+
+        stock_items = item.get("Stock_Item", [])
+        if not isinstance(stock_items, list):
+            stock_items = []
+
+        # 처음 등장한 SKU라면 그대로 저장
+        if sku not in merged_map:
+            item["Stock_Item"] = stock_items
+            merged_map[sku] = item
+        else:
+            # 기존 상품과 옵션 병합
+            existing = merged_map[sku]
+            existing_options = existing.get("Stock_Item", [])
+            all_options = existing_options + stock_items
+
+            # ✅ 옵션 중복 제거 (SKU_item 기준)
+            seen_option_ids = set()
+            merged_options = []
+            for opt in all_options:
+                sku_item = opt.get("SKU_item")
+                if not sku_item or sku_item in seen_option_ids:
+                    continue
+                seen_option_ids.add(sku_item)
+                merged_options.append(opt)
+
+            existing["Stock_Item"] = merged_options
+
+    return list(merged_map.values())
+
+
 
 # ✅ 검증 함수
 def validate_result():

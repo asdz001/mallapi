@@ -210,7 +210,7 @@ class BaseCategoryAdmin(admin.ModelAdmin):
 
     def download_example(self, request):
         data = {
-            "표준명": ["의류", "가방"],
+            "표준카테고리명": ["의류", "가방"],
             "치환명": ["CLOTHES", "BAG"],
         }
         df = pd.DataFrame(data)
@@ -223,7 +223,7 @@ class BaseCategoryAdmin(admin.ModelAdmin):
         response['Content-Disposition'] = f'attachment; filename="{self.example_filename}"'
         return response
 
-# ✅ 대분류
+# ✅ 성별
 class CategoryLevel1AliasInline(BaseCategoryAliasInline):
     model = CategoryLevel1Alias
 
@@ -236,9 +236,9 @@ class CategoryLevel1Admin(BaseCategoryAdmin):
 
     def alias_list(self, obj):
         return ", ".join(alias.alias for alias in obj.aliases.all())
-    alias_list.short_description = "치환 대분류"
+    alias_list.short_description = "치환 성별"
 
-# ✅ 중분류
+# ✅ 대분류
 class CategoryLevel2AliasInline(BaseCategoryAliasInline):
     model = CategoryLevel2Alias
 
@@ -251,9 +251,9 @@ class CategoryLevel2Admin(BaseCategoryAdmin):
 
     def alias_list(self, obj):
         return ", ".join(alias.alias for alias in obj.aliases.all())
-    alias_list.short_description = "치환 중분류"
+    alias_list.short_description = "치환 대분류"
 
-# ✅ 소분류
+# ✅ 중분류
 class CategoryLevel3AliasInline(BaseCategoryAliasInline):
     model = CategoryLevel3Alias
 
@@ -266,9 +266,9 @@ class CategoryLevel3Admin(BaseCategoryAdmin):
 
     def alias_list(self, obj):
         return ", ".join(alias.alias for alias in obj.aliases.all())
-    alias_list.short_description = "치환 소분류"
+    alias_list.short_description = "치환 중분류"
 
-# ✅ 소소분류
+# ✅ 소분류
 class CategoryLevel4AliasInline(BaseCategoryAliasInline):
     model = CategoryLevel4Alias
 
@@ -281,4 +281,4 @@ class CategoryLevel4Admin(BaseCategoryAdmin):
 
     def alias_list(self, obj):
         return ", ".join(alias.alias for alias in obj.aliases.all())
-    alias_list.short_description = "치환 소소분류"
+    alias_list.short_description = "치환 소분류"
