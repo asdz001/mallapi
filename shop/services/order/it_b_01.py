@@ -91,7 +91,7 @@ def send_order(order: Order):
             "reason": ""
         })
 
-    item = order.items.first()
+
     shop_order_id = item.external_order_number
  
 
@@ -144,9 +144,11 @@ def send_order(order: Order):
         error_message = str(e)
         print("❌ 전송 실패:", error_message)
 
+        is_stock_missing = "ITEM_NOT_FOUND" in error_message.upper()        
+
         # 결과 항목의 success = False, reason에 오류 메시지 기입
         for r in results:
             r["success"] = False
-            r["reason"] = f"바제블루 전송 실패: {error_message}"
+            r["reason"] = "재고 없음" if is_stock_missing else f"바제블루 전송 실패: {error_message}"
 
         return results
