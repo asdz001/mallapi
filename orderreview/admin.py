@@ -28,7 +28,7 @@ class RetailerUserAdmin(admin.ModelAdmin):
 class OrderReviewAdmin(admin.ModelAdmin):
     list_display = (
         'order_id', 'retailer_name', 'barcode', 'brand_name', 'product_name', 'option_name',
-        'quantity', 'cost_price', 'status', 'order_date','last_updated_by', 'last_updated_at' 
+        'quantity', 'cost_price', 'status', 'status_colored', 'order_date','last_updated_by', 'last_updated_at' 
     )
     list_editable = ('status',)  # ✅ 상태 필드를 인라인에서 수정 가능하게 설정
     list_filter = ('retailer', 'status')
@@ -43,9 +43,7 @@ class OrderReviewAdmin(admin.ModelAdmin):
     fields = ('order_item', 'retailer', 'status', 'memo', 'display_info','last_updated_by', 'last_updated_at')
 
     def order_id(self, obj):
-        date = obj.order_item.order.created_at.strftime("%Y%m%d")
-        retailer = obj.order_item.order.retailer.code.replace("IT-", "").replace("-", "")
-        return f"{date}-ORDER-{obj.order_item.order.id}-{obj.order_item.id}-{retailer}"
+        return obj.order_item.external_order_number or "-"
     #order_id.short_description = _("주문번호")
 
 
@@ -158,4 +156,21 @@ class OrderReviewAdmin(admin.ModelAdmin):
             return ['retailer', 'status']
         else:
             return ['status']  # retailer 필터 숨김
+        
+
+    def status_colored(self, obj):
+        color_map = {
+            'PENDING': "#f7f4f1",  # 주황
+            'CONFIRMED': '#5cb85c',  # 녹색
+            'SHIPPED': "#6eafeb",    # 빨강
+            'CANCELED': "#FF0000", # 회색
+        }
+        status = obj.status
+        bg_color = color_map.get(status, '#f0f0f0')  # 기본 배경색 (없을 경우)
+        return format_html(
+            '<div style="background-color: {}; padding: 4px 8px; border-radius: 4px; text-align: center;">{}</div>',
+            bg_color,
+            status
+        )
+    status_colored.short_description = "status"    
         
