@@ -38,7 +38,7 @@ class RawProduct(models.Model):
     description = models.TextField(blank=True, null=True, verbose_name="설명")
     status = models.CharField(
         max_length=10,
-        choices=[('pending', _("미등록")), ('converted', _("등록됨"))],
+        choices=[('pending', _("미등록")), ('converted', _("등록됨")), ('soldout', _("품절됨")) ],
         default='pending',
         verbose_name=_("상태")
     )
@@ -97,6 +97,7 @@ class Product(models.Model):
     STATUS_CHOICES = [
         ('pending', _("미등록")),
         ('active', _("등록됨")),
+        ('soldout', _("품절됨")),     
     ]
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', verbose_name=_("상태"))
 

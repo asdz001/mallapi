@@ -27,11 +27,15 @@ def run_full_pipeline_by_retailer(retailer_code):
         # 라띠
         if retailer_code == "IT-R-01":  # LATTI
             from shop.api.latti.latti import fetch_latti_raw_products_optimized
-            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer
+            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer, sync_soldout_products_from_raw
 
 
             fetch_count = fetch_latti_raw_products_optimized()
+
             bulk_convert_or_update_products_by_retailer(retailer_code)
+
+            sync_soldout_products_from_raw(retailer_code)
+
             register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
 
 
@@ -39,10 +43,15 @@ def run_full_pipeline_by_retailer(retailer_code):
         # 바제블루
         elif retailer_code == "IT-B-01":  # BASEBLU
             from shop.api.baseblu.basebiu import run_full_baseblue_pipeline
-            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer
+            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer, sync_soldout_products_from_raw
 
             fetch_count = run_full_baseblue_pipeline()  # limit 생략 or 넣을 수 있음
+
             bulk_convert_or_update_products_by_retailer(retailer_code)
+
+            sync_soldout_products_from_raw(retailer_code)
+            print(f"🔁 바제블루 품절 반영 완료: {retailer_code}")
+
             register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
 
 
@@ -51,13 +60,15 @@ def run_full_pipeline_by_retailer(retailer_code):
         # 지앤비
         elif retailer_code == "IT-G-01":
             from shop.api.gnb.gnb import main  # gnb.py의 main 함수만 불러옴
-            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer
+            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer, sync_soldout_products_from_raw
 
             # ✅ GNB 상품 수집 및 원본 등록
             fetch_count = main()
 
             # ✅ 가공상품 등록
             bulk_convert_or_update_products_by_retailer(retailer_code)
+
+            sync_soldout_products_from_raw(retailer_code)
 
             # ✅ 등록된 상품 수 체크 (가공상품 기준)
             register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
@@ -115,13 +126,16 @@ def run_full_pipeline_by_retailer(retailer_code):
         # 쿠쿠이니
         elif retailer_code == "IT-C-02":
             from shop.api.atelier.convert_cuccuini_products import convert_atelier_products
-            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer
+            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer, sync_soldout_products_from_raw
 
-            print("🟡 [1/2] CUCCUINI 상품 수집 및 저장 시작")
+            print("🟡 [1/3] CUCCUINI 상품 수집 및 저장 시작")
             fetch_count = convert_atelier_products()
 
-            print("🟡 [2/2] 가공상품 등록 시작")
+            print("🟡 [2/3] 가공상품 등록 시작")
             register_count = bulk_convert_or_update_products_by_retailer(retailer_code)
+
+            print("🟡 [3/3] 상품 솔드아웃")
+            sync_soldout_products_from_raw(retailer_code)
 
             print(f"✅ CUCCUINI 전체 프로세스 완료 - 수집: {fetch_count}개 / 등록: {register_count}개")
 
@@ -130,13 +144,16 @@ def run_full_pipeline_by_retailer(retailer_code):
         # 비니실비아
         elif retailer_code == "IT-B-02":
             from shop.api.atelier.convert_bini_products import convert_atelier_products
-            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer
+            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer, sync_soldout_products_from_raw
 
-            print("🟡 [1/2] bini 상품 수집 및 저장 시작")
+            print("🟡 [1/3] bini 상품 수집 및 저장 시작")
             fetch_count = convert_atelier_products()
 
-            print("🟡 [2/2] 가공상품 등록 시작")
+            print("🟡 [2/3] 가공상품 등록 시작")
             register_count = bulk_convert_or_update_products_by_retailer(retailer_code)
+
+            print("🟡 [3/3] 상품 솔드아웃")
+            sync_soldout_products_from_raw(retailer_code)
 
             print(f"✅ bini 전체 프로세스 완료 - 수집: {fetch_count}개 / 등록: {register_count}개")
 
@@ -144,13 +161,16 @@ def run_full_pipeline_by_retailer(retailer_code):
         # 미네띠
         elif retailer_code == "IT-M-01":
             from shop.api.atelier.convert_minetti_products import convert_atelier_products
-            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer
+            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer, sync_soldout_products_from_raw
 
-            print("🟡 [1/2] MINETTI 상품 수집 및 저장 시작")
+            print("🟡 [1/3] MINETTI 상품 수집 및 저장 시작")
             fetch_count = convert_atelier_products()
 
-            print("🟡 [2/2] 가공상품 등록 시작")
+            print("🟡 [2/3] 가공상품 등록 시작")
             register_count = bulk_convert_or_update_products_by_retailer(retailer_code)
+
+            print("🟡 [3/3] 상품 솔드아웃")
+            sync_soldout_products_from_raw(retailer_code)
 
             print(f"✅ MINETTI 전체 프로세스 완료 - 수집: {fetch_count}개 / 등록: {register_count}개")
 

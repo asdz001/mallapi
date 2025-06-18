@@ -89,5 +89,24 @@ def fetch_latti_raw_products_optimized(limit=None):
 
         RawProductOption.objects.bulk_create(new_options)
 
+    # ✅ 수집된 상품 ID 모으기
+    collected_ids = set(item.get("COD") for item in items if item.get("COD"))
+
+    # ✅ 이전에 soldout 상태였는데 이번에 다시 수집된 것 → 복원
+    RawProduct.objects.filter(
+        retailer="IT-R-01",
+        external_product_id__in=collected_ids,
+        status="soldout"
+    ).update(status="pending")
+
+    # ✅ 이번에 수집되지 않은 상품 → soldout 처리
+    RawProduct.objects.filter(
+        retailer="IT-R-01"
+    ).exclude(
+        external_product_id__in=collected_ids
+    ).update(status="soldout")
+
+
+
     print(f"✅ 최적화 저장 완료: 상품 {len(items)}건")
     return saved_count

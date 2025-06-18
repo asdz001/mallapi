@@ -16,6 +16,7 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
+# ✅ 옵션 ID와 SKU 매핑을 최신 JSON 파일에서 로드
 def load_optionid_to_sku_map_from_latest_json():
     folder = Path("export/BASEBLU")
     json_files = sorted(folder.glob("base_blu_raw_*.json"), reverse=True)
@@ -36,6 +37,34 @@ def load_optionid_to_sku_map_from_latest_json():
                 sku_map[item_id] = {"sku": sku, "item_id": item_id}
     return sku_map
 
+# ✅ 실시간 API 호출로 SKU 조회
+def fetch_sku_from_api(option_id):
+    try:
+        url = f"{BASE_URL}/shop/v1/items/{option_id}"
+        res = requests.get(url, headers=HEADERS, timeout=5)
+        res.raise_for_status()
+        data = res.json()
+        sku = data.get("sku")
+        if sku:
+            print(f"✅ 실시간 조회 성공 → option_id={option_id}, sku={sku}")
+            return {"sku": sku, "item_id": option_id}
+        else:
+            print(f"❌ SKU 없음 → option_id={option_id}")
+            return None
+    except Exception as e:
+        print(f"❌ 실시간 SKU 조회 실패 → option_id={option_id} / {e}")
+        return None
+
+
+# ✅ 통합 조회 함수: JSON + 실시간 fallback
+def get_sku_info(option_id, sku_map):
+    info = sku_map.get(option_id)
+    if info:
+        return info
+    return fetch_sku_from_api(option_id)
+
+
+# ✅ 주문 전송 함수
 def send_order(order: Order):
     print(f"\n🛰️ [API 전송 시작] 주문번호: {order.id}, 거래처: BASEBLU")
     sku_map = load_optionid_to_sku_map_from_latest_json()
@@ -48,8 +77,8 @@ def send_order(order: Order):
 
     for item in order.items.all():
         option_id = item.option.external_option_id
-        info = sku_map.get(option_id, {})
-        sku = info.get("sku", "-")
+        info = get_sku_info(option_id, sku_map)
+        sku = info.get("sku", "-") if info else "-"
 
         qty = item.quantity
         price = item.product.price_org or Decimal("0.00")
