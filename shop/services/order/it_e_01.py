@@ -13,7 +13,7 @@ def send_order(order):
         list: [{"sku": 바코드, "item_id": 주문항목ID, "success": bool, "reason": str}]
     """
 
-    # 주문 번호 설정
+    item = order.items.first()
     reference = item.external_order_number
 
 
