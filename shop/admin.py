@@ -168,7 +168,7 @@ class ProductAdmin(admin.ModelAdmin):
 
     inlines = [ProductOptionInline]
     # ✅ 3번 수정: 모든 브랜드 + 수량 표시 필터로 변경
-    list_filter = ('retailer', BrandCountListFilter, 'created_at')
+    list_filter = ('retailer', 'status', BrandCountListFilter, 'created_at')
     change_list_template = 'admin/shop/product/change_list_with_count.html'
     readonly_fields = ('image_tag',)
     

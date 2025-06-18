@@ -317,6 +317,25 @@ class EleonoraRegistration:
                     logger.info(f"📦 처리 중: {i}/{len(data)} ({i/len(data)*100:.1f}%)")
             
             logger.info(f"✅ 처리 완료: {len(new_products)}개 상품 준비")
+
+            collected_ids = set(item["SKU"] for item in data if item.get("SKU"))
+
+            # 복원 처리 (soldout → pending)
+            RawProduct.objects.filter(
+                retailer=RETAILER_CODE,
+                external_product_id__in=collected_ids,
+                status="soldout"
+            ).update(status="pending")
+
+            # 이번에 수집되지 않은 상품은 soldout 처리
+            RawProduct.objects.filter(
+                retailer=RETAILER_CODE
+            ).exclude(
+                external_product_id__in=collected_ids
+            ).update(status="soldout")
+
+            logger.info(f"✅ 품절 처리 완료: {RawProduct.objects.filter(retailer=RETAILER_CODE, status='soldout').count()}개")
+
             
             # 4. 데이터베이스 저장
             if not new_products:

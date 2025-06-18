@@ -370,7 +370,7 @@ def bulk_convert_or_update_products(batch_size=500):
     
     return success_count
 
-
+# 거래처별 대량 변환 (기존 인터페이스 유지)
 def bulk_convert_or_update_products_by_retailer(retailer_code, batch_size=500):
     """기존 인터페이스 유지 - 거래처별 대량 변환"""
     service = get_conversion_service()
@@ -388,6 +388,22 @@ def bulk_convert_or_update_products_by_retailer(retailer_code, batch_size=500):
     logger.info(f"✅ [{retailer_code}] 전송 완료 - 성공: {success_count}개 / 실패: {fail_count}개")
     
     return success_count
+
+#솔드아웃시키기
+def sync_soldout_products_from_raw(retailer_code: str):
+    """원본이 soldout인 상품 → 가공상품도 soldout 처리"""
+    soldout_ids = RawProduct.objects.filter(
+        retailer=retailer_code,
+        status="soldout"
+    ).values_list("external_product_id", flat=True)
+
+    updated_count = Product.objects.filter(
+        retailer=retailer_code,
+        external_product_id__in=soldout_ids
+    ).update(status="soldout")
+
+    print(f"🔁 가공상품 soldout 처리 완료: {updated_count}개")
+
 
 
 # 🚀 추가 유틸리티 함수들

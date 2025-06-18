@@ -9,6 +9,7 @@ from shop.models import RawProductOption  # 옵션 모델 존재 시
 
 
 
+
 # 설정
 SHOP_ID = "BASE BLU"
 CONFIG = {
@@ -249,6 +250,37 @@ def run_full_baseblue_pipeline(limit=None):
         except Exception as e:
             print(f"❌ 저장 실패: {e}")
             skipped += 1
+
+
+
+
+
+    # 🔹 오늘 수집된 상품 ID들만 추출
+    if product_list_f:  # 상품이 수집된 경우에만 품절 처리
+        collected_ids = set(
+            option["id"] for item in product_list_f.values() for option in item["options"]
+        )
+
+
+
+        #품절 처리 수정
+        RawProduct.objects.filter(
+            retailer="IT-B-01",
+            external_product_id__in=collected_ids,
+            status="soldout"
+        ).update(status="pending")  # 또는 "converted" 로 복원
+
+
+        # 품절 처리
+        RawProduct.objects.filter(
+            retailer="IT-B-01"
+        ).exclude(
+            external_product_id__in=collected_ids
+        ).update(status="soldout")
+    else:
+        print("❗ 상품이 하나도 수집되지 않았습니다. soldout 처리는 건너뜁니다.")
+
+
 
 
     print(f"🏁 전체 완료: 등록 {saved}개 / 실패 {skipped}개")

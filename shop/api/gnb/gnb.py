@@ -333,6 +333,12 @@ def register_full_sync(products, stats):
         
         # 2. 들어오는 상품 ID 세트
         incoming_ids = set(p["external_product_id"] for p in products)
+
+        RawProduct.objects.filter(
+            external_product_id__in=incoming_ids,
+            retailer=RETAILER_CODE,
+            status="soldout"
+        ).update(status="pending")
         
         # 3. 신규/업데이트/삭제 분류
         new_products = []
@@ -379,12 +385,12 @@ def register_full_sync(products, stats):
             
             # ✅ 전체파일에 없는 상품 삭제 (전체파일일 때만)
             if to_delete_ids:
-                deleted_count = RawProduct.objects.filter(
+                updated_count = RawProduct.objects.filter(
                     external_product_id__in=to_delete_ids,
                     retailer=RETAILER_CODE
-                ).delete()[0]
-                stats.deleted_products = deleted_count
-                logger.info(f"전체파일 기준 삭제된 상품: {deleted_count}개")
+                ).update(status="soldout")
+
+                logger.info(f"전체파일 기준 soldout 처리된 상품: {updated_count}개")
             
             # 모든 옵션 재등록
             RawProductOption.objects.filter(

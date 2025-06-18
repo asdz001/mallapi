@@ -1,3 +1,5 @@
+#사용안함(아마도?)
+
 import json
 import os
 from django.db import transaction
@@ -32,6 +34,7 @@ def extract_image_url(pictures, no):
         print(f"❌ 이미지 추출 오류 (No={no}): {e}")
         return None
 
+#상품등록
 def convert_CUCCUINI_raw_products(limit=None, goods_override=None):
     RETAILER = "CUCCUINI"
     RETAILER_CODE = "IT-C-02"
@@ -153,6 +156,8 @@ def convert_CUCCUINI_raw_products(limit=None, goods_override=None):
         print(f"✅ CUCCUINI 상품 등록 완료: 상품 {len(goods)}개 / 옵션 {len(new_options)}개")
         return len(goods)
 
+
+# 단일 상품 ID로 변환
 def convert_CUCCUINI_raw_products_by_id(target_id):
     RETAILER = "CUCCUINI"
     BASE_PATH = os.path.join("export", RETAILER)

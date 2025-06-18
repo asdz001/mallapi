@@ -180,8 +180,26 @@ def convert_atelier_products():
         RawProductOption.objects.bulk_create(new_options)
         print(f"✅ 상품 등록 완료: 상품 {len(data)}개 / 옵션 {len(new_options)}개")
 
+
+        # 오늘 수집된 상품 ID들만 추출(SOIDOUT 시키기)
+        collected_ids = set(str(item["ID"]) for item in data)
+
+        RawProduct.objects.filter(
+            retailer=RETAILER_CODE,
+            external_product_id__in=collected_ids,
+            status="soldout"
+        ).update(status="pending")
+
+        RawProduct.objects.filter(
+            retailer=RETAILER_CODE
+        ).exclude(
+            external_product_id__in=collected_ids
+        ).update(status="soldout")
+
         fetch_count = len(data)
         return fetch_count
+
+
 
 if __name__ == "__main__":
     fetch_count = convert_atelier_products()
