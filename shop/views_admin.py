@@ -15,6 +15,8 @@ def save_cart_option(request):
             # ✅ 단일 항목 처리와 복수 항목 처리 구분
             if 'items' in data:
                 # 📌 복수 항목 처리
+                updated_carts = set()
+
                 for item in data['items']:
                     option_id = item.get('cart_option_id')
                     qty_raw = item.get('quantity')
@@ -22,12 +24,23 @@ def save_cart_option(request):
                     try:
                         qty = int(qty_raw)
                         cart_option = CartOption.objects.get(id=option_id)
-                        cart_option.quantity = qty
-                        cart_option.save()
-                        print(f"✅ 저장 성공: option_id={option_id}, quantity={qty}")
+
+                        if cart_option.quantity != qty:
+                            cart_option.quantity = qty
+                            cart_option.save()
+                        
+                            cart = cart_option.cart
+                            cart.updated_by = request.user
+                            cart.save()
+
+                            print(f"✅ 수량 변경됨: option_id={option_id}, quantity={qty}")
+                        else:
+                            print(f"⏭️ 수량 같음 → 무시: option_id={option_id}")
+
                     except Exception as e:
                         print(f"❌ 항목 처리 실패: id={option_id}, 에러={e}")
                         continue
+   
 
                 return JsonResponse({'success': True})
 
@@ -39,6 +52,10 @@ def save_cart_option(request):
                 cart_option = CartOption.objects.get(id=option_id)
                 cart_option.quantity = qty
                 cart_option.save()
+
+                cart = cart_option.cart
+                cart.updated_by = request.user
+                cart.save()
 
                 print(f"✅ 저장 성공: option_id={option_id}, quantity={qty}")
                 return JsonResponse({'success': True})

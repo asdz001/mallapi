@@ -17,7 +17,10 @@ def create_orders_from_carts(selected_carts, request):
 
     for retailer_code, carts in cart_groups.items():
         retailer_obj = Retailer.objects.get(code=retailer_code)
-        order = Order.objects.create(retailer=retailer_obj)
+        order = Order.objects.create(
+            retailer=retailer_obj,
+            created_by=request.user,
+        )
 
         print(f"📦 장바구니 {cart.id} 처리 중")
         
@@ -162,16 +165,21 @@ def send_order_to_api(order):
             order.status = "FAILED"
         else:
             order.status = "PARTIAL"    
-            
+
         order.save()
 
 def create_order_review_from_order_item(order_item):
     """
     SHOP에서 주문이 생성될 때 호출되어, 주문 항목당 OrderReview를 자동 생성
+    단, 전송에 성공한 항목(SENT)만 생성
     """
+    if order_item.order_status != "SENT":
+        print(f"⏭️ 전송 실패 항목은 오더뷰 생성 제외: {order_item}")
+        return
+
     if not OrderReview.objects.filter(order_item=order_item).exists():
         OrderReview.objects.create(
             order_item=order_item,
-            retailer=order_item.order.retailer,  # 주문에 있는 거래처 정보
-            status="PENDING",  # 초기 상태는 미확인
-        )        
+            retailer=order_item.order.retailer,
+            status="PENDING",
+        )

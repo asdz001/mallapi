@@ -16,7 +16,7 @@ django.setup()
 from shop.api.atelier.atelier_api import Atelier
 
 RETAILER = "CUCCUINI"
-TARGET_ID = "31947648"  # 수집하고 싶은 상품 ID
+TARGET_ID = "26975531"  # 수집하고 싶은 상품 ID
 
 def main():
     atelier = Atelier(RETAILER)

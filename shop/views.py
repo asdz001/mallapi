@@ -28,7 +28,7 @@ def add_to_cart(request, option_id):
     return JsonResponse({"message": "장바구니에 담겼습니다."})
 
 
-# ✅ 장바구니: 상품 ID로 전체 옵션 초기 세팅
+# ✅ 장바구니 : 상품 ID로 전체 옵션 초기 세팅
 def add_to_cart_from_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
 
@@ -36,7 +36,10 @@ def add_to_cart_from_product(request, product_id):
         messages.error(request, "해당 상품에 옵션이 없습니다.")
         return redirect("/admin/shop/product/")
 
-    cart = Cart.objects.create(product=product)
+    cart = Cart.objects.create(
+        product=product,
+        created_by=request.user,
+    )
 
     has_valid_option = False
     for option in product.options.all():
@@ -48,6 +51,8 @@ def add_to_cart_from_product(request, product_id):
         cart.delete()
         messages.error(request, "재고가 있는 옵션이 없습니다.")
         return redirect("/admin/shop/product/")
+    
+    
 
     return redirect("/admin/shop/cart/")
 
@@ -72,29 +77,5 @@ def add_to_cart(request, option_id):
 
 
 
-#장바구니 담기
-
-
-def add_to_cart_from_product(request, product_id):
-    product = get_object_or_404(Product, id=product_id)
-
-    if not product.options.exists():
-        messages.error(request, "해당 상품에 옵션이 없습니다.")
-        return redirect("/admin/shop/product/")
-
-    cart = Cart.objects.create(product=product)
-
-    has_valid_option = False
-    for option in product.options.all():
-        if option.stock > 0:
-            CartOption.objects.create(cart=cart, product_option=option, quantity=0)
-            has_valid_option = True
-
-    if not has_valid_option:
-        cart.delete()
-        messages.error(request, "재고가 있는 옵션이 없습니다.")
-        return redirect("/admin/shop/product/")
-
-    return redirect("/admin/shop/cart/")
 
 

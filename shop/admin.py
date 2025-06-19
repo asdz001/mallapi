@@ -386,7 +386,7 @@ class CartAdmin(admin.ModelAdmin):
 
     # ✅ 옵션 테이블 (이미 prefetch된 데이터 사용)
     def display_option_table(self, obj):
-        html = "<table style='border-collapse: collapse;'>"
+        html = f"<div id='cart-{obj.id}'><table style='border-collapse: collapse;'>"
         html += "<tr><th>OPTION</th><th>재고정보</th><th>COST</th><th>공급가</th><th>ORDER QTY</th></tr>"
 
         # ✅ prefetch된 데이터 사용 (N+1 쿼리 방지)
@@ -425,14 +425,14 @@ class CartAdmin(admin.ModelAdmin):
             </tr>
             """
 
-        html += """
+        html += f"""
         <tr>
             <td colspan="5" style='text-align: right; padding-top: 8px;'>
-                <strong id="cart-total-display">총 주문금액: 0</strong><br>
-                <button type="button" onclick="saveAllCartOptions()" style="padding: 4px 10px;">💾 전체 저장</button>
+                <strong class="cart-total">총 주문금액: ₩0</strong><br>
+                <button type="button" onclick="saveCart({obj.id})" style="padding: 4px 10px;">💾 옵션 수량 저장</button>
             </td>
         </tr>
-        </table>
+        </table></div>
         """
         return format_html(html)
     display_option_table.short_description = "옵션별 주문정보"
