@@ -625,6 +625,7 @@ class OrderAdmin(admin.ModelAdmin):
             'SENT': "#2dfd2d",  # 흰색
             'FAILED': "#FF0000", # 빨강
             'PENDING' : "#FFA500", # 주황
+            'SOIDOUT' : "#EEFF00", # 주황
         }
         status = obj.status
         bg_color = color_map.get(status, '#f0f0f0')  # 기본 배경색 (없을 경우)

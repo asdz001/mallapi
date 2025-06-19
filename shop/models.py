@@ -200,6 +200,7 @@ class Order(models.Model):
         ("SENT", _("전송됨")),
         ("COMPLETED", _("완료")),
         ("FAILED", _("전송실패")),
+        ("SOIDOUT", _("품절취소")),
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING", verbose_name=_("상태"))
     memo = models.TextField(blank=True, null=True, verbose_name=_("관리자 메모"))

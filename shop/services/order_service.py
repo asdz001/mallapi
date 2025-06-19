@@ -4,8 +4,8 @@ from collections import defaultdict
 from django.db import transaction
 from importlib import import_module
 from orderreview.models import OrderReview
-
-
+import json  # JSON 형식 로그 기록용
+from utils.order_logger import logger, log_order_send
 
 @transaction.atomic
 def create_orders_from_carts(selected_carts, request):
@@ -71,6 +71,7 @@ def create_orders_from_carts(selected_carts, request):
 def send_order_to_api(order):
     try:
         print(f"\n🛰️ [API 전송 시작] 주문번호: {order.id}, 거래처: {order.retailer.name}")
+        logger.info(f"[START] 주문번호: {order.id}, 거래처: {order.retailer.code} → 주문 전송 준비됨")
 
         # 거래처별 모듈 import
         ATELIER_CODES = {"MINETTI", "CUCCUINI", "BINI", "IT-C-02", "IT-M-01", "IT-B-02", "TEST-HUB"}
@@ -80,6 +81,7 @@ def send_order_to_api(order):
 
         # ✅ 거래처 API에 주문 전송 → 결과는 무조건 표준 형태여야 함
         result = send_order(order)
+        logger.info(f"[RESULT] 주문번호: {order.id} 응답: {json.dumps(result, ensure_ascii=False)}")
 
         has_failed = False
 
@@ -108,8 +110,23 @@ def send_order_to_api(order):
             order.status = "SENT"
             order.memo = "API 전송 성공"
 
+        # ✅ 주문 결과 로그 (성공 + 실패 케이스 모두 포함)
+        log_order_send(
+            order_id=order.id,
+            retailer_name=order.retailer.name,
+            items=[{
+                "sku": res.get("sku"),
+                "quantity": order.items.get(id=res.get("item_id")).quantity
+            } for res in result],
+            success=not has_failed,
+            reason="일부 실패" if has_failed else ""
+        )
+
+
+
     except Exception as e:
         print("❌ 오류 발생:", str(e))
+        logger.error(f"[ERROR] 주문번호: {order.id} 전송 실패 → {str(e)}", exc_info=True)
         order.status = "FAILED"
         order.memo = f"전송 실패: {str(e)}"
 
@@ -119,6 +136,21 @@ def send_order_to_api(order):
             item.order_message = str(e)
             item.save()
 
+
+        # ✅ 예외 상황도 로그 저장
+        log_order_send(
+            order_id=order.id,
+            retailer_name=order.retailer.name,
+            items=[{
+                "sku": item.option.external_option_id,
+                "quantity": item.quantity
+            } for item in order.items.all()],
+            success=False,
+            reason=str(e)
+        )
+
+
+        
     finally:
         order.save()
 

@@ -2,7 +2,7 @@ import requests
 import json
 import traceback
 from requests.auth import HTTPBasicAuth
-
+from utils.order_logger import log_order_send
 
 # 운영 서버 API URL
 API_URL = "https://www2.atelier-hub.com/hub/CreateNewOrder"
@@ -198,6 +198,16 @@ def send_order(order):
                 "success": False,
                 "reason": "결과 누락 또는 처리되지 않음"
             })
+
+
+    log_order_send(
+        order_id=order.id,
+        retailer_name=order.retailer.name,
+        items=[{"sku": r["sku"], "quantity": order.items.get(id=r["item_id"]).quantity} for r in complete_results],
+        success=all(r["success"] for r in complete_results),
+        reason="일부 실패" if any(not r["success"] for r in complete_results) else ""
+    )
+            
 
     return complete_results
 

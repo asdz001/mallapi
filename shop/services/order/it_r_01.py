@@ -1,7 +1,7 @@
 import requests
 from datetime import datetime
 from shop.models import Order
-
+from utils.order_logger import log_order_send
 
 def send_order(order: Order):
     """
@@ -54,5 +54,19 @@ def send_order(order: Order):
                 "success": False,
                 "reason": str(e)
             })
+
+    log_order_send(
+        order_id=order.id,
+        retailer_name="LATTI",
+        items=[
+            {
+                "sku": r["sku"],
+                "quantity": order.items.get(id=r["item_id"]).quantity
+            } for r in results
+        ],
+        success=all(r["success"] for r in results),
+        reason="일부 실패" if any(not r["success"] for r in results) else ""
+    )
+            
 
     return results
