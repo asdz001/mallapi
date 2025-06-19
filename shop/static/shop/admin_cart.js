@@ -147,31 +147,81 @@ document.querySelectorAll(".cart-qty-input").forEach(input => {
     input.addEventListener("input", updateCartTotal);
 });
 
-function updateCartTotal() {
-    let total = 0;
+function updateCartTotal(cartId) {
+  const container = document.getElementById(`cart-${cartId}`);
+  const inputs = container.querySelectorAll(".cart-qty-input");
+  let total = 0;
 
-    document.querySelectorAll(".cart-qty-input").forEach(input => {
-        const qty = parseInt(input.value) || 0;
-        const row = input.closest("tr");
+  inputs.forEach(input => {
+    const qty = parseInt(input.value.trim(), 10) || 0;
+    const row = input.closest("tr");
 
-        // ✅ 공급가가 들어있는 4번째 td에서 숫자 추출
-        const priceText = row.querySelector("td:nth-child(4)").innerText.match(/([\d.,]+)/);
-        const price = priceText ? parseFloat(priceText[1].replace(/,/g, '')) : 0;
+    const priceText = row.querySelector("td:nth-child(4)").innerText.match(/([\d.,]+)/);
+    const price = priceText ? parseFloat(priceText[1].replace(/,/g, '')) : 0;
 
-        total += qty * price;
-    });
+    total += qty * price;
+  });
 
-    const totalDisplay = document.getElementById("cart-total-display");
-    if (totalDisplay) {
-        totalDisplay.innerText = `총 주문금액: ₩${total.toLocaleString()}`;
-    }
+  const totalDisplay = container.querySelector(".cart-total");
+  if (totalDisplay) {
+    totalDisplay.innerText = `총 주문금액: ₩${total.toLocaleString()}`;
+  }
 }
 
+
 document.addEventListener("DOMContentLoaded", function () {
-    document.querySelectorAll(".cart-qty-input").forEach(input => {
-        input.addEventListener("input", updateCartTotal);
+  document.querySelectorAll("[id^=cart-]").forEach(container => {
+    const cartId = container.id.replace("cart-", "");
+
+    container.querySelectorAll(".cart-qty-input").forEach(input => {
+      input.addEventListener("input", () => updateCartTotal(cartId));
     });
 
-    // 페이지 로딩 시에도 한번 계산
-    updateCartTotal();
+    updateCartTotal(cartId); // 초기 총액 표시
+  });
 });
+
+function saveCart(cartId) {
+  const container = document.getElementById(`cart-${cartId}`);
+  const inputs = container.querySelectorAll(".cart-qty-input");
+  const items = [];
+
+  for (const input of inputs) {
+    const optionId = input.dataset.optionId;
+    const qty = parseInt(input.value.trim(), 10);
+    const max = parseInt(input.dataset.maxStock, 10);
+
+    if (isNaN(qty) || qty < 0 || qty > max) {
+      alert(`❌ 수량 오류: 0 이상, 재고(${max}) 이하만`);
+      input.focus();
+      return;
+    }
+
+    items.push({
+      cart_option_id: optionId,
+      quantity: qty,
+    });
+  }
+
+  fetch("/admin/api/save-cart-option/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": getCookie("csrftoken"),
+    },
+    body: JSON.stringify({ items }),
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        alert("✅ 저장 완료");
+        updateCartTotal(cartId);  // 저장 후 금액 다시 계산
+      } else {
+        alert("❌ 실패: " + data.error);
+      }
+    })
+    .catch(err => {
+      console.error("❌ 오류:", err);
+      alert("❌ 저장 중 오류 발생!");
+    });
+}
