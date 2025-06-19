@@ -1,6 +1,7 @@
 import requests
 import json
 from datetime import datetime
+from utils.order_logger import log_order_send
 
 PERSONAL_CODE = "da3e1b50-8ce1-433d-a7a5-6353b0c969d3"
 ORDER_INPUT_URL = "https://order.eleonorabonucci.com/ws/order.asmx/Order_Input"
@@ -62,6 +63,16 @@ def send_order(order):
 
     except Exception as e:
         print("❌ Step 1 실패:", e)
+
+
+        log_order_send(
+            order_id=order.id,
+            retailer_name="ELEONORA",
+            items=[{"sku": item.option.external_option_id, "quantity": item.quantity} for item in order.items.all()],
+            success=False,
+            reason=str(e)
+        )
+        
         return [
             {
                 "sku": item.option.external_option_id,
@@ -71,6 +82,7 @@ def send_order(order):
             }
             for item in order.items.all()
         ]
+    
 
     # ✅ Step 2: 주소 정보 전송
     address_info = {
@@ -131,6 +143,15 @@ def send_order(order):
 
     except Exception as e:
         print("❌ Step 2 예외 발생:", e)
+
+        log_order_send(
+            order_id=order.id,
+            retailer_name="ELEONORA",
+            items=[{"sku": sku, "quantity": order.items.get(option__external_option_id=sku).quantity} for sku in response_map.keys()],
+            success=False,
+            reason=f"주소 전송 실패: {str(e)}"
+        )
+
         return [
             {
                 "sku": sku,
@@ -140,6 +161,18 @@ def send_order(order):
             }
             for sku, data in response_map.items()
         ]
+    
+    log_order_send(
+        order_id=order.id,
+        retailer_name="ELEONORA",
+        items=[
+            {"sku": sku, "quantity": order.items.get(option__external_option_id=sku).quantity}
+            for sku, data in response_map.items()
+        ],
+        success=all(data["success"] for data in response_map.values()),
+        reason="일부 실패" if any(not data["success"] for data in response_map.values()) else ""
+    )
+
 
     # ✅ 최종 표준 응답 반환
     return [
