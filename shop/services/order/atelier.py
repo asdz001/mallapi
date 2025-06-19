@@ -22,51 +22,6 @@ headers = {
 
 TEST_MODE = False  # 운영 전환 시 False로 설정
 
-def get_goods_id_by_barcode(barcode: str, size: str, retailer: str):
-    try:
-        print(f"\n🔍 유효성 검사 요청: barcode={barcode}, size={size}, retailer={retailer}")
-        response = requests.get(
-            "https://www2.atelier-hub.com/hub/GoodsDetailList",
-            headers={
-                "USER_MKT": USER_MKT,
-                "PWD_MKT": PWD_MKT,
-                "LANGUAGE": "en",
-                "DESCRIPTION": "ALL",
-                "SIZEPRICE": "ON",
-                "DETAILEDSIZE": "ON"
-            },
-            auth=HTTPBasicAuth(USER_ID, USER_PW),
-            params={"retailer": retailer, "barcode": barcode}
-        )
-
-        print(f"🛰️ 응답 코드: {response.status_code}")
-        response.raise_for_status()
-
-        data = response.json()
-
-        # ✅ 응답 구조 확인
-        if not isinstance(data, dict):
-            print("❌ 응답이 JSON 객체가 아님! → 서버가 에러를 반환한 것으로 판단")
-            return None
-
-        goods = data.get("GoodsDetailList", {}).get("Good", [])
-        if not goods:
-            print(f"❌ 바코드 {barcode}에 해당하는 상품 없음")
-            return None
-
-        for stock in goods[0].get("Stock", {}).get("Item", []):
-            found_size = stock.get("Size", "").strip().upper()
-            if found_size == size.strip().upper():
-                print(f"✅ 유효한 사이즈 매칭: {size}")
-                return goods[0].get("ID")
-
-        print(f"❌ 사이즈 {size} 없음")
-        return None
-
-    except Exception as e:
-        print(f"❌ 유효성 검사 실패: {e}")
-        traceback.print_exc()
-        return None
 
     
 
@@ -93,22 +48,10 @@ def send_order(order):
         print(f"   원가(price_org): {item.product.price_org}")
         print(f"   통화: EUR")
 
-        # ✅ 유효성 검사 + 상품 ID 추출
-        goods_id = get_goods_id_by_barcode(barcode, size, retailer_name)
-        if not goods_id:
-            print(f"⚠️ 제외됨: 바코드 {barcode} - 사이즈 {size}")
-            results.append({
-                "sku": barcode,
-                "item_id": item.id,  # 주문 항목 고유 ID
-                "success": False,
-                "reason": f"유효하지 않은 옵션: {barcode} / {size}"
-            })
-            continue
-
         price_str = str(item.product.price_org).replace('.', ',')
 
         goods.append({
-            "ID": goods_id,
+            "ID": item.option.external_product_id or "",
             "Size": size,
             "Qty": item.quantity,
             "Price": price_str,
@@ -123,9 +66,7 @@ def send_order(order):
             "reason": ""
         })
 
-    if not goods:
-        print("❌ 유효한 주문 항목이 없어 전송 중단")
-        return results
+
 
     item = order.items.first()
     order_reference = item.external_order_number
@@ -152,6 +93,10 @@ def send_order(order):
         }
     }
 
+    # ✅ 실제 전송 대신 payload만 출력
+    print("\n🚫 실제 전송은 생략하고 전송될 데이터만 출력합니다:")
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+
     try:
         print("\n📡 아뜰리에 주문 전송 중...")
         response = requests.post(API_URL, headers=headers, json=payload, auth=HTTPBasicAuth(USER_ID, USER_PW))
@@ -159,30 +104,39 @@ def send_order(order):
         print("📥 응답 본문:", response.text)
 
         response.raise_for_status()
-
-        # ✅ 응답 타입 검사
         result = response.json()
-        if not isinstance(result, dict):
-            raise ValueError("응답이 JSON 객체가 아님")
 
         response_data = result.get("Response", {})
-        if not isinstance(response_data, dict):
-            raise ValueError("응답 내 Response 구조가 없음")
-
         if response_data.get("Result") != "Success":
             message = response_data.get("Message", "전송 실패")
+
             for r in results:
-                if r["success"]:
-                    r["success"] = False
+                r["success"] = False
+                if "not enough stock" in message.lower():
+                    r["reason"] = "품절"
+                    r["status"] = "SOLDOUT"
+                else:
                     r["reason"] = message
+                    r["status"] = "FAILED"
 
     except Exception as e:
         print("❌ 전송 중 예외 발생:", e)
         traceback.print_exc()
-        for r in results:
-            if r["success"]:
-                r["success"] = False
-                r["reason"] = str(e)
+
+    # ✅ 주문 항목 상태 업데이트
+    for r in results:
+        item = order.items.get(id=r["item_id"])
+        if r.get("status") == "SOLDOUT":
+            item.order_status = "SOLDOUT"
+            item.order_message = r["reason"]
+        elif not r["success"]:
+            item.order_status = "FAILED"
+            item.order_message = r["reason"]
+        else:
+            item.order_status = "SENT"
+            item.order_message = ""
+        item.save()
+
 
     # ✅ 모든 결과에 sku 포함 여부 최종 체크
     complete_results = []
@@ -207,7 +161,6 @@ def send_order(order):
         success=all(r["success"] for r in complete_results),
         reason="일부 실패" if any(not r["success"] for r in complete_results) else ""
     )
-            
 
     return complete_results
 

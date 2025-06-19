@@ -173,6 +173,17 @@ def send_order(order):
         reason="일부 실패" if any(not data["success"] for data in response_map.values()) else ""
     )
 
+    # ✅ 여기부터 추가!
+    for sku, data in response_map.items():
+        try:
+            item = order.items.get(id=data["item_id"])
+            item.order_status = "SENT" if data["success"] else "SOLDOUT"
+            item.order_message = "" if data["success"] else "재고 없음"
+            item.save()
+        except Exception as e:
+            print(f"⚠️ 상태 저장 실패 (SKU: {sku}) →", e)
+
+
 
     # ✅ 최종 표준 응답 반환
     return [
