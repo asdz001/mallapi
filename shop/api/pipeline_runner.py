@@ -75,6 +75,13 @@ def run_full_pipeline_by_retailer(retailer_code):
 
 
 
+        # 리암
+        elif retailer_code == "IT-L-01":  # LEAM
+            from shop.api.leam import leam
+
+            print("🟡 [1/1] 리암 상품 수집 및 등록 시작")
+            fetch_count, register_count = leam.main()
+
 
 
 
