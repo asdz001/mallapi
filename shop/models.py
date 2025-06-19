@@ -200,7 +200,8 @@ class Order(models.Model):
         ("SENT", _("전송됨")),
         ("COMPLETED", _("완료")),
         ("FAILED", _("전송실패")),
-        ("SOIDOUT", _("품절취소")),
+        ("SOLDOUT", _("품절취소")),
+        ("PARTIAL", _("부분실패")),
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING", verbose_name=_("상태"))
     memo = models.TextField(blank=True, null=True, verbose_name=_("관리자 메모"))
@@ -236,6 +237,8 @@ class OrderItem(models.Model):
     ORDER_STATUS_CHOICES = [
         ("SENT", "전송 완료"),
         ("FAILED", "전송 실패"),
+        ("SOLDOUT", "품절 취소"),
+
     ]
 
     order_status = models.CharField(

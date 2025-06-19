@@ -150,8 +150,19 @@ def send_order_to_api(order):
         )
 
 
-        
+
     finally:
+        # ✅ 주문 전체 상태 재계산
+        item_statuses = list(order.items.values_list("order_status", flat=True))
+        if all(status == "SENT" for status in item_statuses):
+            order.status = "SENT"
+        elif all(status == "SOLDOUT" for status in item_statuses):
+            order.status = "SOLDOUT"
+        elif any(status == "FAILED" for status in item_statuses):
+            order.status = "FAILED"
+        else:
+            order.status = "PARTIAL"    
+            
         order.save()
 
 def create_order_review_from_order_item(order_item):

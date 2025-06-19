@@ -188,6 +188,21 @@ def send_order(order: Order):
             r["success"] = False
             r["reason"] = "재고 없음" if is_stock_missing else f"바제블루 전송 실패: {error_message}"
 
+        # ✅ 각 항목 상태 업데이트
+        for r in results:
+            try:
+                item = order.items.get(id=r["item_id"])
+                if is_stock_missing:
+                    item.order_status = "SOLDOUT"
+                    item.order_message = r["reason"]
+                else:
+                    item.order_status = "FAILED"
+                    item.order_message = r["reason"]
+                item.save()
+            except Exception as e2:
+                print(f"⚠️ 항목 상태 업데이트 실패 (item_id={r['item_id']}):", e2)
+
+
         # ✅ 실패 로그
         log_order_send(
             order_id=order.id,
