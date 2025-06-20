@@ -160,7 +160,7 @@ class BrandSettingAdmin(admin.ModelAdmin):
 #거래처명
 @admin.register(Retailer)
 class RetailerAdmin(admin.ModelAdmin):
-    list_display = ('name', 'code',"order_api_name",  "last_fetched_count","last_registered_count",
+    list_display = ('name', 'code',"order_api_name", "auto_schedule", "last_fetched_count","last_registered_count",
                     "last_fetch_started_at","last_register_finished_at",'created_by', 'updated_by',"run_auto_pipeline_button")
     search_fields = ('name',)
     readonly_fields = [
