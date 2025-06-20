@@ -343,7 +343,7 @@ class CartAdmin(admin.ModelAdmin):
         )
 
     class Media:
-        js = (static('shop/admin_cart.js') + f'?v={settings.STATIC_VERSION}',)
+        js = ('shop/admin_cart.js')
 
     def get_retailer(self, obj):
         return obj.product.retailer

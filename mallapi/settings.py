@@ -160,7 +160,7 @@ STATIC_URL = '/static/'
 
 
 # 운영환경용 static 최종 복사본 위치
-STATIC_ROOT = BASE_DIR / "staticfiles"  # 예: /root/staticfiles
+STATIC_ROOT = "/var/www/staticfiles"
 
 
 # 개발 중 참조용 정적 폴더 (여기엔 소스 파일 넣기)
@@ -176,5 +176,3 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 
-#js 파일 버전 바꾸기
-STATIC_VERSION = "20250620"
