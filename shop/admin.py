@@ -12,6 +12,9 @@ from django.db.models import Count
 from django.utils.translation import gettext_lazy as _
 from django.utils.timezone import localtime
 from django.db import transaction
+from django.templatetags.static import static
+from django.conf import settings
+
 
 
 # ✅ 브랜드 필터 - 모든 브랜드 + 수량 표시
@@ -340,7 +343,7 @@ class CartAdmin(admin.ModelAdmin):
         )
 
     class Media:
-        js = ('shop/admin_cart.js',)
+        js = (static('shop/admin_cart.js') + f'?v={settings.STATIC_VERSION}',)
 
     def get_retailer(self, obj):
         return obj.product.retailer
