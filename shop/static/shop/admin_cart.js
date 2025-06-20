@@ -181,6 +181,8 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
+
+// 장바구니 옵션 저장 함수
 function saveCart(cartId) {
   const container = document.getElementById(`cart-${cartId}`);
   const inputs = container.querySelectorAll(".cart-qty-input");
