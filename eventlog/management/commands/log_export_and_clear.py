@@ -6,10 +6,10 @@ import csv
 import os
 
 class Command(BaseCommand):
-    help = "2일 단위로 실패 로그를 백업하고 삭제합니다."
+    help = "1일 단위로 실패 로그를 백업하고 삭제합니다."
 
     def handle(self, *args, **kwargs):
-        threshold = now() - timedelta(days=2)
+        threshold = now() - timedelta(days=1)
         logs = ConversionLog.objects.filter(created_at__lt=threshold).select_related("raw_product")
 
         if not logs.exists():
