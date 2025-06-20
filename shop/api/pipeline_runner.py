@@ -112,7 +112,7 @@ def run_full_pipeline_by_retailer(retailer_code):
 
         # 가우덴찌
         elif retailer_code == "IT-G-03":
-            from shop.api.dresscode import gaudenzi
+            from shop.api.dresscode.gaudenzi import gaudenzi
             from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer
 
             # 가우덴찌 상품 수집(1일전부터)
