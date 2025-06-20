@@ -175,5 +175,6 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-#정적파일 넘버링 설정
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+
+#js 파일 버전 바꾸기
+STATIC_VERSION = "20250620"
