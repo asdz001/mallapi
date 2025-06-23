@@ -29,8 +29,8 @@ def create_orders_from_carts(selected_carts, request):
         retailer_short = retailer_obj.code.replace("IT-", "").replace("-", "")
 
         print(f"📦 장바구니 묶음 생성 중: {retailer_obj.name} → {len(carts)}개")
-
         item_counter = 1  # ✅ 항목별 고유 번호 부여
+
         for cart in carts:
             for cart_option in cart.options.all():
                 if cart_option.product_option.product_id != cart.product.id:
@@ -76,13 +76,11 @@ def send_order_to_api(order):
         print(f"\n🛰️ [API 전송 시작] 주문번호: {order.id}, 거래처: {order.retailer.name}")
         logger.info(f"[START] 주문번호: {order.id}, 거래처: {order.retailer.code} → 주문 전송 준비됨")
 
-        # 거래처별 모듈 import
         ATELIER_CODES = {"MINETTI", "CUCCUINI", "BINI", "IT-C-02", "IT-M-01", "IT-B-02", "TEST-HUB"}
         module_key = "atelier" if order.retailer.code.upper() in ATELIER_CODES else order.retailer.code.lower().replace("-", "_")
         module_path = f"shop.services.order.{module_key}"
         send_order = import_module(module_path).send_order
 
-        # ✅ 거래처 API에 주문 전송 → 결과는 무조건 표준 형태여야 함
         result = send_order(order)
         logger.info(f"[RESULT] 주문번호: {order.id} 응답: {json.dumps(result, ensure_ascii=False)}")
 
@@ -94,7 +92,6 @@ def send_order_to_api(order):
             success = res.get("success", False)
             reason = res.get("reason", "")
 
-
             item = order.items.filter(id=item_id, option__external_option_id=barcode).first()
             if not item:
                 continue
@@ -102,6 +99,10 @@ def send_order_to_api(order):
             item.order_status = "SENT" if success else "FAILED"
             item.order_message = "" if success else reason
             item.save()
+
+            # ✅ 이 시점에서 리뷰 생성 (SENT일 때만)
+            if success:
+                create_order_review_from_order_item(item)
 
             if not success:
                 has_failed = True
@@ -113,7 +114,6 @@ def send_order_to_api(order):
             order.status = "SENT"
             order.memo = "API 전송 성공"
 
-        # ✅ 주문 결과 로그 (성공 + 실패 케이스 모두 포함)
         log_order_send(
             order_id=order.id,
             retailer_name=order.retailer.name,
@@ -125,22 +125,17 @@ def send_order_to_api(order):
             reason="일부 실패" if has_failed else ""
         )
 
-
-
     except Exception as e:
         print("❌ 오류 발생:", str(e))
         logger.error(f"[ERROR] 주문번호: {order.id} 전송 실패 → {str(e)}", exc_info=True)
         order.status = "FAILED"
         order.memo = f"전송 실패: {str(e)}"
 
-        # 예외 발생 시 전체 상품 실패 처리
         for item in order.items.all():
             item.order_status = "FAILED"
             item.order_message = str(e)
             item.save()
 
-
-        # ✅ 예외 상황도 로그 저장
         log_order_send(
             order_id=order.id,
             retailer_name=order.retailer.name,
@@ -152,10 +147,7 @@ def send_order_to_api(order):
             reason=str(e)
         )
 
-
-
     finally:
-        # ✅ 주문 전체 상태 재계산
         item_statuses = list(order.items.values_list("order_status", flat=True))
         if all(status == "SENT" for status in item_statuses):
             order.status = "SENT"
@@ -164,16 +156,13 @@ def send_order_to_api(order):
         elif any(status == "FAILED" for status in item_statuses):
             order.status = "FAILED"
         else:
-            order.status = "PARTIAL"    
-
+            order.status = "PARTIAL"
         order.save()
 
+
 def create_order_review_from_order_item(order_item):
-    """
-    SHOP에서 주문이 생성될 때 호출되어, 주문 항목당 OrderReview를 자동 생성
-    단, 전송에 성공한 항목(SENT)만 생성
-    """
-    if order_item.order_status.strip().upper() != "SENT":
+    status = (order_item.order_status or "").strip().upper()
+    if status != "SENT":
         print(f"⏭️ 전송 실패 항목은 오더뷰 생성 제외: {order_item}")
         return
 
@@ -183,5 +172,4 @@ def create_order_review_from_order_item(order_item):
             retailer=order_item.order.retailer,
             status="PENDING",
         )
-
-        zip
+        print(f"✅ 리뷰 생성 완료: {order_item}")

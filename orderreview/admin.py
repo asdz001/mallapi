@@ -5,7 +5,7 @@ from .models import RetailerUser
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.contrib.admin import SimpleListFilter
-
+from datetime import timedelta
 
 
 #거래처별 필터링
@@ -30,7 +30,28 @@ class RetailerLimitedFilter(SimpleListFilter):
             return queryset.filter(retailer__id=self.value())
         return queryset
     
+# 거래처별 필터링을 위한 커스텀 필터
+class OrderDateFilter(admin.SimpleListFilter):
+    title = '주문일'
+    parameter_name = 'order_date'
 
+    def lookups(self, request, model_admin):
+        return [
+            ('today', '오늘'),
+            ('last_3_days', '최근 3일'),
+            ('last_7_days', '최근 7일'),
+        ]
+
+    def queryset(self, request, queryset):
+        now = timezone.now()
+        if self.value() == 'today':
+            return queryset.filter(order_item__order__created_at__date=now.date())
+        if self.value() == 'last_3_days':
+            return queryset.filter(order_item__order__created_at__gte=now - timedelta(days=3))
+        if self.value() == 'last_7_days':
+            return queryset.filter(order_item__order__created_at__gte=now - timedelta(days=7))
+        return queryset
+    
 
 #유저생성
 @admin.register(RetailerUser)
@@ -169,7 +190,7 @@ class OrderReviewAdmin(admin.ModelAdmin):
         
     # ✅ 필터링 거래처만 확인
     def get_list_filter(self, request):
-        return [RetailerLimitedFilter, 'status']
+        return [RetailerLimitedFilter,  OrderDateFilter ,'status']
         
 
     def status_colored(self, obj):
