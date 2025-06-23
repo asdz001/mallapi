@@ -368,3 +368,208 @@ python manage.py shell
 python manage.py fetch_and_register_baseblu
 python manage.py shell
 /usr/bin/python2 /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/printEnvVariablesToFile.py /root/.vscode-server/extensions/ms-python.python-2025.6.1-linux-x64/python_files/deactivate/bash/envVars.txt
+source venv/bin/activate
+crontab -l
+python manage.py fetch_and_register_gaudenzi
+python manage.py makemigrations
+python manage.py migrate
+crontab -l
+/bin/python2 /root/.vscode-server/extensions/ms-python.python-2025.8.0-linux-x64/python_files/printEnvVariablesToFile.py /root/.vscode-server/extensions/ms-python.python-2025.8.0-linux-x64/python_files/deactivate/bash/envVars.txt
+source venv/bin/activate
+crontab -e
+crontab -l
+python manage.py makemigrations
+python manage.py migrate
+sudo systemctl restart gunicorn
+python manage.py makemigrations
+python manage.py migrate
+sudo systemctl restart gunicorn
+git pull origin main
+python manage.py collectstatic --noinput
+python manage.py collectstatic
+sudo systemctl restart gunicorn
+cat /root/staticfiles/shop/admin_cart.js | grep saveAllCartOptions
+python manage.py collectstatic --noinput
+cat /root/staticfiles/shop/admin_cart.js | grep saveAllCartOptions
+python manage.py makemigrations
+python manage.py migrate
+sudo systemctl restart gunicorn
+코드 변경시 반영(재시작) - html일경우
+sudo systemctl restart gunicorn
+python manage.py makemigrations
+python manage.py migrate
+python manage.py collectstatic --noinput
+python manage.py makemigrations
+python manage.py migrate
+sudo systemctl restart gunicorn
+코드 변경시 반영(재시작) - html일경우
+sudo systemctl restart gunicorn
+python manage.py collectstatic --noinput
+rm -rf /root/staticfiles/
+python manage.py collectstatic --noinput
+rm -rf /root/staticfiles/
+python manage.py collectstatic --noinput
+python manage.py makemigrations
+python manage.py migrate
+sudo systemctl restart gunicorn
+코드 변경시 반영(재시작) - html일경우
+sudo systemctl restart gunicorn
+python manage.py collectstatic --noinput
+rm -rf /root/staticfiles/
+python manage.py collectstatic --noinput
+rm -rf /root/staticfiles/
+rm staticfiles.json
+rm -rf staticfiles/
+python manage.py collectstatic --noinput
+ls staticfiles/shop/
+python manage.py shell
+python manage.py collectstatic --noinput --verbosity 2
+cd static/shop
+cp admin_cart.js admin_cart_temp.js
+rm admin_cart.js
+mv admin_cart_temp.js admin_cart.js
+cd ~/mallapi/static/shop
+cp admin_cart.js admin_cart_temp.js
+rm admin_cart.js
+mv admin_cart_temp.js admin_cart.js
+find . -name admin_cart.js
+cd shop/static/shop
+cp admin_cart.js admin_cart_temp.js
+rm admin_cart.js
+mv admin_cart_temp.js admin_cart.js
+cd shop/static/shop
+python manage.py collectstatic --noinput --verbosity 2
+cd ~/mallapi
+python manage.py collectstatic --noinput --verbosity 2
+find /root -name manage.py
+cd /root
+python manage.py collectstatic --noinput --verbosity 2
+ls staticfiles/shop/
+cd /root/mallapi/shop/static/shop
+mkdir -p /root/static/shop
+cp admin_cart.js /root/static/shop/
+cd /root/shop/static/shop
+cp admin_cart.js /root/static/shop/
+ls /root/static/shop/
+cd /root
+python manage.py collectstatic --noinput --verbosity 2
+ls /root/staticfiles/shop/
+rm /root/mallapi/shop/static/shop/admin_cart.js
+find /root -name admin_cart.js
+rm /root/shop/static/shop/admin_cart.js
+python manage.py collectstatic --noinput --verbosity 2
+ls /root/staticfiles/shop/
+python manage.py collectstatic --noinput --verbosity 2
+ls /root/staticfiles/shop/
+mv /root/static/shop/admin_cart.js /root/static/shop/admin_cart.v2.js
+python manage.py collectstatic --noinput
+python manage.py makemigrations
+python manage.py migrate
+sudo systemctl restart gunicorn
+코드 변경시 반영(재시작) - html일경우
+sudo systemctl restart gunicorn
+ls /root/static/shop/
+ps aux | grep nginx
+sudo nano /etc/nginx/sites-available/default
+sudo systemctl restart nginx
+sudo nginx -T | grep static
+sudo nano /etc/nginx/sites-available/default
+sudo nginx -t  # ✅ 문법 체크
+sudo systemctl reload nginx  # ✅ 설정 반영
+python manage.py collectstatic --noinput
+cd ~/mallapi  # mallapi 프로젝트 디렉토리로 이동
+git reset --hard origin/main
+python manage.py collectstatic --noinput
+python manage.py makemigrations
+python manage.py migrate
+cd /root
+python manage.py makemigrations
+python manage.py migrate
+sudo systemctl restart gunicorn
+코드 변경시 반영(재시작) - html일경우
+sudo systemctl restart gunicorn
+python manage.py makemigrations
+python manage.py migrate
+python manage.py collectstatic --noinput
+ls -al /root/staticfiles/shop/admin_cart.* 
+python manage.py collectstatic
+sudo systemctl restart gunicorn
+코드 변경시 반영(재시작) - html일경우
+sudo systemctl restart gunicorn
+python manage.py collectstatic
+git pull origin main
+python manage.py collectstatic
+python manage.py collectstatic --clear --noinput
+ls -al /root/staticfiles/shop/admin_cart.js
+cat /root/staticfiles/shop/admin_cart.js | tail -n 20
+git pull origin main
+python manage.py collectstatic --clear --noinput
+cat /root/staticfiles/shop/admin_cart.js | tail -n 20
+git reset --hard HEAD
+git pull origin main
+python manage.py collectstatic --clear --noinput
+cat /root/staticfiles/shop/admin_cart.js | tail -n 20
+cat /etc/nginx/sites-enabled/default
+cat /etc/nginx/nginx.conf
+sudo nginx -T | grep static
+sudo nano /etc/nginx/sites-enabled/default
+sudo nginx -T | grep -A 5 "location /static/"
+sudo nginx -T | grep -B 10 "alias /var/www/staticfiles"
+sudo nano /etc/nginx/sites-enabled/mallapi
+sudo nginx -t
+sudo systemctl reload nginx
+sudo nano /etc/nginx/sites-enabled/mallapi
+sudo nginx -t
+sudo nano /etc/nginx/sites-enabled/mallapi
+sudo nginx -t
+sudo systemctl reload nginx
+python manage.py makemigrations
+python manage.py migrate
+sudo nano /etc/nginx/sites-enabled/mallapi
+sudo nginx -t
+sudo systemctl reload nginx
+git fetch origin
+git reset --hard origin/main
+python manage.py collectstatic --clear --noinput
+sudo rm -rf /root/staticfiles
+crontab -l
+crontab -e
+python manage.py fetch_and_register-eleonorabonucci' >> /root/test_scheduler.log 2>&1
+
+
+python manage.py fetch_and_register-eleonorabonucci
+python manage.py fetch_and_register_eleonorabonucci
+sudo nginx -T | grep -A 5 "location /static/"
+python manage.py makemigrations myshop
+python manage.py migrate myshop
+sudo systemctl reload nginx
+python manage.py collectstatic --clear --noinput
+sudo systemctl reload nginx
+sudo nginx -t
+sudo systemctl reload nginx
+python manage.py collectstatic --clear --noinput
+sudo systemctl reload nginx
+python manage.py collectstatic --clear --noinput
+sudo systemctl reload nginx
+python manage.py collectstatic --clear --noinput
+sudo systemctl reload nginx
+python manage.py makemigrations
+python manage.py migrate
+python manage.py collectstatic --clear --noinput
+class Media:
+ls -al /var/www/staticfiles/shop/admin_cart.js
+python manage.py shell
+sudo rm -rf /root/staticfiles
+python manage.py collectstatic --clear --noinput
+tail -n 100 /var/log/nginx/access.log | grep admin_cart.js
+python manage.py shell
+sudo systemctl restart gunicorn
+python manage.py fetch_and_register_baseblu
+/bin/python2 /root/.vscode-server/extensions/ms-python.python-2025.8.0-linux-x64/python_files/printEnvVariablesToFile.py /root/.vscode-server/extensions/ms-python.python-2025.8.0-linux-x64/python_files/deactivate/bash/envVars.txt
+source venv/bin/activate
+python manage.py fetch_and_register_baseblu
+source venv/bin/activate
+python manage.py fetch_and_register_cuccuini
+sudo systemctl restart gunicorn
+python manage.py shell
+/bin/python2 /root/.vscode-server/extensions/ms-python.python-2025.8.0-linux-x64/python_files/printEnvVariablesToFile.py /root/.vscode-server/extensions/ms-python.python-2025.8.0-linux-x64/python_files/deactivate/bash/envVars.txt

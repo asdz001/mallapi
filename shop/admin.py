@@ -17,6 +17,7 @@ from django.conf import settings
 
 
 
+
 # ✅ 브랜드 필터 - 모든 브랜드 + 수량 표시
 class BrandCountListFilter(admin.SimpleListFilter):
     title = _('브랜드')
@@ -343,7 +344,11 @@ class CartAdmin(admin.ModelAdmin):
         )
 
     class Media:
-        js = ('shop/admin_cart.js')
+        js = ('shop/admin_cart.js',)
+    
+
+
+    
 
     def get_retailer(self, obj):
         return obj.product.retailer
@@ -462,6 +467,7 @@ class CartAdmin(admin.ModelAdmin):
 
         return super().change_view(request, object_id, form_url, extra_context)
 
+ 
 
 # ✅ 주문 아이템 인라인 (최적화)
 class OrderItemInline(admin.TabularInline):

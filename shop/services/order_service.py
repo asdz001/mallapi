@@ -173,7 +173,7 @@ def create_order_review_from_order_item(order_item):
     SHOP에서 주문이 생성될 때 호출되어, 주문 항목당 OrderReview를 자동 생성
     단, 전송에 성공한 항목(SENT)만 생성
     """
-    if order_item.order_status != "SENT":
+    if order_item.order_status.strip().upper() != "SENT":
         print(f"⏭️ 전송 실패 항목은 오더뷰 생성 제외: {order_item}")
         return
 
@@ -183,3 +183,5 @@ def create_order_review_from_order_item(order_item):
             retailer=order_item.order.retailer,
             status="PENDING",
         )
+
+        zip

@@ -51,7 +51,7 @@ def send_order(order):
         price_str = str(item.product.price_org).replace('.', ',')
 
         goods.append({
-            "ID": item.option.external_product_id or "",
+            "ID": item.option.external_option_id or "",
             "Size": size,
             "Qty": item.quantity,
             "Price": price_str,
