@@ -37,9 +37,9 @@ class OrderDateFilter(admin.SimpleListFilter):
 
     def lookups(self, request, model_admin):
         return [
-            ('today', '오늘'),
-            ('last_3_days', '최근 3일'),
-            ('last_7_days', '최근 7일'),
+            ('today', 'today'),
+            ('last_3_days', 'last 3 days'),
+            ('last_7_days', 'last 7 days'),
         ]
 
     def queryset(self, request, queryset):

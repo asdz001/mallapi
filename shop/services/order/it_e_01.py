@@ -143,12 +143,15 @@ def send_order(order):
 
     except Exception as e:
         print("❌ Step 2 예외 발생:", e)
+        print("⚠️ 주소 실패는 무시하고 주문은 성공으로 간주합니다.")
 
+
+        # ✅ 로그는 남기되 성공으로 기록
         log_order_send(
             order_id=order.id,
             retailer_name="ELEONORA",
             items=[{"sku": sku, "quantity": order.items.get(option__external_option_id=sku).quantity} for sku in response_map.keys()],
-            success=False,
+            success=True,
             reason=f"주소 전송 실패: {str(e)}"
         )
 
@@ -156,7 +159,7 @@ def send_order(order):
             {
                 "sku": sku,
                 "item_id": data["item_id"],
-                "success": False,
+                "success": True,
                 "reason": f"주소 전송 실패: {str(e)}"
             }
             for sku, data in response_map.items()
