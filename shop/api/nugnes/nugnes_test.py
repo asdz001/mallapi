@@ -174,24 +174,12 @@ def register_products(products):
             existing = existing_option_map.get(key)
             stock = opt["stock"]
             price = opt["price"] or item.get("DISCOUNTED PRICE") or item.get("PRICE") or 0
-            
-            new_option_url = (opt.get("variant_url") or "").strip()
-            old_option_url = (existing.option_url or "").strip()
 
             if existing:
-                new_option_url = (opt.get("variant_url") or "").strip()
-                old_option_url = (existing.option_url or "").strip()
-
-                if (
-                    existing.stock != stock
-                    or str(existing.price) != str(price)
-                    or old_option_url != new_option_url
-                ):
+                if existing.stock != stock or str(existing.price) != str(price):
                     existing.stock = stock
                     existing.price = price
-                    existing.option_url = new_option_url  # ✅ 꼭 넣어야 저장됨
                     options_to_update.append(existing)
-
             else:
                 options_to_create.append(RawProductOption(
                     product=product,
@@ -199,12 +187,11 @@ def register_products(products):
                     option_name=opt["size"],
                     stock=stock,
                     price=price,
-                    option_url=opt.get("variant_url") or "",
                 ))
 
     # ✅ 옵션 대량 처리
     RawProductOption.objects.bulk_create(options_to_create, batch_size=1000)
-    RawProductOption.objects.bulk_update(options_to_update, ["stock", "price", "option_url"], batch_size=1000)
+    RawProductOption.objects.bulk_update(options_to_update, ["stock", "price"], batch_size=1000)
 
     # ✅ 누락된 상품은 soldout 처리 (오늘 수집에 포함 안된 기존 상품)
     RawProduct.objects.filter(retailer=RETAILER_CODE).exclude(external_product_id__in=active_ids).update(status="soldout")
@@ -229,6 +216,16 @@ def main():
     # ✅ 3. 대표상품 + 옵션 묶기
     products = group_products(df)
 
+    for item in products:
+        # ✅ 디버깅: 현재 값 찍기
+        if item.get("product_id") == "1750713041":
+            print("✅ 디버깅: product_id =", item.get("product_id"))
+            print("🔍 GENDER:", item.get("GENDER"))
+            print("🔍 CATEGORY1:", item.get("GRUPPO SUPER"))
+            print("🔍 CATEGORY2:", item.get("PRODUCT TYPE"))
+            print("🔍 MATERIAL:", item.get("COMPOSIZIONE"))
+            print("🔍 COLOR:", item.get("COLORE"))
+
 
     # ✅ 4. 중간 JSON 저장
     with open(OUTPUT_JSON_PATH, "w", encoding="utf-8") as f:
@@ -238,7 +235,6 @@ def main():
     register_products(products)
 
     print("🎉 모든 상품 처리 완료")
-    return len(products)  # ✅ 수집한 상품 수 반환
 
 if __name__ == "__main__":
     main()

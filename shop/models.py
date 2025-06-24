@@ -56,6 +56,7 @@ class RawProductOption(models.Model):
     option_name = models.CharField(max_length=100, verbose_name=_("옵션명"))
     stock = models.IntegerField(default=0, verbose_name=_("재고 수량"))
     price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name=_("옵션 가격"), null=True, blank=True)  # ✅ 추가
+    option_url = models.URLField(verbose_name=_("옵션 링크"), null=True, blank=True)  # ✅ 추가
 
     def save(self, *args, **kwargs):
         if self.option_name:
@@ -137,6 +138,7 @@ class ProductOption(models.Model):
     option_name = models.CharField(max_length=100, verbose_name=_("옵션명"))
     stock = models.IntegerField(default=0, verbose_name=_("재고 수량"))
     price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name=_("옵션 COST"), null=True, blank=True)  # ✅ 추가
+    option_url = models.URLField(verbose_name=_("옵션 링크"), null=True, blank=True)  # ✅ 추가
 
     def save(self, *args, **kwargs):
         if self.option_name:

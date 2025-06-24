@@ -74,6 +74,23 @@ def run_full_pipeline_by_retailer(retailer_code):
             register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
 
 
+        # 뉴네스
+        elif retailer_code == "IT-N-01":
+            from shop.api.nugnes.nugnes import main  # nugnes.py의 main 함수만 불러옴
+            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer, sync_soldout_products_from_raw
+
+            # ✅ GNB 상품 수집 및 원본 등록
+            fetch_count = main()
+
+            # ✅ 가공상품 등록
+            bulk_convert_or_update_products_by_retailer(retailer_code)
+
+            sync_soldout_products_from_raw(retailer_code)
+
+            # ✅ 등록된 상품 수 체크 (가공상품 기준)
+            register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
+
+
 
         # 리암
         elif retailer_code == "IT-L-01":  # LEAM

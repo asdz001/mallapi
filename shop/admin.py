@@ -48,7 +48,7 @@ class BrandCountListFilter(admin.SimpleListFilter):
 class RawProductOptionInline(admin.TabularInline):
     model = RawProductOption
     extra = 1
-    fields = ('external_option_id', 'option_name', 'stock', 'price')
+    fields = ('external_option_id', 'option_name', 'stock', 'price','option_url')
 
 
 # ✅ 원본상품 가공상품으로 전송버튼 (액션 최적화)
@@ -144,7 +144,7 @@ class RawProductAdmin(admin.ModelAdmin):
 class ProductOptionInline(admin.TabularInline):
     model = ProductOption
     extra = 1
-    fields = ('external_option_id', 'option_name', 'stock', 'price','calculated_supply' )
+    fields = ('external_option_id', 'option_name', 'stock', 'price','calculated_supply','option_url' )
     readonly_fields = ('calculated_supply',)
 
     def calculated_supply(self, obj):
