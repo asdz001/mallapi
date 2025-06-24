@@ -51,7 +51,7 @@ def send_order(order):
         price_str = str(item.product.price_org).replace('.', ',')
 
         goods.append({
-            "ID": item.option.external_option_id or "",
+            "ID": item.product.external_product_id or "",
             "Size": size,
             "Qty": item.quantity,
             "Price": price_str,
@@ -154,12 +154,25 @@ def send_order(order):
             })
 
 
+    items = []
+    for r in complete_results:
+        item_obj = order.items.get(id=r["item_id"])
+        items.append({
+            "sku": item_obj.option.external_option_id,
+            "size": item_obj.option.option_name,
+            "product_id": item_obj.product.external_product_id,  # ✅ 고유 ID 추가
+            "quantity": item_obj.quantity
+        })
+
     log_order_send(
         order_id=order.id,
         retailer_name=order.retailer.name,
-        items=[{"sku": r["sku"], "quantity": order.items.get(id=r["item_id"]).quantity} for r in complete_results],
+        items=items,
         success=all(r["success"] for r in complete_results),
-        reason="일부 실패" if any(not r["success"] for r in complete_results) else ""
+        reason="일부 실패" if any(not r["success"] for r in complete_results) else "",
+        payload=payload,
+        response=response.text if 'response' in locals() else None,
+        error=str(e) if 'e' in locals() else None
     )
 
     return complete_results

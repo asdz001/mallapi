@@ -573,3 +573,20 @@ python manage.py fetch_and_register_cuccuini
 sudo systemctl restart gunicorn
 python manage.py shell
 /bin/python2 /root/.vscode-server/extensions/ms-python.python-2025.8.0-linux-x64/python_files/printEnvVariablesToFile.py /root/.vscode-server/extensions/ms-python.python-2025.8.0-linux-x64/python_files/deactivate/bash/envVars.txt
+source venv/bin/activate
+git add -A
+git commit -m "🔁 장바구니 및 아뜰리에 주문 수정 "
+git push origin main
+crontab -l
+sudo systemctl restart gunicorn
+git fetch origin
+git reset --hard origin/main
+sudo systemctl restart gunicorn
+python manage.py fetch_and_register_eleonorabonucci
+crontab -e
+crontab -l
+sudo systemctl restart gunicorn
+python /root/.vscode-server/extensions/ms-python.python-2025.8.0-linux-x64/python_files/printEnvVariablesToFile.py /root/.vscode-server/extensions/ms-python.python-2025.8.0-linux-x64/python_files/deactivate/bash/envVars.txt
+source venv/bin/activate
+python shop/api/atelier/test_single_product.py
+/usr/bin/python2 /root/.vscode-server/extensions/ms-python.python-2025.8.0-linux-x64/python_files/printEnvVariablesToFile.py /root/.vscode-server/extensions/ms-python.python-2025.8.0-linux-x64/python_files/deactivate/bash/envVars.txt

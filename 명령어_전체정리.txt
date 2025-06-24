@@ -27,7 +27,7 @@
   ```
 - CUCCUINI 병합 실행
   ```bash
-  python shop/api/atelier/CUCCUINI/merge_all_data.py
+  python shop/api/atelier/test_single_product.py
   ```
 
 ## 🐚 Django Shell
