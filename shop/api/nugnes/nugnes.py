@@ -176,12 +176,10 @@ def register_products(products):
             price = opt["price"] or item.get("DISCOUNTED PRICE") or item.get("PRICE") or 0
             
             new_option_url = (opt.get("variant_url") or "").strip()
-            old_option_url = (existing.option_url or "").strip()
+
 
             if existing:
-                new_option_url = (opt.get("variant_url") or "").strip()
                 old_option_url = (existing.option_url or "").strip()
-
                 if (
                     existing.stock != stock
                     or str(existing.price) != str(price)
@@ -189,9 +187,8 @@ def register_products(products):
                 ):
                     existing.stock = stock
                     existing.price = price
-                    existing.option_url = new_option_url  # ✅ 꼭 넣어야 저장됨
+                    existing.option_url = new_option_url
                     options_to_update.append(existing)
-
             else:
                 options_to_create.append(RawProductOption(
                     product=product,
@@ -199,7 +196,7 @@ def register_products(products):
                     option_name=opt["size"],
                     stock=stock,
                     price=price,
-                    option_url=opt.get("variant_url") or "",
+                    option_url=new_option_url,
                 ))
 
     # ✅ 옵션 대량 처리
