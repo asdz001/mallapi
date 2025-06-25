@@ -230,3 +230,47 @@ function saveCart(cartId) {
     });
 }
 
+// 장바구니 옵션 주문 함수
+window.submitCartOptionOrder = function(optionId, optionUrl) {
+  console.log(`🛒 주문 요청 시작: optionId=${optionId}, optionUrl=${optionUrl}`);
+
+  // ✅ 새창 열기 시도
+  const win = window.open(optionUrl, "_blank", "noopener,noreferrer");
+
+  // ❗ 새창 실패 여부와 관계없이 무조건 fetch 실행
+  if (!win) {
+    alert("❌ 팝업 차단됨! 브라우저에서 허용해주세요.");
+  }
+
+  // ✅ fetch 요청은 항상 실행
+  fetch(`/shop/cart-option/order/${optionId}/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": getCookie("csrftoken"),
+    },
+    body: JSON.stringify({}),
+  })
+    .then((res) => {
+      console.log("📡 응답 수신됨", res);
+      if (!res.ok) {
+        alert("❌ 주문 상태 저장 실패!");
+        console.error("응답 실패:", res.status);
+        return;
+      }
+      return res.json();
+    })
+    .then((data) => {
+      console.log("📦 JSON 응답:", data);
+      if (data?.status === "ok") {
+        console.log("✅ 주문 상태 저장 완료");
+        location.reload();
+      } else {
+        alert("❌ 서버 응답 오류");
+      }
+    })
+    .catch((err) => {
+      console.error("❌ 요청 오류:", err);
+      alert("❌ 상태 저장 중 오류 발생");
+    });
+};

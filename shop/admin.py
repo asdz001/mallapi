@@ -435,14 +435,12 @@ class CartAdmin(admin.ModelAdmin):
                     if opt.order_status == "SENT":
                         # 💡 전송된 수량보다 현재 수량이 많다면 → 다시 주문 가능
                         if qty > (opt.last_sent_quantity or 0):
-                            url = reverse("cart-option-order", args=[opt.id])
-                            order_button_html = f"<a href='{url}' target='_blank'>🔁 추가 주문</a>"
+                            order_button_html = f"<a href='#' onclick=\"submitCartOptionOrder({opt.id}, '{option.option_url}')\">🔁 추가 주문</a>"
                         else:
                             order_button_html = "✅ 전송완료"
                     else:
                         # 💡 아직 주문되지 않았다면 → 일반 주문 버튼
-                        url = reverse("cart-option-order", args=[opt.id])
-                        order_button_html = f"<a href='{url}' target='_blank'>🔗 주문 실행</a>"
+                        order_button_html = f"<a href='#' onclick=\"submitCartOptionOrder({opt.id}, '{option.option_url}')\">🔗 주문 실행</a>"
                 else:
                     order_button_html = "❌ 수량 없음"
 

@@ -3,8 +3,9 @@ from django.http import JsonResponse , HttpResponse
 from shop.models import Product, ProductOption, Cart, CartOption
 from django.contrib import messages
 from shop.services.order_service import create_orders_from_carts
-from django.contrib.admin.views.decorators import staff_member_required
 from django.utils import timezone
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 
 
 def my_view(request):
@@ -76,29 +77,23 @@ def add_to_cart(request, option_id):
 
 
 
-@staff_member_required
+@csrf_exempt
+@require_POST
 def order_from_cart_option(request, option_id):
+    print(f"📥 View 도달: 주문 요청 받음, option_id={option_id}")
+
     cart_option = get_object_or_404(CartOption, id=option_id)
 
-    # 수량 확인
+    print(f"🧾 현재 수량: {cart_option.quantity}, 상태: {cart_option.order_status}, 마지막 전송 수량: {cart_option.last_sent_quantity}")
+
     if cart_option.quantity <= 0:
-        return HttpResponse("❌ 수량 없음")
+        print("❌ 수량 0이라 주문 거절")
+        return JsonResponse({"error": "❌ 수량 없음"}, status=400)
 
-    # ✅ 주문링크 저장 → 전송 완료로 상태 변경
     cart_option.order_status = "SENT"
+    cart_option.last_sent_quantity = cart_option.quantity
     cart_option.order_message = f"수동 주문 처리됨 - {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}"
-    cart_option.last_sent_quantity = cart_option.quantity  # ✅ 마지막 전송 수량 저장
-    cart_option.save(update_fields=["order_status", "order_message", "last_sent_quantity"])
+    cart_option.save(update_fields=["order_status", "last_sent_quantity", "order_message"])
 
-    # 링크 열기
-    option_url = cart_option.product_option.option_url
-    if option_url:
-        return HttpResponse(f"""
-                <script>
-                    window.onload = function() {{                    
-                        window.open("{option_url}", "_blank", "noopener,noreferrer");
-                        window.location.replace("/admin/shop/cart/");
-                    }};
-                </script>
-        """)
-    return redirect("/admin/shop/cart/")
+    print("✅ 주문 상태 저장 완료")
+    return JsonResponse({"status": "ok"})
