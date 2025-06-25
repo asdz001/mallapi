@@ -187,6 +187,20 @@ class CartOption(models.Model):
     product_option = models.ForeignKey('shop.ProductOption', on_delete=models.CASCADE)
     quantity = models.IntegerField(default=0)
 
+    # ✅ 주문 전송 상태
+    ORDER_STATUS_CHOICES = [
+        ("PENDING", "대기중"),
+        ("SENT", "전송완료"),
+        ("FAILED", "전송실패"),
+    ]
+    order_status = models.CharField(max_length=20, choices=ORDER_STATUS_CHOICES, default="PENDING", verbose_name="전송상태", null=True, blank=True)
+
+    # ✅ 주문 전송 메시지 (실패 사유 등 기록용)
+    order_message = models.TextField(null=True, blank=True, verbose_name="전송 메시지")
+    # ✅ 마지막 전송 수량 (주문 전송 시 기록용)
+    last_sent_quantity = models.IntegerField(default=0)
+
+
     def __str__(self):
         return f"{self.cart.product.product_name} - {self.product_option.option_name}: {self.quantity}개"
 

@@ -14,7 +14,7 @@ from django.utils.timezone import localtime
 from django.db import transaction
 from django.templatetags.static import static
 from django.conf import settings
-
+from django.urls import reverse
 
 
 
@@ -392,24 +392,31 @@ class CartAdmin(admin.ModelAdmin):
         return f"{obj.product.calculated_price_krw:,.0f}" if obj.product.calculated_price_krw else "-"
     product_price_krw.short_description = _("원화가")
 
+
+
+    # ✅ 거래처 코드 필터링 (예시: 이탈리아 거래처만 허용)
+    ALLOWED_RETAILER_CODES = ["IT-N-01", "IT-L-01"]
+
+
     # ✅ 옵션 테이블 (이미 prefetch된 데이터 사용)
     def display_option_table(self, obj):
+        # 💡 테이블 시작 HTML 구성
         html = f"<div id='cart-{obj.id}'><table style='border-collapse: collapse;'>"
-        html += "<tr><th>OPTION</th><th>재고정보</th><th>COST</th><th>공급가</th><th>ORDER QTY</th></tr>"
+        html += "<tr><th>OPTION</th><th>재고정보</th><th>COST</th><th>공급가</th><th>ORDER QTY</th><th>주문</th></tr>"
 
-        # ✅ prefetch된 데이터 사용 (N+1 쿼리 방지)
+        # 💡 장바구니 옵션들을 미리 가져옴 (prefetch 최적화)
         cart_options = getattr(obj, '_prefetched_objects_cache', {}).get('options')
         if cart_options is None:
             cart_options = obj.options.all()
 
         for opt in cart_options:
             option = opt.product_option
-            qty = opt.quantity
-            stock = option.stock
-            cart_qty = option.cart_quantity
-            order_qty = option.order_quantity
+            qty = opt.quantity                   # 💡 현재 주문할 수량
+            stock = option.stock                # 💡 전체 재고
+            cart_qty = option.cart_quantity     # 💡 장바구니 내 수량
+            order_qty = option.order_quantity   # 💡 지금까지 주문된 수량
 
-            # 가격 및 마크업 계산
+            # 💡 가격 계산 (마크업 포함 공급가 계산)
             markup = get_markup_from_product(obj.product) or 1
             product_price = obj.product.price_supply or 0
             base_price = option.price if option.price is not None else product_price
@@ -418,10 +425,32 @@ class CartAdmin(admin.ModelAdmin):
             price_display = f"{base_price:,.2f} "
             supply_display = f"{supply_price:,.2f}({markup:.2f})"
 
+            # 💡 주문 버튼 생성 로직
+            retailer_code = option.product.retailer  # 💡 이 옵션이 어떤 거래처인지 확인
+            order_button_html = "-"  # 기본값: 버튼 없음
+
+            if retailer_code in self.ALLOWED_RETAILER_CODES:
+                if qty > 0:
+                    # ✅ 이미 주문된 상태인지 확인
+                    if opt.order_status == "SENT":
+                        # 💡 전송된 수량보다 현재 수량이 많다면 → 다시 주문 가능
+                        if qty > (opt.last_sent_quantity or 0):
+                            url = reverse("cart-option-order", args=[opt.id])
+                            order_button_html = f"<a href='{url}' target='_blank'>🔁 추가 주문</a>"
+                        else:
+                            order_button_html = "✅ 전송완료"
+                    else:
+                        # 💡 아직 주문되지 않았다면 → 일반 주문 버튼
+                        url = reverse("cart-option-order", args=[opt.id])
+                        order_button_html = f"<a href='{url}' target='_blank'>🔗 주문 실행</a>"
+                else:
+                    order_button_html = "❌ 수량 없음"
+
+            # 💡 옵션 테이블 한 행 구성
             html += f"""
             <tr>
                 <td>{option.option_name}</td>
-                <td>_({stock}개 (장바구니: {cart_qty}개, 주문됨: {order_qty}개))</td>
+                <td>({stock}개 (장바구니: {cart_qty}개, 주문됨: {order_qty}개))</td>
                 <td>{price_display}</td>
                 <td>{supply_display}</td>
                 <td>
@@ -430,12 +459,14 @@ class CartAdmin(admin.ModelAdmin):
                            data-max-stock='{stock}'
                            value='{qty}' style='width:40px;' />
                 </td>
+                <td>{order_button_html}</td>  <!-- 💡 주문 버튼 위치 -->
             </tr>
             """
 
+        # 💡 테이블 하단: 총 금액 및 저장 버튼
         html += f"""
         <tr>
-            <td colspan="5" style='text-align: right; padding-top: 8px;'>
+            <td colspan="6" style='text-align: right; padding-top: 8px;'>
                 <strong class="cart-total">총 주문금액: ₩0</strong><br>
                 <button type="button" onclick="saveCart({obj.id})" style="padding: 4px 10px;">💾 옵션 수량 저장</button>
             </td>
@@ -444,6 +475,8 @@ class CartAdmin(admin.ModelAdmin):
         """
         return format_html(html)
     display_option_table.short_description = "옵션별 주문정보"
+
+
 
     def change_view(self, request, object_id, form_url='', extra_context=None):
         if request.method == 'POST':

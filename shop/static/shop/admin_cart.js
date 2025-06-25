@@ -217,6 +217,8 @@ function saveCart(cartId) {
     .then(data => {
       if (data.success) {
         alert("✅ 저장 완료");
+        // ✅ 자동 새로고침 추가!
+        window.location.reload();
         updateCartTotal(cartId);  // 저장 후 금액 다시 계산
       } else {
         alert("❌ 실패: " + data.error);
@@ -227,3 +229,4 @@ function saveCart(cartId) {
       alert("❌ 저장 중 오류 발생!");
     });
 }
+

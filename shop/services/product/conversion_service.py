@@ -220,6 +220,7 @@ class OptimizedConversionService:
                         'external_option_id': opt.external_option_id,
                         'stock': opt.stock,
                         'price': opt.price,
+                        'option_url': opt.option_url,
                     }
                 )
             
