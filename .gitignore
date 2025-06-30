@@ -47,3 +47,6 @@ Thumbs.db
 coverage/
 .coverage
 htmlcov/
+
+#미디어(사진)
+media

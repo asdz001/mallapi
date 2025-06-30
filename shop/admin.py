@@ -103,15 +103,27 @@ class RawProductAdmin(admin.ModelAdmin):
     # 이미지
     def image_preview(self, obj):
         urls = [obj.image_url_1, obj.image_url_2, obj.image_url_3, obj.image_url_4]
-        tags = [
-            format_html(
+
+        # 각 URL이 http로 시작하지 않으면 /media/를 붙여줌
+        tags = []
+        for url in urls:
+            if not url:
+                continue
+            # 절대 경로로 변환
+            if url.startswith("http"):
+                full_url = url
+            else:
+                full_url = settings.MEDIA_URL.rstrip('/') + '/' + url.lstrip('/')
+
+            tags.append(format_html(
                 '''
                 <img src="{}" style="width:60px; height:60px; margin-right:4px; transition:0.3s;" 
                      onmouseover="this.style.transform='scale(3)'" 
                      onmouseout="this.style.transform='scale(1)'"/>
-                ''', url
-            ) for url in urls if url
-        ]
+                ''',
+                full_url
+            ))
+
         return format_html(''.join(tags)) if tags else "-"
     image_preview.short_description = _("이미지")
     
@@ -197,11 +209,18 @@ class ProductAdmin(admin.ModelAdmin):
     # 이미지노출
     def image_tag(self, obj):
         if obj.image_url:
+            url = obj.image_url
+
+            # http로 시작하지 않으면 /media 붙이기
+            if not url.startswith("http"):
+                url = settings.MEDIA_URL.rstrip("/") + "/" + url.lstrip("/")
+
             return format_html('''
                 <img src="{}" style="width:60px; height:60px; transition: 0.3s;" 
                      onmouseover="this.style.transform='scale(3)'" 
                      onmouseout="this.style.transform='scale(1)'"/>
-            ''', obj.image_url)
+            ''', url)
+
         return "-"
     image_tag.short_description = _('이미지')
     
@@ -410,6 +429,7 @@ class CartAdmin(admin.ModelAdmin):
             cart_options = obj.options.all()
 
         for opt in cart_options:
+            
             option = opt.product_option
             qty = opt.quantity                   # 💡 현재 주문할 수량
             stock = option.stock                # 💡 전체 재고

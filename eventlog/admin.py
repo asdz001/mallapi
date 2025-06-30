@@ -11,11 +11,22 @@ from pathlib import Path
 
 @admin.register(ConversionLog)
 class ConversionLogAdmin(admin.ModelAdmin):
-    list_display = ["retailer", "id", "source", "raw_product", "reason", "created_at"]
+    list_display = ["retailer", "id", "source","raw_brand", "sku","raw_product", "reason", "created_at"]
     search_fields = ["retailer", "reason", "raw_product__product_name"]
     list_filter = ["retailer", "source", "created_at"]
     readonly_fields = ["raw_product", "reason", "created_at", "source"]
     change_list_template = "admin/conversionlog/change_list.html"
+
+
+    # ✅ 실패 상품의 브랜드명
+    def raw_brand(self, obj):
+        return obj.raw_product.raw_brand_name if obj.raw_product else "-"
+    raw_brand.short_description = "브랜드"
+
+    # ✅ 실패 상품의 모델명
+    def sku(self, obj):
+        return obj.raw_product.sku if obj.raw_product else "-"
+    sku.short_description = "모델명"
 
     def get_urls(self):
         urls = super().get_urls()
@@ -72,7 +83,7 @@ class ConversionLogAdmin(admin.ModelAdmin):
                 [python_path, str(manage_py), "log_export_and_clear"],
                 check=True
             )
-            self.message_user(request, "✅ 2일 이상 된 로그 백업 및 삭제 완료!", messages.SUCCESS)
+            self.message_user(request, "✅ 1일 이상 된 로그 백업 및 삭제 완료!", messages.SUCCESS)
         except subprocess.CalledProcessError as e:
             self.message_user(request, f"❌ 실행 중 오류 발생: {e}", messages.ERROR)
         except Exception as e:

@@ -4,6 +4,8 @@ from django.urls import path, include  # ★ include를 추가합니다.
 from shop.views_admin import save_cart_option
 from django.http import HttpResponse
 from django.conf.urls.i18n import i18n_patterns
+from django.conf import settings
+from django.conf.urls.static import static
 
 
 def home(request):
@@ -22,3 +24,6 @@ urlpatterns = [
 urlpatterns += i18n_patterns(
     path("admin/", admin.site.urls),  # 관리자 경로 다국어 처리
 )
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

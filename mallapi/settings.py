@@ -174,5 +174,12 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# 미디어 파일 설정
+MEDIA_URL = '/media/'
 
 
+# 운영환경용 미디어 파일 저장 방식
+USE_WEBP = True           # WebP 사용 여부
+WEBP_QUALITY = 85         # WebP 품질
+JPEG_QUALITY = 80         # JPEG 품질  
+SAVE_BOTH_FORMATS = False # 현재 사용 안함 (추후 확장용)

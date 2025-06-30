@@ -94,11 +94,18 @@ def run_full_pipeline_by_retailer(retailer_code):
 
         # 리암
         elif retailer_code == "IT-L-01":  # LEAM
-            from shop.api.leam import leam
+            from shop.api.leam.leam import main
+            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer, sync_soldout_products_from_raw
 
             print("🟡 [1/1] 리암 상품 수집 및 등록 시작")
-            fetch_count, register_count = leam.main()
+            fetch_count = main()
 
+            bulk_convert_or_update_products_by_retailer(retailer_code)
+
+            sync_soldout_products_from_raw(retailer_code)
+
+            # ✅ 등록된 상품 수 체크 (가공상품 기준)
+            register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
 
 
 
