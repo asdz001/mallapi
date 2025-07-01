@@ -118,6 +118,23 @@ def build_media_url(path: str) -> str:
         jpeg_path = str(path_obj.with_suffix('.jpg'))
         return f"{settings.MEDIA_URL.rstrip('/')}/{jpeg_path.lstrip('/')}"
 
+
+
+# Leam 상품 링크 생성 함수
+def generate_leam_product_url(item: dict) -> str:
+    gender = item.get("department", "").strip().lower()
+    brand = item.get("brand", "").strip().lower().replace(" ", "-")
+    name = item.get("name", "").strip().lower().replace(" ", "-")
+    
+    style = item.get("style_code", "").strip()
+    fabric = item.get("fabric_code", "").strip()
+    color = item.get("color_code", "").strip()
+    product_id = item.get("product_id", "").strip()
+    
+    return f"https://www.leam.com/kr_kr/{gender}-{brand}-{name}-{style}{fabric}{color}-{product_id}.html"
+
+
+
 def convert_leam_to_raw_format(raw_data: List[Dict]) -> List[Dict]:
     """Leam API 데이터를 내부 포맷으로 변환"""
     converted = []
@@ -129,6 +146,7 @@ def convert_leam_to_raw_format(raw_data: List[Dict]) -> List[Dict]:
         color_code = item.get("color_code", "")
         brand = item.get("brand", "").replace(" ", "")
         folder = f"{brand.upper()}/{style_code}_{color_code}"
+        leam_url = generate_leam_product_url(item)
 
         product = {
             "retailer": RETAILER_CODE,
@@ -157,7 +175,8 @@ def convert_leam_to_raw_format(raw_data: List[Dict]) -> List[Dict]:
                     "option_name": opt.get("size", "ONE"),
                     "stock": int(opt.get("qty", 0) or 0),
                     "price": float(item.get("price", 0)),
-                    "external_option_id": opt.get("stock_id", "")
+                    "external_option_id": opt.get("stock_id", ""),
+                    "option_url": leam_url
                 }
                 for opt in item["available_size"]
             ]
@@ -460,7 +479,8 @@ def register_raw_products_bulk(products: List[Dict]):
                     option_name=opt["option_name"],
                     stock=opt["stock"],
                     price=opt["price"],
-                    external_option_id=opt["external_option_id"]
+                    external_option_id=opt["external_option_id"],
+                    option_url=opt.get("option_url")
                 ))
         else:
             # 신규 상품 등록
@@ -498,7 +518,8 @@ def register_raw_products_bulk(products: List[Dict]):
                     option_name=opt["option_name"],
                     stock=opt["stock"],
                     price=opt["price"],
-                    external_option_id=opt["external_option_id"]
+                    external_option_id=opt["external_option_id"],
+                    option_url=opt.get("option_url", "")
                 ))
 
     # 🚀 DB 저장 작업: 트랜잭션으로 안전하게 처리
@@ -562,7 +583,7 @@ def main():
         logger.info(f"📊 처리 결과: 총 {len(mapped)}개, DB 저장 {saved_count}개")
         logger.info(f"🚄 평균 처리속도: {len(mapped)/total_elapsed:.1f}개/초")
         
-        return len(mapped), saved_count
+        return len(mapped)
         
     except Exception as e:
         logger.error(f"💥 처리 중 치명적 오류 발생: {e}")
