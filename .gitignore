@@ -50,3 +50,6 @@ htmlcov/
 
 #미디어(사진)
 media
+
+# GNB SOAP 응답 로그 디렉토리
+soap_responses

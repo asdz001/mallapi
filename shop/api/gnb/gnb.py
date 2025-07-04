@@ -62,7 +62,7 @@ COLUMNS = {
     "price_retail": "PrezzoIvato",
     "season": "DSStagione",
     "origin": "DSMarca",
-    "external_option_id": "IDArtCod",
+    "external_option_id": "CodArticolo",
     "material": "DSMateriale",
     "image_urls": ["URLImg1", "URLImg2", "URLImg3", "URLImg4"]
 }

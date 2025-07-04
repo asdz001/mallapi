@@ -1,0 +1,13 @@
+{
+  "timestamp": "20250704_135832",
+  "order_id": 183,
+  "retailer_name": "GNB",
+  "status": "성공",
+  "reason": "",
+  "items": [
+    {
+      "sku": "2000014719293",
+      "quantity": 1
+    }
+  ]
+}

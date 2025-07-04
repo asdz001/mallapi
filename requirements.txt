@@ -13,3 +13,4 @@ drf-yasg
 coreapi
 django-multiselectfield
 psutil
+zeep

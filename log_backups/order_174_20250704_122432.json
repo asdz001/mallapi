@@ -1,0 +1,13 @@
+{
+  "timestamp": "20250704_122432",
+  "order_id": 174,
+  "retailer_name": "GNB",
+  "status": "실패",
+  "reason": "'Order' object has no attribute 'external_order_number'",
+  "items": [
+    {
+      "sku": "2000016806564",
+      "quantity": 1
+    }
+  ]
+}

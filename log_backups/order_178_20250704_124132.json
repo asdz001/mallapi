@@ -1,0 +1,13 @@
+{
+  "timestamp": "20250704_124132",
+  "order_id": 178,
+  "retailer_name": "GNB",
+  "status": "실패",
+  "reason": "'bool' object is not iterable",
+  "items": [
+    {
+      "sku": "2000016806564",
+      "quantity": 1
+    }
+  ]
+}

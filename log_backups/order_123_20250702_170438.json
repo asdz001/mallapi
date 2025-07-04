@@ -1,0 +1,13 @@
+{
+  "timestamp": "20250702_170438",
+  "order_id": 123,
+  "retailer_name": "GNB",
+  "status": "실패",
+  "reason": "일부 실패",
+  "items": [
+    {
+      "sku": "7236046",
+      "quantity": 1
+    }
+  ]
+}
