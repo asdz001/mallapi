@@ -30,7 +30,7 @@ class RawProduct(models.Model):
     image_url_1 = models.CharField(verbose_name=_("이미지 URL 1"), blank=True, null=True)
     image_url_2 = models.CharField(verbose_name=_("이미지 URL 2"), blank=True, null=True)
     image_url_3 = models.CharField(verbose_name=_("이미지 URL 3"), blank=True, null=True)
-    image_url_4 = models.CharField(verbose_name=_("이미지 URL 3"), blank=True, null=True)
+    image_url_4 = models.CharField(verbose_name=_("이미지 URL 4"), blank=True, null=True)
     price_org = models.DecimalField(max_digits=12, decimal_places=2, verbose_name=_("COST"), default=0)
     price_supply = models.DecimalField(max_digits=12, decimal_places=2, verbose_name=_("판매가"), default=0)
     discount_rate = models.DecimalField(_("할인율 (%)"), max_digits=5, decimal_places=2, null=True, blank=True)

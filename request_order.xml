@@ -1,0 +1,38 @@
+<?xml version='1.0' encoding='utf-8'?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:fInserimentoDocumento">
+  <soapenv:Body>
+    <urn:fInserimentoDocumento>
+      <user>milaneseb2b</user>
+      <password>w8Yc$K</password>
+      <inserimentoDocumento>
+        <testata>
+          <iguNegozio>179</iguNegozio>
+          <iguNegozioDest></iguNegozioDest>
+          <dtRif>2025-07-07</dtRif>
+          <numRif>TEST-ORDER-20250707-003</numRif>
+          <iguTipoDocumento>B2BORD</iguTipoDocumento>
+          <iguCliente>13/4/3/6867/242476/0</iguCliente>
+          <nominativo>TEST CLIENT</nominativo>
+          <indirizzo>TEST STREET 123</indirizzo>
+          <citta>SEOUL</citta>
+          <cap>12345</cap>
+          <provincia>SEOUL</provincia>
+          <telefono>01000000000</telefono>
+          <codiceStato>KOR</codiceStato>
+          <partitaIva>0000000000</partitaIva>
+          <codFisc>0000000000</codFisc>
+        </testata>
+        <righe>
+          <codArticolo>2000014719293</codArticolo>
+          <quantitaMov>1</quantitaMov>
+          <przVenditaLordo>680.00</przVenditaLordo>
+          <sconto>0</sconto>
+          <przVenditaNetto>272.00</przVenditaNetto>
+          <tipoPrezzo>1</tipoPrezzo>
+          <codIva>NI08</codIva>
+          <matricola></matricola>
+        </righe>
+      </inserimentoDocumento>
+    </urn:fInserimentoDocumento>
+  </soapenv:Body>
+</soapenv:Envelope>

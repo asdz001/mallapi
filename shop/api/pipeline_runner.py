@@ -135,17 +135,17 @@ def run_full_pipeline_by_retailer(retailer_code):
         #드레스코드
 
         # 가우덴찌
-        elif retailer_code == "IT-G-03":
-            from shop.api.dresscode.gaudenzi import gaudenzi
-            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer
+        elif retailer_code == "IT-G-03":  # GAUDENZI
+            from shop.api.dresscode.gaudenzi.gaudenzi import run_gaudenzi_collection
+            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer, sync_soldout_products_from_raw
 
-            # 가우덴찌 상품 수집(1일전부터)
-            result = gaudenzi.fetch_daily()
-            #전체 상품 수집 7일기준으로 반복
-            #result = gaudenzi.fetch_full_history()
-            fetch_count = result["collected_count"]
+            fetch_count = run_gaudenzi_collection()
 
             bulk_convert_or_update_products_by_retailer(retailer_code)
+
+            sync_soldout_products_from_raw(retailer_code)
+            print(f"🔁 가우덴찌 품절 반영 완료: {retailer_code}")
+
             register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
 
 

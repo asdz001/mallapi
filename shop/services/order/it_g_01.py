@@ -11,7 +11,7 @@ SOAP_ENDPOINT = "http://93.46.41.5:8180/milaneseb2b/soapBeestore.php"  # SOAP �
 SOAP_USER = "milaneseb2b"  # SOAP 인증 사용자명
 SOAP_PSW = "w8Yc$K"  # SOAP 인증 비밀번호
 SOAP_IGUNEGOZIO = "179"  # 상점 ID
-SOAP_IGUCLIENTE = "13\\4\\3\\6867\\242476\\0"  # 고객 ID (성공 확인된 포맷)
+SOAP_IGUCLIENTE = "13/4/3/6867/242476/0"  # 고객 ID (성공 확인된 포맷)
 SOAP_CODIVA = "NI08"  # 세금 코드
 
 # ✅ 요청 및 응답 로그 디렉토리 설정
