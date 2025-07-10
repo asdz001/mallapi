@@ -14,7 +14,7 @@ GAUDENZI_CONFIG = {
     'channel_key': '33a2aaeb-7ef2-44c5-bb66-0d3a84e9869f',
     'subscription_key': 'd9b2538817b248d6a39e7289d5b87e87',
     'retailer_code': 'IT-G-03',
-    'test_mode': True  # 🔧 TODO: 운영시 False로 변경
+    'test_mode': False  # 🔧 TODO: 운영시 False로 변경
 }
 
 
