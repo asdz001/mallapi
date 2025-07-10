@@ -418,6 +418,22 @@ class DataProcessor:
                 images[i] = photo
             elif isinstance(photo, dict):
                 images[i] = photo.get('url', '')
+
+        # ✅ 옵션에서 가장 높은 wholesalePrice 가져오기 (우리가 추가할 부분)
+        max_opt_wholesale = max(
+            (float(opt.get("wholesalePrice", 0)) for opt in data.get("sizes", [])),
+            default=0
+        )
+        # ✅ 상품의 최종 가격 설정
+        price_org = (
+            float(data["wholesalePrice"])
+            if data.get("wholesalePrice")
+            else max_opt_wholesale
+            if max_opt_wholesale > 0
+            else float(data.get("price", 0))
+        )
+
+
         
         return {
             'product_name': f"{data.get('brand', '')} {data.get('name', '')} {data.get('sku', '')}".strip(),
@@ -428,7 +444,7 @@ class DataProcessor:
             'category2': data.get('category', ''),
             'origin': data.get('madeIn', ''),
             'material': data.get('composition', ''),
-            'price_org': float(data.get('wholesalePrice', 0)),
+            'price_org': price_org,
             'price_supply': float(data.get('price', 0)),
             'price_retail': float(data.get('retailPrice', 0)),
             'sku': data.get('sku', ''),
@@ -444,7 +460,9 @@ class DataProcessor:
     # ✅ 수정: 올바른 필드 매핑
     def _map_option_fields(self, option_data, product_data):
         stock = int(option_data.get('stock', 0))
-        price = float(option_data.get('price', 0) or product_data.get('price', 0))
+        price = (float(option_data["wholesalePrice"])
+                 if option_data.get("wholesalePrice")else float(product_data["wholesalePrice"])
+                 if product_data.get("wholesalePrice")else float(product_data.get("price", 0)))
         
         return {
             'option_name': option_data.get('size', 'ONE'),  # ✅ size → option_name
