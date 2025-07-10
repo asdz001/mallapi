@@ -9,12 +9,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         commands = [
-            "fetch_and_register_baseblu",
-            "fetch_and_register_bini",
-            "fetch_and_register_cuccuini",
-            "fetch_and_register_latti",
-            "fetch_and_register_minetti",
-            #"fetch_and_register_gaudenzi",
+            "fetch_and_register_gaudenzi",
         ]
 
         for cmd in commands:

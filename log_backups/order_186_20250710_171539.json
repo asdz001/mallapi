@@ -1,0 +1,13 @@
+{
+  "timestamp": "20250710_171539",
+  "order_id": 186,
+  "retailer_name": "GAUDENZI",
+  "status": "성공",
+  "reason": "",
+  "items": [
+    {
+      "sku": "3617131391104",
+      "quantity": 1
+    }
+  ]
+}

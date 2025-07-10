@@ -49,7 +49,7 @@ def create_orders_from_carts(selected_carts, request):
                         price_org=cart.product.price_org,   # ✅ 원가
                         price_supply=cart.product.price_supply,  # ✅ 공급가
                         markup=get_markup_from_product(cart.product),  # ✅ 마크업율
-                        price_krw=calculate_final_price(cart.product, cart_option.product_option),
+                        price_krw=calculate_final_price(cart.product),
                     )
 
                     # ✅ 고유 external_order_number 생성
