@@ -234,6 +234,10 @@ class OrderItem(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     option = models.ForeignKey(ProductOption, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
+    price_org = models.DecimalField(_("상품 원가"), max_digits=12, decimal_places=2, null=True, blank=True)
+    price_supply = models.DecimalField(_("공급가"), max_digits=12, decimal_places=2, null=True, blank=True)
+    option_price = models.DecimalField(_("option_COST"), max_digits=12, decimal_places=2, null=True, blank=True)
+    markup = models.DecimalField(_("마크업"), max_digits=5, decimal_places=2, null=True, blank=True)
     price_krw = models.DecimalField(_("원화가"), max_digits=12, decimal_places=0, null=True, blank=True)
     external_order_number = models.CharField(max_length=100,blank=True,null=True,verbose_name="	order_number(날짜-고유번호-업체명)" )  # 관리자 페이지 표시 이름
 

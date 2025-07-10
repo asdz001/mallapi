@@ -179,7 +179,7 @@ class ProductAdmin(admin.ModelAdmin):
     )
 
     search_fields = (
-        'product_name', 'brand_name', 'sku', 'color', 'origin'
+        'id','product_name', 'brand_name', 'sku', 'color', 'origin'
     )
 
     inlines = [ProductOptionInline]
@@ -528,7 +528,7 @@ class OrderItemInline(admin.TabularInline):
 
     fields = (
         'retailer_name', 'category', 'brand_name', 'product_name',
-        'option_name', 'quantity', 'price_org', 'price_supply' , 'markup', 'price_krw' , 'barcode', 'external_order_number','item_status', 'item_message'
+        'option_name', 'quantity', 'price_org', 'option_price',  'price_supply' , 'markup', 'price_krw' , 'barcode', 'external_order_number','item_status', 'item_message'
     )
     readonly_fields = fields
 
@@ -555,23 +555,24 @@ class OrderItemInline(admin.TabularInline):
     def quantity(self, obj):
         return obj.quantity
     
+    def option_price(self, obj):
+        return f"{obj.option_price:,.2f} €" if obj.option_price else "-"
+    option_price.short_description = _("option cost")
+    
     def price_org(self, obj):
-        if obj.option and obj.option.price is not None:
-            return f"{obj.option.price:,.2f} "
-        return f"{obj.product.price_org:,.2f} "
+        return f"{obj.price_org:,.2f} €" if obj.price_org else "-"
 
+    # ✅ 주문 당시의 고정 공급가
     def price_supply(self, obj):
-        if obj.option:
-            supply = obj.option.get_calculated_supply()
-            return f"{supply:,.2f} €"
-        return f"{obj.product.price_supply:,.2f} €"
-    
+        return f"{obj.price_supply:,.2f} €" if obj.price_supply else "-"
+
+    # ✅ 주문 당시의 마크업
     def markup(self, obj):
-        markup = get_markup_from_product(obj.product)
-        return f"{markup:.2f}" if markup else "-"
-    
+        return f"{obj.markup:.2f}" if obj.markup else "-"
+
+    # ✅ 주문 당시의 원화가
     def price_krw(self, obj):
-        return obj.price_krw
+        return f"{obj.price_krw:,.0f} ₩" if obj.price_krw else "-"
     
     def barcode(self, obj):
         return obj.option.external_option_id if obj.option else "-"

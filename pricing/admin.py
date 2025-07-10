@@ -15,6 +15,7 @@ from .models import Retailer
 from shop.api.pipeline_runner import run_full_pipeline_by_retailer
 import traceback
 import logging
+from shop.models import Product 
 
 
 #브랜드
@@ -160,7 +161,7 @@ class BrandSettingAdmin(admin.ModelAdmin):
 #거래처명
 @admin.register(Retailer)
 class RetailerAdmin(admin.ModelAdmin):
-    list_display = ('name', 'code',"order_api_name", "auto_schedule", "last_fetched_count","last_registered_count",
+    list_display = ('name', 'code',"order_api_name", "auto_schedule", 'current_product_count', "last_fetched_count","last_registered_count",
                     "last_fetch_started_at","last_register_finished_at",'created_by', 'updated_by',"run_auto_pipeline_button")
     search_fields = ('name',)
     readonly_fields = [
@@ -177,7 +178,15 @@ class RetailerAdmin(admin.ModelAdmin):
         obj.updated_by = request.user  # ✅ 매 저장시 수정자 기록
         super().save_model(request, obj, form, change)
 
+    # 실시간으로 현재 등록된 상품 수를 표시하는 메소드
+    def current_product_count(self, obj):
+        """
+        실시간으로 현재 등록된 상품 수를 반환합니다.
+        retailer.code 와 Product.retailer (문자열) 기준으로 필터링
+        """
+        return Product.objects.filter(retailer=obj.code).count()
 
+    current_product_count.short_description = "가공상품 수"
 
     def get_urls(self):
         urls = super().get_urls()

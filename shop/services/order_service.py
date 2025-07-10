@@ -6,6 +6,8 @@ from importlib import import_module
 from orderreview.models import OrderReview
 import json  # JSON 형식 로그 기록용
 from utils.order_logger import logger, log_order_send
+from shop.services.price_calculator import calculate_final_price
+from shop.utils.markup_util import get_markup_from_product
 
 @transaction.atomic
 def create_orders_from_carts(selected_carts, request):
@@ -43,7 +45,11 @@ def create_orders_from_carts(selected_carts, request):
                         product=cart.product,
                         option=cart_option.product_option,
                         quantity=quantity,
-                        price_krw=cart.product.calculated_price_krw,
+                        option_price=cart_option.product_option.price,  # ✅ 옵션 단가
+                        price_org=cart.product.price_org,   # ✅ 원가
+                        price_supply=cart.product.price_supply,  # ✅ 공급가
+                        markup=get_markup_from_product(cart.product),  # ✅ 마크업율
+                        price_krw=calculate_final_price(cart.product, cart_option.product_option),
                     )
 
                     # ✅ 고유 external_order_number 생성
@@ -59,7 +65,7 @@ def create_orders_from_carts(selected_carts, request):
                     item_counter += 1
 
         # ✅ 주문 API 전송
-        send_order_to_api(order)
+        send_order_to_api(order) # 주문 전송 함수 호출 - 블러처리하면 주문이 전송되지않음
         orders_created.append(order)
 
     # ✅ 장바구니 비우기
