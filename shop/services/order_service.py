@@ -24,9 +24,7 @@ def create_orders_from_carts(selected_carts, request):
             created_by=request.user,
         )
 
-        print(f"📦 장바구니 {cart.id} 처리 중")
-        
-        order_items = []
+        order_items = []  # ✅ 원래 코드 유지 (혹시 모를 참조용)
         order_date = order.created_at.strftime("%Y%m%d")
         retailer_short = retailer_obj.code.replace("IT-", "").replace("-", "")
 
@@ -34,6 +32,8 @@ def create_orders_from_carts(selected_carts, request):
         item_counter = 1  # ✅ 항목별 고유 번호 부여
 
         for cart in carts:
+            print(f"📦 장바구니 {cart.id} 처리 중")
+            
             for cart_option in cart.options.all():
                 if cart_option.product_option.product_id != cart.product.id:
                     continue
@@ -57,15 +57,14 @@ def create_orders_from_carts(selected_carts, request):
                     order_item.external_order_number = code
                     order_item.save()
 
-                    # ✅ 리뷰 생성 및 재고 차감
-                    create_order_review_from_order_item(order_item)
+                    # ✅ 재고 차감 (리뷰는 API 전송 성공 후에만 생성)
                     cart_option.product_option.stock = max(cart_option.product_option.stock - quantity, 0)
                     cart_option.product_option.save()
 
                     item_counter += 1
 
         # ✅ 주문 API 전송
-        send_order_to_api(order) # 주문 전송 함수 호출 - 블러처리하면 주문이 전송되지않음
+        send_order_to_api(order)
         orders_created.append(order)
 
     # ✅ 장바구니 비우기
@@ -76,8 +75,8 @@ def create_orders_from_carts(selected_carts, request):
     return orders_created
 
 
-#api로 주문호출
 def send_order_to_api(order):
+    """API로 주문 전송"""
     try:
         print(f"\n🛰️ [API 전송 시작] 주문번호: {order.id}, 거래처: {order.retailer.name}")
         logger.info(f"[START] 주문번호: {order.id}, 거래처: {order.retailer.code} → 주문 전송 준비됨")
@@ -91,35 +90,55 @@ def send_order_to_api(order):
         logger.info(f"[RESULT] 주문번호: {order.id} 응답: {json.dumps(result, ensure_ascii=False)}")
 
         has_failed = False
+        has_soldout = False
 
         for res in result:
             barcode = res.get("sku")
             item_id = res.get("item_id")
             success = res.get("success", False)
             reason = res.get("reason", "")
+            stock = res.get("stock", -1)
 
             item = order.items.filter(id=item_id, option__external_option_id=barcode).first()
             if not item:
                 continue
 
-            item.order_status = "SENT" if success else "FAILED"
-            item.order_message = "" if success else reason
+            # ✅ 상태 설정 및 리뷰 생성
+            if success:
+                item.order_status = "SENT"
+                item.order_message = ""
+                # ✅ 성공한 경우에만 리뷰 생성
+                create_order_review_from_order_item(item)
+                print(f"✅ 성공 처리: {barcode} → SENT")
+            else:
+                if stock == 0:
+                    item.order_status = "SOLDOUT"
+                    item.order_message = f"품절 ({reason})"
+                    has_soldout = True
+                    print(f"🚫 품절 처리: {barcode} → SOLDOUT (재고: {stock})")
+                else:
+                    item.order_status = "FAILED"
+                    item.order_message = reason
+                    has_failed = True
+                    print(f"❌ 실패 처리: {barcode} → FAILED: {reason}")
+
             item.save()
 
-            # ✅ 이 시점에서 리뷰 생성 (SENT일 때만)
-            if success:
-                create_order_review_from_order_item(item)
-
-            if not success:
-                has_failed = True
-
-        if has_failed:
+        # ✅ 주문 전체 상태 설정
+        if has_failed and has_soldout:
+            order.status = "PARTIAL"
+            order.memo = "일부 품절, 일부 실패"
+        elif has_soldout:
+            order.status = "SOLDOUT"
+            order.memo = "품절"
+        elif has_failed:
             order.status = "FAILED"
-            order.memo = "일부 상품 전송 실패"
+            order.memo = "전송 실패"
         else:
             order.status = "SENT"
             order.memo = "API 전송 성공"
 
+        # ✅ 로그 기록
         log_order_send(
             order_id=order.id,
             retailer_name=order.retailer.name,
@@ -127,8 +146,8 @@ def send_order_to_api(order):
                 "sku": res.get("sku"),
                 "quantity": order.items.get(id=res.get("item_id")).quantity
             } for res in result],
-            success=not has_failed,
-            reason="일부 실패" if has_failed else ""
+            success=not (has_failed or has_soldout),
+            reason="품절" if has_soldout and not has_failed else ("실패" if has_failed else "")
         )
 
     except Exception as e:
@@ -154,28 +173,28 @@ def send_order_to_api(order):
         )
 
     finally:
+        # ✅ 최종 상태 확인 및 저장
         item_statuses = list(order.items.values_list("order_status", flat=True))
-        if all(status == "SENT" for status in item_statuses):
-            order.status = "SENT"
-        elif all(status == "SOLDOUT" for status in item_statuses):
-            order.status = "SOLDOUT"
-        elif any(status == "FAILED" for status in item_statuses):
-            order.status = "FAILED"
-        else:
-            order.status = "PARTIAL"
+        print(f"📊 최종 아이템 상태들: {item_statuses}")
+        print(f"📊 최종 주문 상태: {order.status}")
         order.save()
 
 
 def create_order_review_from_order_item(order_item):
+    """주문 아이템으로부터 오더 리뷰 생성 (SENT 상태일 때만)"""
     status = (order_item.order_status or "").strip().upper()
     if status != "SENT":
-        print(f"⏭️ 전송 실패 항목은 오더뷰 생성 제외: {order_item}")
+        print(f"⏭️ 전송 실패 항목은 오더뷰 생성 제외: {order_item.id} (상태: {status})")
         return
 
-    if not OrderReview.objects.filter(order_item=order_item).exists():
-        OrderReview.objects.create(
-            order_item=order_item,
-            retailer=order_item.order.retailer,
-            status="PENDING",
-        )
-        print(f"✅ 리뷰 생성 완료: {order_item}")
+    # ✅ 중복 생성 방지
+    if OrderReview.objects.filter(order_item=order_item).exists():
+        print(f"⏭️ 이미 리뷰가 존재함: {order_item.id}")
+        return
+
+    OrderReview.objects.create(
+        order_item=order_item,
+        retailer=order_item.order.retailer,
+        status="PENDING",
+    )
+    print(f"✅ 리뷰 생성 완료: OrderItem {order_item.id}")
