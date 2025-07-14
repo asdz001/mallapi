@@ -1,8 +1,8 @@
 """
 julian 상품 수집/등록 시스템 (수정된 버전)
 ============================
-🎯 Dresscode API → Gaudenzi 상품 자동 수집/등록
-📝 실행: python manage.py collect_gaudenzi_products
+🎯 Dresscode API → julian 상품 자동 수집/등록
+📝 실행: python manage.py collect_julian_products
 """
 
 import json
@@ -480,7 +480,7 @@ class DataProcessor:
 
 # Django Command
 class Command(BaseCommand):
-    help = 'Gaudenzi 상품 수집 및 등록'
+    help = 'julian 상품 수집 및 등록'
     
     def add_arguments(self, parser):
         parser.add_argument('--force-full', action='store_true', help='강제 전체 수집')
@@ -494,7 +494,7 @@ class Command(BaseCommand):
             format='%(asctime)s [%(levelname)s] %(message)s',
             handlers=[
                 logging.StreamHandler(),
-                logging.FileHandler('logs/gaudenzi.log', encoding='utf-8')
+                logging.FileHandler('logs/julian.log', encoding='utf-8')
             ]
         )
         
@@ -541,7 +541,7 @@ class Command(BaseCommand):
             # JSON 백업 (실험용 - 전체 수집시에만)
             if is_full and not options['no_backup']:
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                backup_file = Config.BACKUP_DIR / f"gaudenzi_full_{timestamp}_{len(products)}items.json"
+                backup_file = Config.BACKUP_DIR / f"julian_full_{timestamp}_{len(products)}items.json"
                 backup_file.write_text(json.dumps(products, ensure_ascii=False, indent=2))
                 logging.info(f"💾 백업 (전체 수집): {backup_file}")
             elif not is_full:
@@ -555,7 +555,7 @@ class Command(BaseCommand):
             TimeHelper.save_time(is_full)
             
             logging.info("✅ 수집 완료")
-            self.stdout.write(self.style.SUCCESS('✅ Gaudenzi 상품 수집 완료'))
+            self.stdout.write(self.style.SUCCESS('✅ julian 상품 수집 완료'))
             
         except Exception as e:
             logging.error(f"❌ 수집 실패: {e}")
@@ -563,10 +563,10 @@ class Command(BaseCommand):
             raise
 
 
-# pipeline_runner용 메인 함수
-def run_gaudenzi_collection(force_full=False):
+# pipeline_runner용 메인 함수 ==
+def run_julian_collection(force_full=False):
     try:
-        print("📦 Gaudenzi 상품 수집 시작")
+        print("📦 julian 상품 수집 시작")
         Config.setup()
         
         # 강제 전체 수집 처리
@@ -601,7 +601,7 @@ def run_gaudenzi_collection(force_full=False):
         if is_full:
             try:
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                backup_file = Config.BACKUP_DIR / f"gaudenzi_full_{timestamp}_{len(products)}items.json"
+                backup_file = Config.BACKUP_DIR / f"julian_full_{timestamp}_{len(products)}items.json"
                 backup_file.write_text(json.dumps(products, ensure_ascii=False, indent=2), encoding='utf-8')
                 print(f"💾 JSON 백업 저장 (전체 수집): {backup_file}")
             except Exception as e:
@@ -613,11 +613,11 @@ def run_gaudenzi_collection(force_full=False):
         processor.process_products(products, is_full)
         TimeHelper.save_time(is_full)
         
-        print(f"✅ Gaudenzi 수집 완료: {len(products)}개")
+        print(f"✅ julian 수집 완료: {len(products)}개")
         return len(products)
         
     except Exception as e:
-        print(f"❌ Gaudenzi 수집 실패: {e}")
+        print(f"❌ julian 수집 실패: {e}")
         import traceback
         traceback.print_exc()
         return 0
@@ -633,7 +633,7 @@ if __name__ == "__main__":
     print("🔧 Django 환경 설정 시작...")
     
     # 현재 파일 위치에서 4단계 위로 올라가야 mallapi 프로젝트 루트
-    # 현재: shop/api/dresscode/gaudenzi/gaudenzi.py
+    # 현재: shop/api/dresscode/julian/julian.py
     # 목표: mallapi/ (manage.py가 있는 곳)
     BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../"))
     print(f"📁 BASE_DIR: {BASE_DIR}")
@@ -658,8 +658,8 @@ if __name__ == "__main__":
         globals()['RawProductOption'] = RawProductOption
         
         # 실제 수집 실행
-        print("🚀 Gaudenzi 수집 실행 시작")
-        result = run_gaudenzi_collection()
+        print("🚀 julian 수집 실행 시작")
+        result = run_julian_collection()
         print(f"{'✅ 성공' if result > 0 else '❌ 실패'}: {result}개")
         
     except Exception as e:
@@ -667,7 +667,7 @@ if __name__ == "__main__":
         print(f"📁 계산된 BASE_DIR: {BASE_DIR}")
         print(f"📄 manage.py 존재 확인: {os.path.exists(os.path.join(BASE_DIR, 'manage.py'))}")
         print("📝 Django management command로 실행해보세요:")
-        print("   python manage.py collect_gaudenzi_products")
+        print("   python manage.py collect_julian_products")
         import traceback
         traceback.print_exc()
         sys.exit(1)

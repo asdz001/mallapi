@@ -563,7 +563,7 @@ class Command(BaseCommand):
             raise
 
 
-# pipeline_runner용 메인 함수
+# pipeline_runner용 메인 함수 ==
 def run_gaudenzi_collection(force_full=False):
     try:
         print("📦 Gaudenzi 상품 수집 시작")
