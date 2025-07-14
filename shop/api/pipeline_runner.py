@@ -132,7 +132,7 @@ def run_full_pipeline_by_retailer(retailer_code):
 
 
 
-        #드레스코드
+    #드레스코드
 
         # 가우덴찌
         elif retailer_code == "IT-G-03":  # GAUDENZI
@@ -149,10 +149,36 @@ def run_full_pipeline_by_retailer(retailer_code):
             register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
 
 
-    
+        # 줄리안
+        elif retailer_code == "IT-J-01":  # 
+            from shop.api.dresscode.julian.julian import run_julian_collection
+            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer, sync_soldout_products_from_raw
+
+            fetch_count = run_julian_collection()
+
+            bulk_convert_or_update_products_by_retailer(retailer_code)
+
+            sync_soldout_products_from_raw(retailer_code)
+            print(f"🔁 줄리안 품절 반영 완료: {retailer_code}")
+
+            register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
+
+        # 비에띠
+        elif retailer_code == "IT-V-02":  # VIETTI
+            from shop.api.dresscode.vietti.vietti import run_vietti_collection
+            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer, sync_soldout_products_from_raw
+
+            fetch_count = run_vietti_collection()
+
+            bulk_convert_or_update_products_by_retailer(retailer_code)
+
+            sync_soldout_products_from_raw(retailer_code)
+            print(f"🔁 비에띠 품절 반영 완료: {retailer_code}")
+
+            register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()                
 
 
-        #아뜰리에
+    #아뜰리에
 
         # 쿠쿠이니
         elif retailer_code == "IT-C-02":
