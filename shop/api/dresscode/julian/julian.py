@@ -142,6 +142,8 @@ class APIClient:
         
         try:
             response = self.session.get(Config.API_URL, params=params, timeout=30)
+            print(f"✅ 응답 코드: {response.status_code}")
+            print(f"📦 응답 내용 (앞 300자): {response.text[:300]}")
             response.raise_for_status()
             
             data = response.json()

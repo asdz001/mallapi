@@ -14,6 +14,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         commands = [
             "fetch_and_register_gaudenzi",
+            "fetch_and_register_julian",
+            "fetch_and_register_vietti",
         ]
 
         for cmd in commands:
