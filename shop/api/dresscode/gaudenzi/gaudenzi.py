@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List
 import pytz
+from utils.product_logger import get_product_logger
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -491,14 +492,10 @@ class Command(BaseCommand):
     
     def handle(self, *args, **options):
         # 로깅 설정
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s [%(levelname)s] %(message)s',
-            handlers=[
-                logging.StreamHandler(),
-                logging.FileHandler('logs/gaudenzi.log', encoding='utf-8')
-            ]
-        )
+        custom_logger = get_product_logger(Config.RETAILER_CODE)
+        
+        for h in custom_logger.handlers:
+            logging.getLogger().addHandler(h)
         
         try:
             Config.setup()

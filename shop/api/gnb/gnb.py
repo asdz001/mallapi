@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from datetime import datetime, date
 from collections import defaultdict
+from utils.product_logger import get_product_logger
 import re
 
 # ✅ Django 환경 설정
@@ -22,15 +23,11 @@ from django.db import transaction
 from shop.models import RawProduct, RawProductOption
 
 # ✅ 로깅 설정
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('gnb_sync.log'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+logger = get_product_logger("IT-G-01")
+
+for h in logger.handlers:
+    logging.getLogger().addHandler(h)
+
 
 # ✅ 설정
 FTP_HOST = "93.46.41.5"

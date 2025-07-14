@@ -1,7 +1,6 @@
 import requests
 from datetime import datetime
 from shop.models import Order
-from utils.order_logger import log_order_send
 
 
 # 재고 조회 함수
@@ -27,6 +26,8 @@ def send_order(order: Order):
     """
     endpoint = "https://lab.modacheva.com/mil_getorder"  # 운영 시 교체 가능
     results = []
+    payloads = []
+    responses = []
 
     for item in order.items.all():
         option = item.option
@@ -53,6 +54,8 @@ def send_order(order: Order):
             response = requests.post(endpoint, data=payload, timeout=10)
             response.raise_for_status()
             response_text = response.text.strip()
+            payloads.append(payload)
+            responses.append(response_text)
 
             print(f"📬 응답: {response_text}")
             is_success = "OK" in response_text.upper()
@@ -74,19 +77,9 @@ def send_order(order: Order):
                 "reason": str(e),
                 "stock": stock
             })
+            payloads.append(payload)
+            responses.append(str(e))
 
-    log_order_send(
-        order_id=order.id,
-        retailer_name="LATTI",
-        items=[
-            {
-                "sku": r["sku"],
-                "quantity": order.items.get(id=r["item_id"]).quantity
-            } for r in results
-        ],
-        success=all(r["success"] for r in results),
-        reason="일부 실패" if any(not r["success"] for r in results) else ""
-    )
 
     for r in results:
         try:
@@ -110,4 +103,4 @@ def send_order(order: Order):
             print(f"⚠️ 상태 저장 실패 (item_id={r['item_id']}) →", e)  
 
 
-    return results
+    return results, payloads, responses

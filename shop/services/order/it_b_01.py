@@ -4,7 +4,6 @@ from decimal import Decimal
 import json
 from pathlib import Path
 from shop.models import Order
-from utils.order_logger import log_order_send
 
 #BASE_URL = "https://sandbox.csplatform.io:9950" #테스트 주소
 BASE_URL = "https://api.csplatform.io"
@@ -166,16 +165,9 @@ def send_order(order: Order):
         print("📨 응답 본문:", response.text)
         response.raise_for_status()
 
-        # ✅ 성공 로그
-        log_order_send(
-            order_id=order.id,
-            retailer_name="BASEBLU",
-            items=[{"sku": r["sku"], "quantity": order.items.get(id=r["item_id"]).quantity} for r in results],
-            success=True
-        )        
 
         # 성공일 경우에도 result 리턴만 함 (order 저장 X)
-        return results
+        return results, payload, response.text
 
     except Exception as e:
         error_message = str(e)
@@ -203,14 +195,6 @@ def send_order(order: Order):
                 print(f"⚠️ 항목 상태 업데이트 실패 (item_id={r['item_id']}):", e2)
 
 
-        # ✅ 실패 로그
-        log_order_send(
-            order_id=order.id,
-            retailer_name="BASEBLU",
-            items=[{"sku": r["sku"], "quantity": order.items.get(id=r["item_id"]).quantity} for r in results],
-            success=False,
-            reason=error_message
-        )
 
-        
-        return results
+        # 결과와 페이로드, 오류 메시지 리턴
+        return results, payload, error_message

@@ -86,7 +86,7 @@ def send_order_to_api(order):
         module_path = f"shop.services.order.{module_key}"
         send_order = import_module(module_path).send_order
 
-        result = send_order(order)
+        result, payload_data, response_data = send_order(order)
         logger.info(f"[RESULT] 주문번호: {order.id} 응답: {json.dumps(result, ensure_ascii=False)}")
 
         has_failed = False
@@ -147,6 +147,8 @@ def send_order_to_api(order):
                 "quantity": order.items.get(id=res.get("item_id")).quantity
             } for res in result],
             success=not (has_failed or has_soldout),
+            payload=payload_data,
+            response=response_data,
             reason="품절" if has_soldout and not has_failed else ("실패" if has_failed else "")
         )
 

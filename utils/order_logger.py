@@ -1,23 +1,23 @@
 # mallapi/utils/order_logger.py
 
 import os
-import json
 import logging
 from datetime import datetime
 
 LOG_DIR = os.path.join(os.path.dirname(__file__), "../log_backups")
 os.makedirs(LOG_DIR, exist_ok=True)
 
-# 기본 로그 설정 (요약 로그)
-logging.basicConfig(
-    filename=os.path.join(LOG_DIR, "order_send.log"),
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s",
-    encoding="utf-8"
-)
+# 전용 주문 로거
+order_logger = logging.getLogger("order_logger")
+order_logger.setLevel(logging.INFO)
 
-logger = logging.getLogger("order_logger")
+if not order_logger.handlers:
+    file_handler = logging.FileHandler(os.path.join(LOG_DIR, "order_send.log"), encoding="utf-8")
+    formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+    file_handler.setFormatter(formatter)
+    order_logger.addHandler(file_handler)
 
+# ✅ JSON 저장 제거된 간단한 버전
 def log_order_send(
     order_id,
     retailer_name,
@@ -29,37 +29,22 @@ def log_order_send(
     error=None
 ):
     """
-    주문 전송 로그 기록 함수 (확장 버전)
+    주문 전송 요약 로그만 기록하는 함수 (개별 JSON 파일 저장 X)
     """
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     status = "성공" if success else "실패"
     item_details = ", ".join([
         f"{item['sku']}({item['quantity']})[{item.get('product_id', '-')}]"
         for item in items
     ])
 
-    # 1) 요약 로그 → order_send.log
-    logger.info(f"[{status}] 주문 ID: {order_id} / 거래처: {retailer_name} / 항목: {item_details} / 사유: {reason}")
-
-    # 2) 상세 로그 → 개별 파일
-    log_data = {
-        "timestamp": timestamp,
-        "order_id": order_id,
-        "retailer_name": retailer_name,
-        "status": status,
-        "reason": reason,
-        "items": items,
-    }
+    # ✅ 로그 메세지 구성 (추가 정보 포함)
+    log_msg = f"[{status}] 주문 ID: {order_id} / 거래처: {retailer_name} / 항목: {item_details} / 사유: {reason or '-'}"
 
     if payload:
-        log_data["payload"] = payload
-
+        log_msg += f"\n📦 요청: {payload}"
     if response:
-        log_data["response"] = response
-
+        log_msg += f"\n📥 응답: {response}"
     if error:
-        log_data["error"] = error
+        log_msg += f"\n❌ 오류: {error}"
 
-    log_filename = os.path.join(LOG_DIR, f"order_{order_id}_{timestamp}.json")
-    with open(log_filename, "w", encoding="utf-8") as f:
-        f.write(json.dumps(log_data, indent=2, ensure_ascii=False))
+    order_logger.info(log_msg)

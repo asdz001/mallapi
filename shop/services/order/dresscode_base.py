@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 from shop.models import Order, OrderItem
-from utils.order_logger import logger, log_order_send
+
 
 # 📮 밀라네제 고정 주소 정보 (모든 드레스코드 거래처 공통 사용)
 MILANESE_ADDRESS = {
@@ -357,9 +357,11 @@ class DresscodeBaseClient:
             [{"sku": "", "item_id": "", "success": bool, "reason": ""}]
         """
         debug_print(f"주문 전송 시작: Order #{order.id} ({self.client})")
-        logger.info(f"[{self.client.upper()}] 주문 전송 시작: Order #{order.id}")
+
         
         results = []
+        payloads = []
+        responses = []
         successful_count = 0
         failed_count = 0
         
@@ -372,7 +374,7 @@ class DresscodeBaseClient:
                 debug_print(f"항목 {index + 1}/{len(order_items)} 처리 중...")
                 
                 # 🔖 채널 주문 ID는 self.order.id-self.id 사용
-                channel_order_id = f"{self.order.id}-{self.id}"
+                channel_order_id = f"{order.id}-{order_item.id}"
                 if not channel_order_id:
                     debug_print(f"❌ self.order.id-self.id 없음: {order_item.id}")
                     raise ValueError(f"OrderItem {order_item.id}에 self.order.id-self.id 가 없습니다")
@@ -384,6 +386,9 @@ class DresscodeBaseClient:
                 
                 # 📤 API 전송
                 api_result = self.create_order_item_api(order_data)
+                payloads.append(order_data if 'order_data' in locals() else {})
+                responses.append(api_result)
+
                 
                 # 📋 결과 처리 - 상태 분류 포함
                 if api_result['success']:
@@ -413,6 +418,7 @@ class DresscodeBaseClient:
                         debug_print(f"❌ 항목 {index + 1} 전송 실패: {result['reason']}")
                 
                 results.append(result)
+  
                 
             except Exception as e:
                 failed_count += 1
@@ -427,21 +433,12 @@ class DresscodeBaseClient:
                     "order_status": "FAILED"  # 🔧 예외 발생시 일반 실패로 처리
                 }
                 results.append(result)
+                payloads.append(order_data)
+                responses.append(str(e))
         
         # 📊 최종 결과 로깅
         debug_print(f"전송 완료: 성공 {successful_count}개, 실패 {failed_count}개")
-        logger.info(f"[{self.client.upper()}] 전송 완료: 성공 {successful_count}개, 실패 {failed_count}개")
         
-        # 🔧 TODO: log_order_send 호출 (거래처별로 다를 수 있음)
-        try:
-            log_order_send(
-                order_id=order.id,
-                retailer_name=self.client.upper(),
-                items=[{"sku": r["sku"], "quantity": order.items.get(id=r["item_id"]).quantity} for r in results],
-                success=successful_count > 0,
-                reason="부분 실패" if failed_count > 0 else ""
-            )
-        except Exception as e:
-            debug_print(f"⚠️ 로그 기록 실패: {e}")
         
-        return results
+        
+        return results, payloads, responses

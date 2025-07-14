@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List
 import pytz
+from utils.product_logger import get_product_logger
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -31,7 +32,7 @@ class Config:
     CLIENT = "vietti"
     CHANNEL_KEY = "cd38797c-44b8-43a1-8591-92ab7b61f1d8"
     SUBSCRIPTION_KEY = "d9b2538817b248d6a39e7289d5b87e87"
-    RETAILER_CODE = "IT-v-02"
+    RETAILER_CODE = "IT-V-02"
     
     EXPORT_DIR = Path("export/vietti")
     HISTORY_FILE = EXPORT_DIR / "last_collection_time.txt"
@@ -491,14 +492,10 @@ class Command(BaseCommand):
     
     def handle(self, *args, **options):
         # 로깅 설정
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s [%(levelname)s] %(message)s',
-            handlers=[
-                logging.StreamHandler(),
-                logging.FileHandler('logs/vietti.log', encoding='utf-8')
-            ]
-        )
+        custom_logger = get_product_logger(Config.RETAILER_CODE)
+        
+        for h in custom_logger.handlers:
+            logging.getLogger().addHandler(h)
         
         try:
             Config.setup()

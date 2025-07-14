@@ -1,7 +1,7 @@
 import requests
 import json
 from datetime import datetime
-from utils.order_logger import log_order_send
+
 
 PERSONAL_CODE = "da3e1b50-8ce1-433d-a7a5-6353b0c969d3"
 ORDER_INPUT_URL = "https://order.eleonorabonucci.com/ws/order.asmx/Order_Input"
@@ -65,15 +65,7 @@ def send_order(order):
         print("❌ Step 1 실패:", e)
 
 
-        log_order_send(
-            order_id=order.id,
-            retailer_name="ELEONORA",
-            items=[{"sku": item.option.external_option_id, "quantity": item.quantity} for item in order.items.all()],
-            success=False,
-            reason=str(e)
-        )
-        
-        return [
+        result_list = [
             {
                 "sku": item.option.external_option_id,
                 "item_id": item.id,
@@ -82,6 +74,8 @@ def send_order(order):
             }
             for item in order.items.all()
         ]
+        return result_list, order_input_payload, str(e)
+
     
 
     # ✅ Step 2: 주소 정보 전송
@@ -147,15 +141,7 @@ def send_order(order):
 
 
         # ✅ 로그는 남기되 성공으로 기록
-        log_order_send(
-            order_id=order.id,
-            retailer_name="ELEONORA",
-            items=[{"sku": sku, "quantity": order.items.get(option__external_option_id=sku).quantity} for sku in response_map.keys()],
-            success=True,
-            reason=f"주소 전송 실패: {str(e)}"
-        )
-
-        return [
+        result_list = [
             {
                 "sku": sku,
                 "item_id": data["item_id"],
@@ -164,17 +150,9 @@ def send_order(order):
             }
             for sku, data in response_map.items()
         ]
-    
-    log_order_send(
-        order_id=order.id,
-        retailer_name="ELEONORA",
-        items=[
-            {"sku": sku, "quantity": order.items.get(option__external_option_id=sku).quantity}
-            for sku, data in response_map.items()
-        ],
-        success=all(data["success"] for data in response_map.values()),
-        reason="일부 실패" if any(not data["success"] for data in response_map.values()) else ""
-    )
+        return result_list, order_input_payload, str(e)
+
+
 
     # ✅ 여기부터 추가!
     for sku, data in response_map.items():
@@ -189,12 +167,13 @@ def send_order(order):
 
 
     # ✅ 최종 표준 응답 반환
-    return [
+    result_list = [
         {
             "sku": sku,
             "item_id": data["item_id"],
             "success": data["success"],
             "reason": "" if data["success"] else "재고 없음"
         }
-        for sku, data in response_map.items()
+       for sku, data in response_map.items()
     ]
+    return result_list, order_input_payload, result2

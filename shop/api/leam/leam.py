@@ -7,6 +7,8 @@ from PIL import Image
 from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from shop.models import RawProduct, RawProductOption, Retailer
+from utils.product_logger import get_product_logger
+
 from django.db import transaction
 from django.utils.timezone import now
 from django.conf import settings
@@ -18,8 +20,9 @@ import psutil
 import gc
 
 # 로깅 설정
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = get_product_logger("IT-L-01")
+for h in logger.handlers:
+    logging.getLogger().addHandler(h)
 
 RETAILER_CODE = "IT-L-01"
 BASE_URL = "https://srv2.best-fashion.net"
