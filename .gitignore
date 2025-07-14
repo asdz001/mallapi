@@ -53,3 +53,6 @@ media
 
 # GNB SOAP 응답 로그 디렉토리
 soap_responses
+
+# 압축 파일
+*.zip

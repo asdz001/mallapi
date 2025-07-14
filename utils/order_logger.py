@@ -8,14 +8,14 @@ LOG_DIR = os.path.join(os.path.dirname(__file__), "../log_backups")
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # 전용 주문 로거
-order_logger = logging.getLogger("order_logger")
-order_logger.setLevel(logging.INFO)
+logger = logging.getLogger("order_logger")
+logger.setLevel(logging.INFO)
 
-if not order_logger.handlers:
+if not logger.handlers:
     file_handler = logging.FileHandler(os.path.join(LOG_DIR, "order_send.log"), encoding="utf-8")
     formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
     file_handler.setFormatter(formatter)
-    order_logger.addHandler(file_handler)
+    logger.addHandler(file_handler)
 
 # ✅ JSON 저장 제거된 간단한 버전
 def log_order_send(
@@ -47,4 +47,4 @@ def log_order_send(
     if error:
         log_msg += f"\n❌ 오류: {error}"
 
-    order_logger.info(log_msg)
+    logger.info(log_msg)
