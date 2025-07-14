@@ -111,7 +111,7 @@ class DresscodeBaseClient:
         
         Args:
             order_item: Django OrderItem 객체
-            channel_order_id: 고유 채널 주문 ID (external_order_number 사용)
+            channel_order_id: 고유 채널 주문 ID (self.order.id-self.id 사용)
             
         Returns:
             드레스코드 API 요청 데이터
@@ -130,7 +130,7 @@ class DresscodeBaseClient:
         
         # 📦 기본 주문 데이터
         order_data = {
-            "channelOrderID": channel_order_id,  # 🔧 수정: external_order_number 사용
+            "channelOrderID": channel_order_id,  # 🔧 수정: self.order.id-self.id 사용
             "productID": product_id,
             "size": order_item.option.option_name,
             "soldUnits": order_item.quantity,
@@ -371,11 +371,11 @@ class DresscodeBaseClient:
             try:
                 debug_print(f"항목 {index + 1}/{len(order_items)} 처리 중...")
                 
-                # 🔖 채널 주문 ID는 external_order_number 사용
-                channel_order_id = order_item.external_order_number
+                # 🔖 채널 주문 ID는 self.order.id-self.id 사용
+                channel_order_id = f"{self.order.id}-{self.id}"
                 if not channel_order_id:
-                    debug_print(f"❌ external_order_number 없음: {order_item.id}")
-                    raise ValueError(f"OrderItem {order_item.id}에 external_order_number가 없습니다")
+                    debug_print(f"❌ self.order.id-self.id 없음: {order_item.id}")
+                    raise ValueError(f"OrderItem {order_item.id}에 self.order.id-self.id 가 없습니다")
                 
                 debug_print(f"매핑 확인 - channelOrderID: {channel_order_id}, sku(external_option_id): {order_item.option.external_option_id}")
                 

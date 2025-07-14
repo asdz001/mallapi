@@ -4,6 +4,10 @@ from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from datetime import datetime
 
+
+# 드레스코드용 자동화 명령어
+
+
 class Command(BaseCommand):
     help = "모든 거래처의 fetch_and_register 작업을 순차적으로 실행합니다."
 
