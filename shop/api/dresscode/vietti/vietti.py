@@ -30,9 +30,9 @@ except ImportError:
 class Config:
     API_URL = "https://api.dresscode.cloud/channels/v2/api/feeds/en/clients/vietti/products"
     CLIENT = "vietti"
-    CHANNEL_KEY = "33a2aaeb-7ef2-44c5-bb66-0d3a84e9869f"
+    CHANNEL_KEY = "cd38797c-44b8-43a1-8591-92ab7b61f1d8"
     SUBSCRIPTION_KEY = "d9b2538817b248d6a39e7289d5b87e87"
-    RETAILER_CODE = "IT-J-01"
+    RETAILER_CODE = "IT-V-02"
 
     EXPORT_DIR = Path("export/VETTI")
     HISTORY_FILE = EXPORT_DIR / "last_collection_time.txt"

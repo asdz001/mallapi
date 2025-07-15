@@ -30,7 +30,7 @@ except ImportError:
 class Config:
     API_URL = "https://api.dresscode.cloud/channels/v2/api/feeds/en/clients/julian/products"
     CLIENT = "julian"
-    CHANNEL_KEY = "33a2aaeb-7ef2-44c5-bb66-0d3a84e9869f"
+    CHANNEL_KEY = "54536dc3-6fda-4bdd-8f3b-3213c5aae66d"
     SUBSCRIPTION_KEY = "d9b2538817b248d6a39e7289d5b87e87"
     RETAILER_CODE = "IT-J-01"
     
