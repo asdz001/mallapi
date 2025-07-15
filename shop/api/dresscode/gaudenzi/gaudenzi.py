@@ -564,7 +564,7 @@ class Command(BaseCommand):
 
 # pipeline_runner용 메인 함수 ==
 def run_gaudenzi_collection(force_full=False):
-    logger = get_product_logger(RETAILER_CODE=Config.RETAILER_CODE)
+    logger = get_product_logger(Config.RETAILER_CODE)
 
     # 🔧 중복 핸들러 제거
     logging.getLogger().handlers.clear()
