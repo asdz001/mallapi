@@ -13,3 +13,11 @@ class ConversionLog(models.Model):
 
     def __str__(self):
         return f"[{self.source}] {self.retailer} - {self.raw_product.id} - {self.reason[:30]}"
+
+
+
+class ServerMonitor(models.Model):
+    class Meta:
+        verbose_name = "서버 모니터링"
+        verbose_name_plural = "🖥️ 서버 모니터링 (실시간)"
+        managed = False  # ✅ DB에 테이블 생성되지 않음

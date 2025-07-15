@@ -7,6 +7,9 @@ from django.http import HttpResponse
 import csv
 import subprocess, os, sys
 from pathlib import Path
+from django.template.response import TemplateResponse
+from utils.server_monitor import get_enhanced_server_status  # 최신 함수명
+from .models import ServerMonitor
 
 
 @admin.register(ConversionLog)
@@ -90,3 +93,28 @@ class ConversionLogAdmin(admin.ModelAdmin):
             self.message_user(request, f"❌ 예상치 못한 오류 발생: {e}", messages.ERROR)
 
         return redirect("..")
+
+
+
+#서버사용량 체크
+@admin.register(ServerMonitor)
+class ServerMonitorAdmin(admin.ModelAdmin):
+    change_list_template = "admin/server_monitor.html"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        status = get_enhanced_server_status()
+        context = dict(
+            self.admin_site.each_context(request),
+            title="서버 모니터링",
+            **status
+        )
+        return TemplateResponse(request, self.change_list_template, context)

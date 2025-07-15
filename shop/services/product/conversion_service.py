@@ -1,7 +1,7 @@
 from shop.models import RawProduct, Product, RawProductOption, ProductOption
 from django.db import transaction
 from django.utils.timezone import now
-from django.db.models import Sum, Prefetch
+from django.db.models import Sum, Prefetch, Q
 from dictionary.models import BrandAlias, CategoryLevel1Alias, CategoryLevel2Alias, CategoryLevel3Alias
 from pricing.models import FixedCountry, CountryAlias
 from eventlog.services.log_service import log_conversion_failure
@@ -9,12 +9,12 @@ from typing import Dict, List, Optional, Tuple
 import logging
 from utils.product_logger import get_product_logger
 import time
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
-class OptimizedConversionService:
-    """최적화된 변환 서비스 클래스"""
-    
+class UltraOptimizedConversionService:
+    """대폭 최적화된 변환 서비스 클래스"""
     
     def __init__(self, logger=None):
         # 로거 설정 - 전달받거나 기본 로거 사용
@@ -32,7 +32,10 @@ class OptimizedConversionService:
             'fail_count': 0,
             'cache_hits': 0,
             'cache_misses': 0,
-            'start_time': None
+            'start_time': None,
+            'db_queries': 0,
+            'bulk_creates': 0,
+            'bulk_updates': 0
         }
         
         self._load_all_caches()
@@ -40,7 +43,7 @@ class OptimizedConversionService:
     def _load_all_caches(self):
         """모든 매핑 데이터를 메모리에 캐시"""
         start_time = time.time()
-        logger.info("🔄 매핑 데이터 캐시 로딩 중...")
+        self.logger.info("🔄 매핑 데이터 캐시 로딩 중...")
         
         # 🚀 브랜드 캐시 - select_related로 쿼리 최적화
         brand_aliases = BrandAlias.objects.select_related('brand').all()
@@ -76,12 +79,12 @@ class OptimizedConversionService:
                 self.country_cache[alias] = alias_obj.standard_country.name
         
         elapsed = time.time() - start_time
-        logger.info(f"✅ 캐시 로딩 완료 ({elapsed:.2f}초)")
-        logger.info(f"   브랜드: {len(self.brand_cache)}개")
-        logger.info(f"   카테고리1: {len(self.category1_cache)}개")
-        logger.info(f"   카테고리2: {len(self.category2_cache)}개")
-        logger.info(f"   카테고리3: {len(self.category3_cache)}개")
-        logger.info(f"   국가: {len(self.country_cache)}개")
+        self.logger.info(f"✅ 캐시 로딩 완료 ({elapsed:.2f}초)")
+        self.logger.info(f"   브랜드: {len(self.brand_cache)}개")
+        self.logger.info(f"   카테고리1: {len(self.category1_cache)}개")
+        self.logger.info(f"   카테고리2: {len(self.category2_cache)}개")
+        self.logger.info(f"   카테고리3: {len(self.category3_cache)}개")
+        self.logger.info(f"   국가: {len(self.country_cache)}개")
     
     def match_brand_cached(self, input_value: str) -> Optional[str]:
         """캐시된 브랜드 매칭"""
@@ -128,68 +131,87 @@ class OptimizedConversionService:
         
         return result
     
-    def validate_raw_product(self, raw_product: RawProduct) -> Tuple[bool, str]:
-        """상품 검증 로직"""
-        # 🚀 재고 체크 최적화 - 개별 옵션 체크가 아닌 집계 쿼리
-        total_stock = raw_product.rawoptions.aggregate(total=Sum("stock"))['total'] or 0
-        if total_stock <= 0:
-            return False, "재고 없음"
+    def bulk_convert_ultra_optimized(self, queryset, batch_size: int = 500) -> Tuple[int, int]:
+        """🚀 대폭 최적화된 대량 변환 - 전체 재작성"""
+        self.stats['start_time'] = time.time()
+        self.logger.info("🚀 대폭 최적화된 대량 변환 시작...")
         
-        # 원가 체크
-        if not raw_product.price_org or raw_product.price_org == 0:
-            return False, "원가 없음 또는 0원"
+        # 🔥 1단계: 모든 기존 Product와 Option 미리 로드 (한 번에 가져오기)
+        self.logger.info("📊 기존 데이터 로드 중...")
+        existing_products = {}
+        existing_options = {}
         
-        return True, ""
-    
-    def convert_single_product(self, raw_product: RawProduct) -> bool:
-        """단일 상품 변환 (최적화)"""
-        try:
-
-        # ✅ 관리자 페이지 등에서 호출 시 rawoptions가 없을 수 있음 → 직접 붙여줌
-            if not hasattr(raw_product, 'rawoptions'):
-                raw_product.rawoptions = type('MockManager', (), {
-                    'aggregate': lambda self, **kwargs: {
-                        'total': sum(opt.stock for opt in raw_product.options.all())
-                    },
-                    'filter': lambda self, **kwargs: [
-                        opt for opt in raw_product.options.all()
-                        if opt.stock > 0
-                    ]
-                })()
-
-
-            # 1. 검증
-            is_valid, error_reason = self.validate_raw_product(raw_product)
-            if not is_valid:
-                log_conversion_failure(raw_product, error_reason)
-                logger.debug(f"❌ [검증실패] {raw_product.external_product_id}: {error_reason}")
-                return False
+        for product in Product.objects.all().iterator(chunk_size=1000):
+            existing_products[product.external_product_id] = product
+        
+        for option in ProductOption.objects.select_related('product').iterator(chunk_size=2000):
+            key = (option.product.external_product_id, option.option_name)
+            existing_options[key] = option
+        
+        self.logger.info(f"📊 기존 데이터 로드 완료: 상품 {len(existing_products)}개, 옵션 {len(existing_options)}개")
+        
+        # 🔥 2단계: 원본 데이터를 배치로 처리
+        products_to_create = []
+        products_to_update = []
+        options_to_create = []
+        options_to_update = []
+        
+        success_count = 0
+        fail_count = 0
+        processed_count = 0
+        
+        # 🚀 쿼리 최적화 - 재고 있는 것만 처리
+        valid_queryset = queryset.filter(
+            Q(options__stock__gt=0) & Q(price_org__gt=0)
+        ).prefetch_related('options').distinct()
+        
+        total_count = valid_queryset.count()
+        self.logger.info(f"📊 처리 대상: {total_count}개 상품")
+        
+        # 🔥 3단계: 배치 단위로 처리
+        batch_num = 0
+        for batch_start in range(0, total_count, batch_size):
+            batch_num += 1
+            batch = valid_queryset[batch_start:batch_start + batch_size]
             
-            # 2. 캐시된 매핑 수행
-            std_brand = self.match_brand_cached(raw_product.raw_brand_name)
-            std_cat1 = self.match_category_cached(self.category1_cache, raw_product.gender)
-            std_cat2 = self.match_category_cached(self.category2_cache, raw_product.category1)
-            std_cat3 = self.match_category_cached(self.category3_cache, raw_product.category2)
+            self.logger.info(f"🔄 배치 {batch_num} 처리 중... ({len(batch)}개)")
             
-            origin_input = (raw_product.origin or "").strip()
-            origin_for_save = origin_input if origin_input else "-"
-            std_origin = self.match_country_cached(origin_input) if origin_input else "-"
+            # 배치 내 상품들 처리
+            batch_success = 0
+            batch_fail = 0
             
-            # 3. 매핑 실패 체크
-            brand_log = "브랜드 성공" if std_brand else f"브랜드 실패(사유: {raw_product.raw_brand_name})"
-            category_log = "카테고리 성공" if std_cat1 else f"카테고리 실패(사유: {raw_product.gender})"
-            origin_log = "원산지 성공" if std_origin else f"원산지 실패(사유: {raw_product.origin or '-'})"
-            
-            if not std_brand or not std_cat1 or not std_origin:
-                reason = f"{brand_log} / {category_log} / {origin_log}"
-                log_conversion_failure(raw_product, reason)
-                logger.debug(f"❌ [매핑실패] {raw_product.external_product_id}: {reason}")
-                return False
-            
-            # 4. 상품 생성/업데이트
-            product, created = Product.objects.update_or_create(
-                external_product_id=raw_product.external_product_id,
-                defaults={
+            for raw_product in batch:
+                processed_count += 1
+                self.stats['total_processed'] += 1
+                
+                # 🚀 빠른 검증 (재고와 가격만 체크)
+                total_stock = sum(opt.stock for opt in raw_product.options.all())
+                if total_stock <= 0 or not raw_product.price_org or raw_product.price_org <= 0:
+                    batch_fail += 1
+                    fail_count += 1
+                    self.stats['fail_count'] += 1
+                    continue
+                
+                # 🚀 매핑 수행 (캐시 사용)
+                std_brand = self.match_brand_cached(raw_product.raw_brand_name)
+                std_cat1 = self.match_category_cached(self.category1_cache, raw_product.gender)
+                std_cat2 = self.match_category_cached(self.category2_cache, raw_product.category1)
+                std_cat3 = self.match_category_cached(self.category3_cache, raw_product.category2)
+                
+                origin_input = (raw_product.origin or "").strip()
+                std_origin = self.match_country_cached(origin_input) if origin_input else "-"
+                
+                # 필수 매핑 실패시 스킵
+                if not std_brand or not std_cat1:
+                    batch_fail += 1
+                    fail_count += 1
+                    self.stats['fail_count'] += 1
+                    continue
+                
+                # 🚀 Product 처리 (기존 것 있으면 업데이트, 없으면 생성 준비)
+                external_id = raw_product.external_product_id
+                
+                product_data = {
                     'retailer': raw_product.retailer,
                     'season': raw_product.season,
                     'gender': std_cat1,
@@ -202,112 +224,118 @@ class OptimizedConversionService:
                     'sku': raw_product.sku,
                     'price_retail': raw_product.price_retail,
                     'price_org': raw_product.price_org,
-                    'discount_rate': raw_product.discount_rate,
+                    'discount_rate': raw_product.discount_rate or 0,
                     'color': raw_product.color,
                     'material': raw_product.material,
-                    'origin': std_origin or origin_for_save,
+                    'origin': std_origin or origin_input or "-",
                     'status': 'active',
-                    'created_at': raw_product.created_at,
                     'updated_at': now(),
                 }
-            )
-            
-            # 5. 옵션 처리 - 재고 있는 것만
-            raw_options = raw_product.rawoptions.filter(stock__gt=0)
-            
-            for opt in raw_options:
-                ProductOption.objects.update_or_create(
-                    product=product,
-                    option_name=opt.option_name,
-                    defaults={
-                        'external_option_id': opt.external_option_id,
-                        'stock': opt.stock,
-                        'price': opt.price,
-                        'option_url': opt.option_url,
+                
+                if external_id in existing_products:
+                    # 기존 상품 업데이트 준비
+                    existing_product = existing_products[external_id]
+                    for key, value in product_data.items():
+                        setattr(existing_product, key, value)
+                    products_to_update.append(existing_product)
+                else:
+                    # 새 상품 생성 준비
+                    new_product = Product(
+                        external_product_id=external_id,
+                        created_at=raw_product.created_at or now(),
+                        **product_data
+                    )
+                    products_to_create.append(new_product)
+                    existing_products[external_id] = new_product  # 캐시에도 추가
+                
+                # 🚀 Option 처리 (재고 있는 것만)
+                for raw_option in raw_product.options.filter(stock__gt=0):
+                    option_key = (external_id, raw_option.option_name)
+                    
+                    option_data = {
+                        'external_option_id': raw_option.external_option_id,
+                        'stock': raw_option.stock,
+                        'price': raw_option.price,
+                        'option_url': raw_option.option_url or "",
                     }
-                )
-            
-            return True
-            
-        except Exception as e:
-            logger.error(f"❌ 변환 오류 {raw_product.external_product_id}: {e}")
-            log_conversion_failure(raw_product, f"시스템 오류: {e}")
-            return False
-    
-    def bulk_convert_optimized(self, queryset, batch_size: int = 2000) -> Tuple[int, int]:
-        """최적화된 대량 변환"""
-        self.stats['start_time'] = time.time()
-        
-        # 🚀 쿼리 최적화 - prefetch_related로 N+1 문제 해결
-        optimized_queryset = queryset.prefetch_related(
-            Prefetch(
-                'options',
-                queryset=RawProductOption.objects.all(),
-                to_attr='raw_options_cached'
-            )
-        ).select_related().iterator(chunk_size=batch_size)
-        
-        success_ids = []
-        success_count = 0
-        fail_count = 0
-        
-        batch_count = 0
-        
-        for raw_product in optimized_queryset:
-            self.stats['total_processed'] += 1
-            
-            # 캐시된 옵션 사용
-            raw_product.rawoptions = type('MockManager', (), {
-                'aggregate': lambda self, **kwargs: {
-                    'total': sum(opt.stock for opt in raw_product.raw_options_cached)
-                },
-                'filter': lambda self, **kwargs: [
-                    opt for opt in raw_product.raw_options_cached 
-                    if opt.stock > 0
-                ]
-            })()
-            
-            success = self.convert_single_product(raw_product)
-            
-            if success:
-                success_ids.append(raw_product.id)
+                    
+                    if option_key in existing_options:
+                        # 기존 옵션 업데이트 준비
+                        existing_option = existing_options[option_key]
+                        for key, value in option_data.items():
+                            setattr(existing_option, key, value)
+                        options_to_update.append(existing_option)
+                    else:
+                        # 새 옵션 생성 준비
+                        new_option = ProductOption(
+                            product=existing_products[external_id],
+                            option_name=raw_option.option_name,
+                            **option_data
+                        )
+                        options_to_create.append(new_option)
+                        existing_options[option_key] = new_option  # 캐시에도 추가
+                
+                batch_success += 1
                 success_count += 1
                 self.stats['success_count'] += 1
-            else:
-                fail_count += 1
-                self.stats['fail_count'] += 1
             
-            # 🚀 배치 단위로 상태 업데이트 (트랜잭션 최적화)
-            if len(success_ids) >= batch_size:
-                self._update_batch_status(success_ids)
-                success_ids = []
-                batch_count += 1
-                
-                if batch_count % 10 == 0:  # 진행률 로그
-                    elapsed = time.time() - self.stats['start_time']
-                    processed = self.stats['total_processed']
-                    rate = processed / elapsed if elapsed > 0 else 0
-                    logger.info(f"🔄 진행: {processed}개 처리 ({rate:.1f}개/초)")
-        
-        # 남은 배치 처리
-        if success_ids:
-            self._update_batch_status(success_ids)
+            # 🔥 4단계: 배치 단위로 DB에 저장 (트랜잭션)
+            if products_to_create or products_to_update or options_to_create or options_to_update:
+                with transaction.atomic():
+                    # Product 대량 처리
+                    if products_to_create:
+                        Product.objects.bulk_create(products_to_create, batch_size=200)
+                        self.stats['bulk_creates'] += len(products_to_create)
+                        self.logger.info(f"  📥 Product 생성: {len(products_to_create)}개")
+                        products_to_create = []
+                    
+                    if products_to_update:
+                        Product.objects.bulk_update(
+                            products_to_update, 
+                            ['season', 'gender', 'category1', 'category2', 'image_url', 
+                             'brand_name', 'product_name', 'sku', 'price_retail', 'price_org', 
+                             'discount_rate', 'color', 'material', 'origin', 'status', 'updated_at'], 
+                            batch_size=200
+                        )
+                        self.stats['bulk_updates'] += len(products_to_update)
+                        self.logger.info(f"  🔄 Product 업데이트: {len(products_to_update)}개")
+                        products_to_update = []
+                    
+                    # Option 대량 처리
+                    if options_to_create:
+                        ProductOption.objects.bulk_create(options_to_create, batch_size=500)
+                        self.stats['bulk_creates'] += len(options_to_create)
+                        self.logger.info(f"  📥 Option 생성: {len(options_to_create)}개")
+                        options_to_create = []
+                    
+                    if options_to_update:
+                        ProductOption.objects.bulk_update(
+                            options_to_update,
+                            ['external_option_id', 'stock', 'price', 'option_url'],
+                            batch_size=500
+                        )
+                        self.stats['bulk_updates'] += len(options_to_update)
+                        self.logger.info(f"  🔄 Option 업데이트: {len(options_to_update)}개")
+                        options_to_update = []
+                    
+                    # RawProduct 상태 업데이트
+                    success_raw_ids = [rp.id for rp in batch if rp.external_product_id in existing_products]
+                    if success_raw_ids:
+                        RawProduct.objects.filter(id__in=success_raw_ids).update(
+                            status='converted', 
+                            updated_at=now()
+                        )
+            
+            # 진행률 보고
+            progress = (processed_count / total_count) * 100
+            elapsed = time.time() - self.stats['start_time']
+            rate = processed_count / elapsed if elapsed > 0 else 0
+            
+            self.logger.info(f"  📊 배치 {batch_num} 완료: 성공 {batch_success}개, 실패 {batch_fail}개")
+            self.logger.info(f"  📈 전체 진행률: {progress:.1f}% ({processed_count}/{total_count})")
+            self.logger.info(f"  🚀 처리 속도: {rate:.1f}개/초")
         
         return success_count, fail_count
-    
-    def _update_batch_status(self, success_ids: List[int]):
-        """배치 단위 상태 업데이트"""
-        if not success_ids:
-            return
-        
-        try:
-            with transaction.atomic():
-                RawProduct.objects.filter(id__in=success_ids).update(
-                    status='converted',
-                    updated_at=now()
-                )
-        except Exception as e:
-            logger.error(f"❌ 배치 상태 업데이트 실패: {e}")
     
     def print_performance_stats(self):
         """성능 통계 출력"""
@@ -329,6 +357,10 @@ class OptimizedConversionService:
             self.logger.info(f"⏱️ 총 소요 시간: {elapsed:.1f}초")
             self.logger.info(f"🚀 처리 속도: {rate:.1f}개/초")
 
+        # 최적화 통계
+        self.logger.info(f"🔥 대량 생성: {self.stats['bulk_creates']:,}개")
+        self.logger.info(f"🔥 대량 업데이트: {self.stats['bulk_updates']:,}개")
+
         # 캐시 효율성
         total_lookups = self.stats['cache_hits'] + self.stats['cache_misses']
         if total_lookups > 0:
@@ -338,7 +370,12 @@ class OptimizedConversionService:
         self.logger.info("=" * 60)
 
 
-# 🚀 최적화된 함수들 (기존 인터페이스 유지)
+# 🚀 기존 OptimizedConversionService도 유지 (호환성)
+class OptimizedConversionService(UltraOptimizedConversionService):
+    """기존 서비스 (호환성 유지)"""
+    def bulk_convert_optimized(self, queryset, batch_size: int = 2000) -> Tuple[int, int]:
+        return self.bulk_convert_ultra_optimized(queryset, batch_size)
+
 
 # 전역 서비스 인스턴스 (싱글톤 패턴)
 _conversion_service = None
@@ -347,36 +384,12 @@ def get_conversion_service(logger=None):
     """변환 서비스 인스턴스 반환 (싱글톤)"""
     global _conversion_service
     if _conversion_service is None:
-        _conversion_service = OptimizedConversionService(logger=logger)
+        _conversion_service = UltraOptimizedConversionService(logger=logger)
     return _conversion_service
 
-
-def convert_or_update_product(raw_product):
-    """기존 인터페이스 유지 - 단일 상품 변환"""
-    service = get_conversion_service()
-    return service.convert_single_product(raw_product)
-
-
-def bulk_convert_or_update_products(batch_size=2000):
-    """기존 인터페이스 유지 - 전체 대량 변환"""
-    service = get_conversion_service()
-    
-    logger.info("🚀 전체 대량 변환 시작...")
-    
-    raw_products = RawProduct.objects.filter(
-        status__in=['pending', 'converted']
-    )
-    
-    success_count, fail_count = service.bulk_convert_optimized(raw_products, batch_size)
-    
-    service.print_performance_stats()
-    logger.info(f"✅ 전체 전송 완료 - 성공: {success_count}개 / 실패: {fail_count}개")
-    
-    return success_count
-
-# 거래처별 대량 변환 (기존 인터페이스 유지)
-def bulk_convert_or_update_products_by_retailer(retailer_code, batch_size=2000):
-    """기존 인터페이스 유지 - 거래처별 대량 변환"""
+# 거래처별 대량 변환 (최적화 버전)
+def bulk_convert_or_update_products_by_retailer(retailer_code, batch_size=500):
+    """🚀 대폭 최적화된 거래처별 대량 변환"""
     retailer_logger = get_product_logger(retailer_code)
     service = get_conversion_service(logger=retailer_logger)
 
@@ -387,14 +400,14 @@ def bulk_convert_or_update_products_by_retailer(retailer_code, batch_size=2000):
         status__in=['pending', 'converted']
     )
     
-    success_count, fail_count = service.bulk_convert_optimized(raw_products, batch_size)
+    success_count, fail_count = service.bulk_convert_ultra_optimized(raw_products, batch_size)
     
     service.print_performance_stats()
-    logger.info(f"✅ [{retailer_code}] 전송 완료 - 성공: {success_count}개 / 실패: {fail_count}개")
+    retailer_logger.info(f"✅ [{retailer_code}] 전송 완료 - 성공: {success_count}개 / 실패: {fail_count}개")
     
     return success_count
 
-#솔드아웃시키기
+# 솔드아웃 처리
 def sync_soldout_products_from_raw(retailer_code: str):
     """원본이 soldout인 상품 → 가공상품도 soldout 처리"""
     retailer_logger = get_product_logger(retailer_code)
@@ -411,62 +424,25 @@ def sync_soldout_products_from_raw(retailer_code: str):
 
     retailer_logger.info(f"🔁 가공상품 soldout 처리 완료: {updated_count}개")
 
+# 기존 함수들 (호환성 유지)
+def convert_or_update_product(raw_product):
+    """기존 인터페이스 유지 - 단일 상품 변환"""
+    service = get_conversion_service()
+    return service.convert_single_product(raw_product)
 
-
-# 🚀 추가 유틸리티 함수들
-
-def analyze_conversion_bottlenecks():
-    """변환 병목 지점 분석"""
-    analysis_logger = get_product_logger("ANALYSIS")
-
-    analysis_logger.info("=" * 70)
-    analysis_logger.info("🔍 변환 서비스 병목 지점 분석")
-    analysis_logger.info("=" * 70)
-
-    bottlenecks = {
-        "기존 문제점": [
-            "매번 DB에서 Alias 데이터 조회 (N+1 문제)",
-            "중복 쿼리 실행 (같은 브랜드/카테고리 반복 조회)",
-            "개별 옵션 재고 체크로 인한 쿼리 증가",
-            "트랜잭션 없이 개별 업데이트",
-            "prefetch_related 미사용으로 관련 데이터 중복 조회"
-        ],
-        "최적화 방안": [
-            "시작 시 모든 Alias 데이터를 메모리 캐시로 로드",
-            "O(1) 시간복잡도의 딕셔너리 기반 매칭",
-            "집계 쿼리로 재고 체크 최적화",
-            "배치 단위 트랜잭션 처리",
-            "prefetch_related로 관련 옵션 데이터 미리 로드"
-        ],
-        "성능 개선": [
-            "매핑 속도: O(n) → O(1) (해시 테이블)",
-            "쿼리 수: 1000배 감소 (캐시 사용)",
-            "메모리 사용: 약간 증가하지만 속도 대폭 향상",
-            "전체 처리 시간: 80-90% 단축 예상"
-        ]
-    }
+def bulk_convert_or_update_products(batch_size=500):
+    """기존 인터페이스 유지 - 전체 대량 변환"""
+    service = get_conversion_service()
     
-    for category, items in bottlenecks.items():
-        print(f"\n🔧 {category}:")
-        for item in items:
-            print(f"   • {item}")
+    logger.info("🚀 전체 대량 변환 시작...")
     
-    analysis_logger.info("\n📊 예상 성능 향상:")
-    analysis_logger.info("   • 처리 속도: 5-10배 향상")
-    analysis_logger.info("   • 메모리 사용량: 약간 증가 (캐시)")
-    analysis_logger.info("   • DB 쿼리 수: 95% 이상 감소")
-    analysis_logger.info("   • 전체 시간: 80-90% 단축")
-
-    analysis_logger.info("=" * 70)
-
-
-def reset_conversion_cache():
-    """캐시 초기화 (데이터 변경 시 사용)"""
-    global _conversion_service
-    _conversion_service = None
-    logger.info("🔄 변환 서비스 캐시 초기화 완료")
-
-
-if __name__ == "__main__":
-    # 병목 지점 분석
-    analyze_conversion_bottlenecks()
+    raw_products = RawProduct.objects.filter(
+        status__in=['pending', 'converted']
+    )
+    
+    success_count, fail_count = service.bulk_convert_ultra_optimized(raw_products, batch_size)
+    
+    service.print_performance_stats()
+    logger.info(f"✅ 전체 전송 완료 - 성공: {success_count}개 / 실패: {fail_count}개")
+    
+    return success_count
