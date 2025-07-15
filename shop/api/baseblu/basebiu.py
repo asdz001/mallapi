@@ -6,9 +6,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from django.db import transaction
 from shop.models import RawProduct
 from shop.models import RawProductOption  # 옵션 모델 존재 시
+from utils.product_logger import get_product_logger
 
-
-
+# ✅ 로거 생성
+logger = get_product_logger("IT-B-01")
 
 # 설정
 SHOP_ID = "BASE BLU"
@@ -30,7 +31,7 @@ CATEGORY_JSON = EXPORT_DIR / "categories.json"
 
 
 def fetch_all_products(shop_id, page_size=250, max_threads=5):
-    print("📡 상품 수집 시작...")
+    logger.info("📡 상품 수집 시작...")
     token = CONFIG[shop_id]["key"]
     headers = {
         "Authorization": f"Bearer {token}",
@@ -44,7 +45,7 @@ def fetch_all_products(shop_id, page_size=250, max_threads=5):
     response.raise_for_status()
     total_items = response.json().get("_metadata", {}).get("total_items", 0)
     total_pages = (total_items + page_size - 1) // page_size
-    print(f"📄 전체 상품 수: {total_items}개 / 총 페이지 수: {total_pages}페이지")
+    logger.info(f"📄 전체 상품 수: {total_items}개 / 총 페이지 수: {total_pages}페이지")
 
     def fetch_page(index):
         params = {
@@ -63,7 +64,7 @@ def fetch_all_products(shop_id, page_size=250, max_threads=5):
             ]
             return filtered
         except Exception as e:
-            print(f"❌ {index}페이지 수집 실패: {e}")
+            logger.error(f"❌ {index}페이지 수집 실패: {e}")
             return []
 
     from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -74,13 +75,13 @@ def fetch_all_products(shop_id, page_size=250, max_threads=5):
         for future in as_completed(futures):
             all_products.extend(future.result())
 
-    print(f"✅ 재고 있는 상품 수집 완료: {len(all_products)}개")
+    logger.info(f"✅ 재고 있는 상품 수집 완료: {len(all_products)}개")
     return all_products
 
 
 # ✅ 카테고리 다운로드 및 매핑
 def fetch_and_save_categories():
-    print("📂 카테고리 수집 시작...")
+    logger.info("📂 카테고리 수집 시작...")
 
     token = CONFIG[SHOP_ID]["key"]
     headers = {"Authorization": f"Bearer {token}"}
@@ -94,7 +95,7 @@ def fetch_and_save_categories():
 
     def traverse(node, path=""):
         if not isinstance(node, dict):
-            print(f"⚠️ 잘못된 노드 형식: {node}")
+            logger.warning(f"⚠️ 잘못된 노드 형식: {node}")
             return
 
         current_path = f"{path} > {node['name']}" if path else node["name"]
@@ -111,7 +112,7 @@ def fetch_and_save_categories():
     with open(CATEGORY_JSON, "w", encoding="utf-8") as f:
         json.dump(categories, f, ensure_ascii=False, indent=2)
 
-    print(f"✅ 카테고리 저장 완료: {CATEGORY_JSON}")
+    logger.info(f"✅ 카테고리 저장 완료: {CATEGORY_JSON}")
     return categories
 
 
@@ -127,7 +128,7 @@ def run_full_baseblue_pipeline(limit=None):
     EXPORT_JSON = EXPORT_DIR / f"{SHOP_ID.lower().replace(' ', '_')}_raw_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     with open(EXPORT_JSON, "w", encoding="utf-8") as f:
         json.dump(raw_products, f, ensure_ascii=False, indent=2)
-    print(f"📁 원본 상품 JSON 저장 완료: {EXPORT_JSON}")    
+    logger.info(f"📁 원본 상품 JSON 저장 완료: {EXPORT_JSON}")
 
     product_list_f = {}
 
@@ -179,7 +180,7 @@ def run_full_baseblue_pipeline(limit=None):
                 }
 
         except Exception as e:
-            print(f"❌ 상품 파싱 실패: {e}")
+            logger.error(f"❌ 상품 파싱 실패: {e}")
             continue
 
     # 🔹 2단계: 상품 저장
@@ -248,7 +249,7 @@ def run_full_baseblue_pipeline(limit=None):
             saved += 1
 
         except Exception as e:
-            print(f"❌ 저장 실패: {e}")
+            logger.error(f"❌ 저장 실패: {e}")
             skipped += 1
 
 
@@ -278,10 +279,7 @@ def run_full_baseblue_pipeline(limit=None):
             external_product_id__in=collected_ids
         ).update(status="soldout")
     else:
-        print("❗ 상품이 하나도 수집되지 않았습니다. soldout 처리는 건너뜁니다.")
+        logger.warning("❗ 상품이 하나도 수집되지 않았습니다. soldout 처리는 건너뜁니다.")
 
-
-
-
-    print(f"🏁 전체 완료: 등록 {saved}개 / 실패 {skipped}개")
+    logger.info(f"🏁 전체 완료: 등록 {saved}개 / 실패 {skipped}개")
     return saved

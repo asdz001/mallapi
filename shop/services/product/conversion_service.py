@@ -7,6 +7,7 @@ from pricing.models import FixedCountry, CountryAlias
 from eventlog.services.log_service import log_conversion_failure
 from typing import Dict, List, Optional, Tuple
 import logging
+from utils.product_logger import get_product_logger
 import time
 
 logger = logging.getLogger(__name__)
@@ -14,8 +15,10 @@ logger = logging.getLogger(__name__)
 class OptimizedConversionService:
     """최적화된 변환 서비스 클래스"""
     
-    def __init__(self):
-        # 🚀 캐시 초기화 - 가장 큰 성능 개선 포인트
+    
+    def __init__(self, logger=None):
+        # 로거 설정 - 전달받거나 기본 로거 사용
+        self.logger = logger or get_product_logger("CONVERSION")        
         self.brand_cache = {}
         self.category1_cache = {}
         self.category2_cache = {}
@@ -231,7 +234,7 @@ class OptimizedConversionService:
             log_conversion_failure(raw_product, f"시스템 오류: {e}")
             return False
     
-    def bulk_convert_optimized(self, queryset, batch_size: int = 500) -> Tuple[int, int]:
+    def bulk_convert_optimized(self, queryset, batch_size: int = 2000) -> Tuple[int, int]:
         """최적화된 대량 변환"""
         self.stats['start_time'] = time.time()
         
@@ -310,29 +313,29 @@ class OptimizedConversionService:
         """성능 통계 출력"""
         elapsed = time.time() - self.stats['start_time'] if self.stats['start_time'] else 0
         
-        print("=" * 60)
-        print("📊 변환 성능 통계")
-        print("=" * 60)
-        print(f"📦 총 처리: {self.stats['total_processed']:,}개")
-        print(f"✅ 성공: {self.stats['success_count']:,}개")
-        print(f"❌ 실패: {self.stats['fail_count']:,}개")
+        self.logger.info("=" * 60)
+        self.logger.info("📊 변환 성능 통계")
+        self.logger.info("=" * 60)
+        self.logger.info(f"📦 총 처리: {self.stats['total_processed']:,}개")
+        self.logger.info(f"✅ 성공: {self.stats['success_count']:,}개")
+        self.logger.info(f"❌ 실패: {self.stats['fail_count']:,}개")
         
         if self.stats['total_processed'] > 0:
             success_rate = (self.stats['success_count'] / self.stats['total_processed']) * 100
-            print(f"📈 성공률: {success_rate:.1f}%")
-        
+            self.logger.info(f"📈 성공률: {success_rate:.1f}%")
+
         if elapsed > 0:
             rate = self.stats['total_processed'] / elapsed
-            print(f"⏱️ 총 소요 시간: {elapsed:.1f}초")
-            print(f"🚀 처리 속도: {rate:.1f}개/초")
-        
+            self.logger.info(f"⏱️ 총 소요 시간: {elapsed:.1f}초")
+            self.logger.info(f"🚀 처리 속도: {rate:.1f}개/초")
+
         # 캐시 효율성
         total_lookups = self.stats['cache_hits'] + self.stats['cache_misses']
         if total_lookups > 0:
             cache_hit_rate = (self.stats['cache_hits'] / total_lookups) * 100
-            print(f"🎯 캐시 적중률: {cache_hit_rate:.1f}%")
-        
-        print("=" * 60)
+            self.logger.info(f"🎯 캐시 적중률: {cache_hit_rate:.1f}%")
+
+        self.logger.info("=" * 60)
 
 
 # 🚀 최적화된 함수들 (기존 인터페이스 유지)
@@ -340,11 +343,11 @@ class OptimizedConversionService:
 # 전역 서비스 인스턴스 (싱글톤 패턴)
 _conversion_service = None
 
-def get_conversion_service():
+def get_conversion_service(logger=None):
     """변환 서비스 인스턴스 반환 (싱글톤)"""
     global _conversion_service
     if _conversion_service is None:
-        _conversion_service = OptimizedConversionService()
+        _conversion_service = OptimizedConversionService(logger=logger)
     return _conversion_service
 
 
@@ -354,7 +357,7 @@ def convert_or_update_product(raw_product):
     return service.convert_single_product(raw_product)
 
 
-def bulk_convert_or_update_products(batch_size=500):
+def bulk_convert_or_update_products(batch_size=2000):
     """기존 인터페이스 유지 - 전체 대량 변환"""
     service = get_conversion_service()
     
@@ -372,12 +375,13 @@ def bulk_convert_or_update_products(batch_size=500):
     return success_count
 
 # 거래처별 대량 변환 (기존 인터페이스 유지)
-def bulk_convert_or_update_products_by_retailer(retailer_code, batch_size=500):
+def bulk_convert_or_update_products_by_retailer(retailer_code, batch_size=2000):
     """기존 인터페이스 유지 - 거래처별 대량 변환"""
-    service = get_conversion_service()
-    
-    logger.info(f"🚀 [{retailer_code}] 대량 변환 시작...")
-    
+    retailer_logger = get_product_logger(retailer_code)
+    service = get_conversion_service(logger=retailer_logger)
+
+    retailer_logger.info(f"🚀 [{retailer_code}] 대량 변환 시작...")
+
     raw_products = RawProduct.objects.filter(
         retailer=retailer_code,
         status__in=['pending', 'converted']
@@ -393,6 +397,8 @@ def bulk_convert_or_update_products_by_retailer(retailer_code, batch_size=500):
 #솔드아웃시키기
 def sync_soldout_products_from_raw(retailer_code: str):
     """원본이 soldout인 상품 → 가공상품도 soldout 처리"""
+    retailer_logger = get_product_logger(retailer_code)
+
     soldout_ids = RawProduct.objects.filter(
         retailer=retailer_code,
         status="soldout"
@@ -403,7 +409,7 @@ def sync_soldout_products_from_raw(retailer_code: str):
         external_product_id__in=soldout_ids
     ).update(status="soldout")
 
-    print(f"🔁 가공상품 soldout 처리 완료: {updated_count}개")
+    retailer_logger.info(f"🔁 가공상품 soldout 처리 완료: {updated_count}개")
 
 
 
@@ -411,10 +417,12 @@ def sync_soldout_products_from_raw(retailer_code: str):
 
 def analyze_conversion_bottlenecks():
     """변환 병목 지점 분석"""
-    print("=" * 70)
-    print("🔍 변환 서비스 병목 지점 분석")
-    print("=" * 70)
-    
+    analysis_logger = get_product_logger("ANALYSIS")
+
+    analysis_logger.info("=" * 70)
+    analysis_logger.info("🔍 변환 서비스 병목 지점 분석")
+    analysis_logger.info("=" * 70)
+
     bottlenecks = {
         "기존 문제점": [
             "매번 DB에서 Alias 데이터 조회 (N+1 문제)",
@@ -443,13 +451,13 @@ def analyze_conversion_bottlenecks():
         for item in items:
             print(f"   • {item}")
     
-    print("\n📊 예상 성능 향상:")
-    print("   • 처리 속도: 5-10배 향상")
-    print("   • 메모리 사용량: 약간 증가 (캐시)")
-    print("   • DB 쿼리 수: 95% 이상 감소")
-    print("   • 전체 시간: 80-90% 단축")
-    
-    print("=" * 70)
+    analysis_logger.info("\n📊 예상 성능 향상:")
+    analysis_logger.info("   • 처리 속도: 5-10배 향상")
+    analysis_logger.info("   • 메모리 사용량: 약간 증가 (캐시)")
+    analysis_logger.info("   • DB 쿼리 수: 95% 이상 감소")
+    analysis_logger.info("   • 전체 시간: 80-90% 단축")
+
+    analysis_logger.info("=" * 70)
 
 
 def reset_conversion_cache():

@@ -1,6 +1,7 @@
 from django.utils import timezone
 from pricing.models import Retailer
 from shop.models import RawProduct  # ✅ 이거 꼭 필요!
+from utils.product_logger import get_product_logger
 
 
 def run_full_pipeline_by_retailer(retailer_code):
@@ -11,6 +12,7 @@ def run_full_pipeline_by_retailer(retailer_code):
     관리자/스케줄러 공통 함수입니다.
     """
     retailer = Retailer.objects.get(code=retailer_code)
+    logger = get_product_logger(retailer_code)
 
     # 수집 시작 시간 기록
     retailer.last_fetch_started_at = timezone.now()
@@ -50,7 +52,7 @@ def run_full_pipeline_by_retailer(retailer_code):
             bulk_convert_or_update_products_by_retailer(retailer_code)
 
             sync_soldout_products_from_raw(retailer_code)
-            print(f"🔁 바제블루 품절 반영 완료: {retailer_code}")
+            logger.info(f"🔁 바제블루 품절 반영 완료: {retailer_code}")
 
             register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
 
@@ -69,6 +71,7 @@ def run_full_pipeline_by_retailer(retailer_code):
             bulk_convert_or_update_products_by_retailer(retailer_code)
 
             sync_soldout_products_from_raw(retailer_code)
+            logger.info(f"🔁 GNB 품절 반영 완료: {retailer_code}")
 
             # ✅ 등록된 상품 수 체크 (가공상품 기준)
             register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
@@ -97,7 +100,7 @@ def run_full_pipeline_by_retailer(retailer_code):
             from shop.api.leam.leam import main
             from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer, sync_soldout_products_from_raw
 
-            print("🟡 [1/1] 리암 상품 수집 및 등록 시작")
+            logger.info("🟡 [1/1] 리암 상품 수집 및 등록 시작")
             fetch_count = main()
 
             bulk_convert_or_update_products_by_retailer(retailer_code)
@@ -144,7 +147,7 @@ def run_full_pipeline_by_retailer(retailer_code):
             bulk_convert_or_update_products_by_retailer(retailer_code)
 
             sync_soldout_products_from_raw(retailer_code)
-            print(f"🔁 가우덴찌 품절 반영 완료: {retailer_code}")
+            logger.info(f"🔁 가우덴찌 품절 반영 완료: {retailer_code}")
 
             register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
 
@@ -159,7 +162,7 @@ def run_full_pipeline_by_retailer(retailer_code):
             bulk_convert_or_update_products_by_retailer(retailer_code)
 
             sync_soldout_products_from_raw(retailer_code)
-            print(f"🔁 줄리안 품절 반영 완료: {retailer_code}")
+            logger.info(f"🔁 줄리안 품절 반영 완료: {retailer_code}")
 
             register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
 
@@ -173,7 +176,7 @@ def run_full_pipeline_by_retailer(retailer_code):
             bulk_convert_or_update_products_by_retailer(retailer_code)
 
             sync_soldout_products_from_raw(retailer_code)
-            print(f"🔁 비에띠 품절 반영 완료: {retailer_code}")
+            logger.info(f"🔁 비에띠 품절 반영 완료: {retailer_code}")
 
             register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()                
 
@@ -185,16 +188,16 @@ def run_full_pipeline_by_retailer(retailer_code):
             from shop.api.atelier.convert_cuccuini_products import convert_atelier_products
             from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer, sync_soldout_products_from_raw
 
-            print("🟡 [1/3] CUCCUINI 상품 수집 및 저장 시작")
+            logger.info("🟡 [1/3] CUCCUINI 상품 수집 및 저장 시작")
             fetch_count = convert_atelier_products()
 
-            print("🟡 [2/3] 가공상품 등록 시작")
+            logger.info("🟡 [2/3] 가공상품 등록 시작")
             register_count = bulk_convert_or_update_products_by_retailer(retailer_code)
 
-            print("🟡 [3/3] 상품 솔드아웃")
+            logger.info("🟡 [3/3] 상품 솔드아웃")
             sync_soldout_products_from_raw(retailer_code)
 
-            print(f"✅ CUCCUINI 전체 프로세스 완료 - 수집: {fetch_count}개 / 등록: {register_count}개")
+            logger.info(f"✅ CUCCUINI 전체 프로세스 완료 - 수집: {fetch_count}개 / 등록: {register_count}개")
 
 
              
@@ -203,16 +206,16 @@ def run_full_pipeline_by_retailer(retailer_code):
             from shop.api.atelier.convert_bini_products import convert_atelier_products
             from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer, sync_soldout_products_from_raw
 
-            print("🟡 [1/3] bini 상품 수집 및 저장 시작")
+            logger.info("🟡 [1/3] bini 상품 수집 및 저장 시작")
             fetch_count = convert_atelier_products()
 
-            print("🟡 [2/3] 가공상품 등록 시작")
+            logger.info("🟡 [2/3] 가공상품 등록 시작")
             register_count = bulk_convert_or_update_products_by_retailer(retailer_code)
 
-            print("🟡 [3/3] 상품 솔드아웃")
+            logger.info("🟡 [3/3] 상품 솔드아웃")
             sync_soldout_products_from_raw(retailer_code)
 
-            print(f"✅ bini 전체 프로세스 완료 - 수집: {fetch_count}개 / 등록: {register_count}개")
+            logger.info(f"✅ bini 전체 프로세스 완료 - 수집: {fetch_count}개 / 등록: {register_count}개")
 
 
         # 미네띠
@@ -220,16 +223,16 @@ def run_full_pipeline_by_retailer(retailer_code):
             from shop.api.atelier.convert_minetti_products import convert_atelier_products
             from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer, sync_soldout_products_from_raw
 
-            print("🟡 [1/3] MINETTI 상품 수집 및 저장 시작")
+            logger.info("🟡 [1/3] MINETTI 상품 수집 및 저장 시작")
             fetch_count = convert_atelier_products()
 
-            print("🟡 [2/3] 가공상품 등록 시작")
+            logger.info("🟡 [2/3] 가공상품 등록 시작")
             register_count = bulk_convert_or_update_products_by_retailer(retailer_code)
 
-            print("🟡 [3/3] 상품 솔드아웃")
+            logger.info("🟡 [3/3] 상품 솔드아웃")
             sync_soldout_products_from_raw(retailer_code)
 
-            print(f"✅ MINETTI 전체 프로세스 완료 - 수집: {fetch_count}개 / 등록: {register_count}개")
+            logger.info(f"✅ MINETTI 전체 프로세스 완료 - 수집: {fetch_count}개 / 등록: {register_count}개")
 
 
 
@@ -246,14 +249,14 @@ def run_full_pipeline_by_retailer(retailer_code):
         
 
     except Exception as e:
-        print(f"❌ 파이프라인 실행 중 오류: {e}")
+        logger.error(f"❌ 파이프라인 실행 중 오류: {e}")
         # 에러를 로그로 남기되 return은 살림
     finally:
         retailer.is_running = False
         try:
             retailer.save()
         except Exception as save_error:
-            print(f"❌ Retailer 저장 실패 (finally): {save_error}")
+            logger.error(f"❌ Retailer 저장 실패 (finally): {save_error}")
 
 
     return fetch_count, register_count        

@@ -2,17 +2,22 @@ from django.db import transaction
 from shop.models import RawProduct, RawProductOption
 import requests, zipfile, io, json
 from decimal import Decimal
+from utils.product_logger import get_product_logger
+
+
+logger = get_product_logger("IT-R-01")
+
 
 LATTIZIP_URL = "https://lab.modacheva.com/json/json/milanese/stock.zip"
 
 
 def fetch_latti_raw_products_optimized(limit=None):
-    print("📥 운영용 ZIP 다운로드 중...")
+    logger.info("📥 운영용 ZIP 다운로드 중...")
     response = requests.get(LATTIZIP_URL)
-    print(f"🔍 응답 상태 코드: {response.status_code}")
-    print(f"🔍 응답 헤더: {response.headers}")
+    logger.info(f"🔍 응답 상태 코드: {response.status_code}")
+    logger.info(f"🔍 응답 헤더: {response.headers}")
     if response.status_code != 200:
-        print("❌ 실패")
+        logger.error("❌ ZIP 다운로드 실패")
         return
 
     with zipfile.ZipFile(io.BytesIO(response.content)) as zf:
@@ -108,5 +113,5 @@ def fetch_latti_raw_products_optimized(limit=None):
 
 
 
-    print(f"✅ 최적화 저장 완료: 상품 {len(items)}건")
+    logger.info(f"✅ 최적화 저장 완료: 상품 {len(items)}건")
     return saved_count

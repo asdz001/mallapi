@@ -1,5 +1,5 @@
 """
-Gaudenzi 상품 수집/등록 시스템 (수정된 버전)
+Gaudenzi 상품 수집/등록 시스템 (로그 문제 수정 버전)
 ============================
 🎯 Dresscode API → Gaudenzi 상품 자동 수집/등록
 📝 실행: python manage.py collect_gaudenzi_products
@@ -51,6 +51,13 @@ class Config:
             'Ocp-Apim-Subscription-Key': cls.SUBSCRIPTION_KEY,
             'Accept': 'application/json'
         }
+
+
+# ❌ 전역 로거 설정 제거 (이 부분이 문제였음)
+# logger = get_product_logger(Config.RETAILER_CODE)
+# logging.getLogger().handlers.clear()
+# for h in logger.handlers:
+#     logging.getLogger().addHandler(h)
 
 
 # 시간 처리
@@ -124,14 +131,15 @@ class TimeHelper:
 
 # API 클라이언트
 class APIClient:
-    def __init__(self):
+    def __init__(self, logger):  # ✅ 로거를 파라미터로 받음
         self.session = requests.Session()
         self.session.headers.update(Config.get_headers())
+        self.logger = logger  # ✅ 로거 저장
     
     def fetch_products(self, from_time=None, to_time=None, is_full_collection=False):
         if is_full_collection:
             params = {'channelKey': Config.CHANNEL_KEY}
-            logging.info("📡 전체 수집 API 요청")
+            self.logger.info("📡 전체 수집 API 요청")
         else:
             params = {
                 'channelKey': Config.CHANNEL_KEY,
@@ -139,34 +147,35 @@ class APIClient:
             }
             if to_time:
                 params['to'] = to_time.isoformat().replace('+00:00', 'Z')
-            logging.info(f"📡 부분 수집 API 요청: {params}")
+            self.logger.info(f"📡 부분 수집 API 요청: {params}")
         
         try:
             response = self.session.get(Config.API_URL, params=params, timeout=120)
-            print(f"✅ 응답 코드: {response.status_code}")
-            print(f"📦 응답 내용 (앞 300자): {response.text[:300]}")            
+            self.logger.info(f"✅ 응답 코드: {response.status_code}")
+            self.logger.info(f"📦 응답 내용 (앞 300자): {response.text[:300]}")        
             response.raise_for_status()
             
             data = response.json()
             products = data.get('data', data) if isinstance(data, dict) else data
             
-            logging.info(f"✅ 수집 완료: {len(products)}개")
+            self.logger.info(f"✅ 수집 완료: {len(products)}개")
             return products
             
         except Exception as e:
-            logging.error(f"❌ API 요청 실패: {e}")
+            self.logger.error(f"❌ API 요청 실패: {e}")
             return None
 
 
 # 데이터 처리 (수정된 버전)
 class DataProcessor:
-    def __init__(self):
+    def __init__(self, logger):  # ✅ 로거를 파라미터로 받음
+        self.logger = logger
         self.stats = {'products_created': 0, 'products_updated': 0, 'products_soldout': 0,
                      'options_created': 0, 'options_updated': 0, 'options_deleted': 0, 'errors': 0}
     
     @transaction.atomic
     def process_products(self, products_data, is_full_collection=False):
-        logging.info(f"🔄 {'전체' if is_full_collection else '부분'} 상품 처리 시작: {len(products_data)}개")
+        self.logger.info(f"🔄 {'전체' if is_full_collection else '부분'} 상품 처리 시작: {len(products_data)}개")
         
         valid_products = [p for p in products_data if p.get('productID')]
         incoming_product_ids = [str(p['productID']) for p in valid_products]
@@ -243,7 +252,7 @@ class DataProcessor:
                     products_to_create.append(new_product)
                     
             except Exception as e:
-                logging.error(f"❌ 상품 분류 실패 {product_data.get('productID')}: {e}")
+                self.logger.error(f"❌ 상품 분류 실패 {product_data.get('productID')}: {e}")
                 self.stats['errors'] += 1
         
         return products_to_create, products_to_update
@@ -259,7 +268,7 @@ class DataProcessor:
         if products_to_create:
             RawProduct.objects.bulk_create(products_to_create, batch_size=1000)
             self.stats['products_created'] = len(products_to_create)
-            logging.info(f"🆕 상품 생성: {len(products_to_create)}개")
+            self.logger.info(f"🆕 상품 생성: {len(products_to_create)}개")
         
         if products_to_update:
             update_fields = ['product_name', 'raw_brand_name', 'season', 'gender', 'category1', 'category2', 
@@ -267,7 +276,7 @@ class DataProcessor:
                            'color', 'description', 'image_url_1', 'image_url_2', 'image_url_3', 'image_url_4', 'status']
             RawProduct.objects.bulk_update(products_to_update, update_fields, batch_size=1000)
             self.stats['products_updated'] = len(products_to_update)
-            logging.info(f"🔄 상품 업데이트: {len(products_to_update)}개")
+            self.logger.info(f"🔄 상품 업데이트: {len(products_to_update)}개")
     
     def _process_options_full_sync(self, valid_products, existing_options_dict, incoming_product_ids):
         current_products_dict = {
@@ -359,7 +368,7 @@ class DataProcessor:
                     options_to_create.append(new_option)
                     
             except Exception as e:
-                logging.error(f"❌ 옵션 처리 실패 {external_option_id}: {e}")
+                self.logger.error(f"❌ 옵션 처리 실패 {external_option_id}: {e}")
                 self.stats['errors'] += 1
         
         self._bulk_process_options(options_to_create, options_to_update, options_to_delete_ids)
@@ -378,19 +387,19 @@ class DataProcessor:
                 external_option_id__in=options_to_delete_ids
             ).delete()[0]
             self.stats['options_deleted'] = deleted_count
-            logging.info(f"🗑️ 옵션 삭제: {deleted_count}개")
+            self.logger.info(f"🗑️ 옵션 삭제: {deleted_count}개")
         
         if options_to_create:
             RawProductOption.objects.bulk_create(options_to_create, batch_size=1000)
             self.stats['options_created'] = len(options_to_create)
-            logging.info(f"🆕 옵션 생성: {len(options_to_create)}개")
+            self.logger.info(f"🆕 옵션 생성: {len(options_to_create)}개")
         
         if options_to_update:
             # ✅ 수정: 실제 모델 필드명으로 변경
             update_fields = ['option_name', 'stock', 'price']  # ✅ size → option_name, status 제거
             RawProductOption.objects.bulk_update(options_to_update, update_fields, batch_size=1000)
             self.stats['options_updated'] = len(options_to_update)
-            logging.info(f"🔄 옵션 업데이트: {len(options_to_update)}개")
+            self.logger.info(f"🔄 옵션 업데이트: {len(options_to_update)}개")
     
     def _bulk_mark_soldout(self, incoming_product_ids):
         soldout_count = RawProduct.objects.filter(
@@ -403,7 +412,7 @@ class DataProcessor:
         
         if soldout_count > 0:
             self.stats['products_soldout'] = soldout_count
-            logging.info(f"🧹 soldout 처리: {soldout_count}개")
+            self.logger.info(f"🧹 soldout 처리: {soldout_count}개")
     
     def _get_option_external_id(self, product_id, option_data):
         gtin = option_data.get('gtin') or option_data.get('GTIN')
@@ -475,10 +484,10 @@ class DataProcessor:
         }
     
     def _print_stats(self):
-        logging.info("📊 처리 결과:")
+        self.logger.info("📊 처리 결과:")
         for key, value in self.stats.items():
             if value > 0:
-                logging.info(f"   {key.replace('_', ' ').title()}: {value:,}개")
+                self.logger.info(f"   {key.replace('_', ' ').title()}: {value:,}개")
 
 
 # Django Command
@@ -491,12 +500,9 @@ class Command(BaseCommand):
         parser.add_argument('--test-api', action='store_true', help='API 테스트만')
     
     def handle(self, *args, **options):
-        # 로깅 설정
-        custom_logger = get_product_logger(Config.RETAILER_CODE)
-        
-        for h in custom_logger.handlers:
-            logging.getLogger().addHandler(h)
-        
+        # ✅ Django Command에서도 로거 사용
+        logger = get_product_logger(Config.RETAILER_CODE)
+
         try:
             Config.setup()
             
@@ -507,9 +513,9 @@ class Command(BaseCommand):
                     lines = Config.FULL_HISTORY_FILE.read_text().splitlines()
                     filtered = [l for l in lines if not l.startswith(today.strftime('%Y-%m-%d'))]
                     Config.FULL_HISTORY_FILE.write_text('\n'.join(filtered))
-                logging.info("🔄 강제 전체 수집 모드")
+                logger.info("🔄 강제 전체 수집 모드")
             
-            client = APIClient()
+            client = APIClient(logger)  # ✅ 로거 전달
             
             # 테스트 모드
             if options['test_api']:
@@ -524,8 +530,8 @@ class Command(BaseCommand):
             # 수집 시간 범위 계산
             from_time, to_time, is_full = TimeHelper.get_collection_range()
             
-            logging.info(f"🎯 {'📦 전체' if is_full else '🔄 부분'} 수집 실행")
-            logging.info(f"📅 범위: {from_time} ~ {to_time or '현재'}")
+            logger.info(f"🎯 {'📦 전체' if is_full else '🔄 부분'} 수집 실행")
+            logger.info(f"📅 범위: {from_time} ~ {to_time or '현재'}")
             
             # 상품 데이터 수집
             products = client.fetch_products(from_time, to_time, is_full)
@@ -533,7 +539,7 @@ class Command(BaseCommand):
                 raise Exception("API 데이터 수집 실패")
             
             if not products:
-                logging.info("📭 수집할 데이터 없음")
+                logger.info("📭 수집할 데이터 없음")
                 TimeHelper.save_time(is_full)
                 return
             
@@ -542,38 +548,33 @@ class Command(BaseCommand):
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                 backup_file = Config.BACKUP_DIR / f"gaudenzi_full_{timestamp}_{len(products)}items.json"
                 backup_file.write_text(json.dumps(products, ensure_ascii=False, indent=2))
-                logging.info(f"💾 백업 (전체 수집): {backup_file}")
+                logger.info(f"💾 백업 (전체 수집): {backup_file}")
             elif not is_full:
-                logging.info("📝 부분 수집 - JSON 백업 생략")
+                logger.info("📝 부분 수집 - JSON 백업 생략")
             
             # 데이터 처리
-            processor = DataProcessor()
+            processor = DataProcessor(logger)  # ✅ 로거 전달
             processor.process_products(products, is_full)
             
             # 완료 시간 저장
             TimeHelper.save_time(is_full)
             
-            logging.info("✅ 수집 완료")
+            logger.info("✅ 수집 완료")
             self.stdout.write(self.style.SUCCESS('✅ Gaudenzi 상품 수집 완료'))
             
         except Exception as e:
-            logging.error(f"❌ 수집 실패: {e}")
+            logger.error(f"❌ 수집 실패: {e}")
             self.stdout.write(self.style.ERROR(f'❌ 수집 실패: {e}'))
             raise
 
 
 # pipeline_runner용 메인 함수 ==
 def run_gaudenzi_collection(force_full=False):
+    # ✅ 함수 시작시 로거 생성 (중복 생성 제거)
     logger = get_product_logger(Config.RETAILER_CODE)
 
-    # 🔧 중복 핸들러 제거
-    logging.getLogger().handlers.clear()
-
-    for h in logger.handlers:
-        logging.getLogger().addHandler(h)
-
     try:
-        print("📦 Gaudenzi 상품 수집 시작")
+        logger.info("📦 Gaudenzi 상품 수집 시작")
         Config.setup()
         
         # 강제 전체 수집 처리
@@ -583,50 +584,50 @@ def run_gaudenzi_collection(force_full=False):
                 lines = Config.FULL_HISTORY_FILE.read_text().splitlines()
                 filtered = [l for l in lines if not l.startswith(today.strftime('%Y-%m-%d'))]
                 Config.FULL_HISTORY_FILE.write_text('\n'.join(filtered))
-                print("🔄 강제 전체 수집 모드 활성화")
-        
-        client = APIClient()
+                logger.info("🔄 강제 전체 수집 모드 활성화")
+
+        client = APIClient(logger)  # ✅ 로거 전달
         from_time, to_time, is_full = TimeHelper.get_collection_range()
         
-        print(f"🎯 {'전체' if is_full else '부분'} 수집 실행")
-        print(f"📅 범위: {from_time} ~ {to_time or '현재'}")
+        logger.info(f"🎯 {'전체' if is_full else '부분'} 수집 실행")
+        logger.info(f"📅 범위: {from_time} ~ {to_time or '현재'}")
         
         products = client.fetch_products(from_time, to_time, is_full)
         
         if products is None:
-            print("❌ API 응답이 None입니다")
+            logger.error("❌ API 응답이 None입니다")
             return 0
             
         if not products:
-            print("📭 수집할 데이터 없음 (빈 배열)")
+            logger.info("📭 수집할 데이터 없음 (빈 배열)")
             TimeHelper.save_time(is_full)
             return 0
-        
-        print(f"📥 API에서 {len(products)}개 상품 수집됨")
-        
+
+        logger.info(f"📥 API에서 {len(products)}개 상품 수집됨")
+
         # 💾 JSON 백업 저장 (전체 수집시에만!)
         if is_full:
             try:
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                 backup_file = Config.BACKUP_DIR / f"gaudenzi_full_{timestamp}_{len(products)}items.json"
                 backup_file.write_text(json.dumps(products, ensure_ascii=False, indent=2), encoding='utf-8')
-                print(f"💾 JSON 백업 저장 (전체 수집): {backup_file}")
+                logger.info(f"💾 JSON 백업 저장 (전체 수집): {backup_file}")  # ✅ print → logger
             except Exception as e:
-                print(f"⚠️ JSON 백업 실패: {e}")
+                logger.error(f"⚠️ JSON 백업 실패: {e}")  # ✅ print → logger
         else:
-            print("📝 부분 수집 - JSON 백업 생략")
+            logger.info("📝 부분 수집 - JSON 백업 생략")  # ✅ print → logger
         
-        processor = DataProcessor()
+        processor = DataProcessor(logger)  # ✅ 로거 전달
         processor.process_products(products, is_full)
         TimeHelper.save_time(is_full)
-        
-        print(f"✅ Gaudenzi 수집 완료: {len(products)}개")
+
+        logger.info(f"✅ Gaudenzi 수집 완료: {len(products)}개")
         return len(products)
         
     except Exception as e:
-        print(f"❌ Gaudenzi 수집 실패: {e}")
+        logger.error(f"❌ Gaudenzi 수집 실패: {e}")
         import traceback
-        traceback.print_exc()
+        logger.error(traceback.format_exc())  # ✅ 상세 에러 로그 추가
         return 0
 
 

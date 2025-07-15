@@ -21,8 +21,7 @@ import gc
 
 # 로깅 설정
 logger = get_product_logger("IT-L-01")
-for h in logger.handlers:
-    logging.getLogger().addHandler(h)
+
 
 RETAILER_CODE = "IT-L-01"
 BASE_URL = "https://srv2.best-fashion.net"

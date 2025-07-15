@@ -6,6 +6,11 @@ import pandas as pd
 import io
 from django.db import transaction
 from shop.models import RawProduct, RawProductOption
+from utils.product_logger import get_product_logger
+
+
+# ✅ 로거 생성
+logger = get_product_logger("IT-N-01")
 
 # ========== 설정 ==========
 CSV_URL = "https://feedfiles.woolytech.com/nugnes-1920.myshopify.com/yH1YCJhVtJ.csv"  # 뉴네스 제공 CSV 다운로드 URL
@@ -82,7 +87,7 @@ def group_products(df):
 # ✅ 상품 및 옵션 DB에 등록 및 업데이트 수행 (최적화 방식 적용)
 @transaction.atomic
 def register_products(products):
-    print("🔄 DB 등록 시작")
+    logger.info("🔄 DB 등록 시작")
 
 
 
@@ -206,13 +211,13 @@ def register_products(products):
     # ✅ 누락된 상품은 soldout 처리 (오늘 수집에 포함 안된 기존 상품)
     RawProduct.objects.filter(retailer=RETAILER_CODE).exclude(external_product_id__in=active_ids).update(status="soldout")
 
-    print(f"✅ 상품 생성: {len(products_to_create)}개 / 수정: {len(products_to_update)}개")
-    print(f"✅ 옵션 생성: {len(options_to_create)}개 / 수정: {len(options_to_update)}개")
-    print(f"✅ soldout 처리됨: {existing_products.exclude(external_product_id__in=active_ids).count()}개")
+    logger.info(f"✅ 상품 생성: {len(products_to_create)}개 / 수정: {len(products_to_update)}개")
+    logger.info(f"✅ 옵션 생성: {len(options_to_create)}개 / 수정: {len(options_to_update)}개")
+    logger.info(f"✅ soldout 처리됨: {existing_products.exclude(external_product_id__in=active_ids).count()}개")
 
 # ✅ 전체 파이프라인 실행 함수
 def main():
-    print("📦 뉴네스 상품 수집 및 등록 시작")
+    logger.info("📦 뉴네스 상품 수집 및 등록 시작")
 
     # ✅ 1. CSV 파일 메모리에서 직접 읽기 (파일 저장 없이 처리)
     res = requests.get(CSV_URL)
@@ -234,7 +239,7 @@ def main():
     # ✅ 5. DB 등록
     register_products(products)
 
-    print("🎉 모든 상품 처리 완료")
+    logger.info("🎉 모든 상품 처리 완료")
     return len(products)  # ✅ 수집한 상품 수 반환
 
 if __name__ == "__main__":

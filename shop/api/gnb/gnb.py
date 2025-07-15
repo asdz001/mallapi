@@ -25,9 +25,6 @@ from shop.models import RawProduct, RawProductOption
 # ✅ 로깅 설정
 logger = get_product_logger("IT-G-01")
 
-for h in logger.handlers:
-    logging.getLogger().addHandler(h)
-
 
 # ✅ 설정
 FTP_HOST = "93.46.41.5"
