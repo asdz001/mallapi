@@ -564,6 +564,14 @@ class Command(BaseCommand):
 
 # pipeline_runner용 메인 함수 ==
 def run_gaudenzi_collection(force_full=False):
+    logger = get_product_logger(RETAILER_CODE=Config.RETAILER_CODE)
+
+    # 🔧 중복 핸들러 제거
+    logging.getLogger().handlers.clear()
+
+    for h in logger.handlers:
+        logging.getLogger().addHandler(h)
+
     try:
         print("📦 Gaudenzi 상품 수집 시작")
         Config.setup()

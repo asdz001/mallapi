@@ -62,6 +62,8 @@ def convert_selected_raw_products(modeladmin, request, queryset):
     
     for raw_product in queryset:
         if convert_or_update_product(raw_product):
+            raw_product.status = "converted"  # ✅ 상태 갱신
+            raw_product.save(update_fields=["status"])  # ✅ DB 반영
             success_count += 1
         else:
             fail_count += 1
