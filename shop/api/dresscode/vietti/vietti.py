@@ -34,7 +34,7 @@ class Config:
     SUBSCRIPTION_KEY = "d9b2538817b248d6a39e7289d5b87e87"
     RETAILER_CODE = "IT-V-02"
 
-    EXPORT_DIR = Path("export/VETTI")
+    EXPORT_DIR = Path("export/VIETTI")
     HISTORY_FILE = EXPORT_DIR / "last_collection_time.txt"
     FULL_HISTORY_FILE = EXPORT_DIR / "full_collections.txt"
     BACKUP_DIR = EXPORT_DIR / "json_backup"
