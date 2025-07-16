@@ -369,24 +369,33 @@ def main():
         logger.info("🚀 더블F 통합 파이프라인 시작")
         
         # 1단계: 수집 및 가공
-        products_data = collect_and_process(logger)
-        if not products_data:
+        collected_count = collect_and_process(logger)
+        if collected_count <= 0:
             logger.error("❌ 수집 실패")
-            return False
+            return 0  # ✅ 수정: 0 반환
+        
+        # JSON에서 데이터 다시 로드
+        try:
+            with open(JSON_PATH, "r", encoding="utf-8") as f:
+                products_data = json.load(f)
+        except Exception as e:
+            logger.error(f"❌ JSON 로드 실패: {e}")
+            return 0  # ✅ 수정: 0 반환
         
         # 2단계: DB 등록
-        result = register_products(products_data, logger)
+        registered_count = register_products(products_data, logger)
         
-        if result > 0:
-            logger.info(f"🎉 완료: {result}개 상품 처리")
-            return True
+        if registered_count > 0:
+            logger.info(f"🎉 완료: {collected_count}개 상품 처리")
+            
         else:
             logger.error("❌ 등록 실패")
-            return False
+            
+        return collected_count  # ✅ 수정: 수집된 개수 반환
             
     except Exception as e:
         logger.error(f"❌ 실행 실패: {e}")
-        return False
+        return 0  # ✅ 수정: 0 반환
 
 # Django Command
 from django.core.management.base import BaseCommand
