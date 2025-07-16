@@ -16,8 +16,8 @@ from shop.models import Order, OrderItem
 # 📮 밀라네제 고정 주소 정보 (모든 드레스코드 거래처 공통 사용)
 MILANESE_ADDRESS = {
     "billing": {
-        "name": "JD",
-        "surname": "CHO",
+        "name": "",
+        "surname": "",
         "email": "md@milanese.co.kr",
         "streetName": "JOJUNGDAE-RO",
         "streetNumber": "F1025, 45",
@@ -32,8 +32,8 @@ MILANESE_ADDRESS = {
         "notes": "Milanese Korea - Main Office"
     },
     "shipping": {
-        "name": "JD", 
-        "surname": "CHO",
+        "name": "",
+        "surname": "",
         "email": "md@milanese.co.kr",
         "streetName": "JOJUNGDAE-RO",
         "streetNumber": "F1025, 45", 

@@ -4,6 +4,8 @@
 🏢 드레스코드 API를 사용하는 줄리안 부티크 전용
 📋 order_service.py ↔ dresscode_base.py 연결 역할
 """
+#줄리안은 현재 개발이 되어있지않아 운영 안되어 테스트모드로 전송
+
 
 from shop.models import Order
 from .dresscode_base import DresscodeBaseClient
@@ -14,7 +16,7 @@ GAUDENZI_CONFIG = {
     'channel_key': '54536dc3-6fda-4bdd-8f3b-3213c5aae66d',
     'subscription_key': 'd9b2538817b248d6a39e7289d5b87e87',
     'retailer_code': 'IT-J-01',
-    'test_mode': False  # 🔧 TODO: 운영시 False로 변경
+    'test_mode': True  # 🔧 TODO: 운영시 False로 변경
 }
 
 

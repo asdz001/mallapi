@@ -3,7 +3,11 @@
 import logging
 import os
 from pathlib import Path
+from datetime import datetime
 
+
+
+# 거래처별 로거 생성 함수
 def get_product_logger(retailer_code: str) -> logging.Logger:
     """
     거래처 코드에 따라 logger를 생성하고 별도 로그 파일로 분리 저장
@@ -63,3 +67,14 @@ def get_product_logger(retailer_code: str) -> logging.Logger:
     logger.info(f"📝 로거 초기화 완료: {log_path}")
     
     return logger
+
+
+# Session 시작 로그 출력 함수
+def log_session_separator(logger, label: str = ""):
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    label = f"📦 {label}" if label else ""
+    logger.info("")
+    logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    logger.info(f"🕒 실행 시작: {now} {label}")
+    logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    logger.info("")

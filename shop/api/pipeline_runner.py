@@ -1,7 +1,10 @@
 from django.utils import timezone
 from pricing.models import Retailer
 from shop.models import RawProduct  # ✅ 이거 꼭 필요!
-from utils.product_logger import get_product_logger
+from utils.product_logger import get_product_logger,log_session_separator
+
+
+
 
 
 def run_full_pipeline_by_retailer(retailer_code):
@@ -13,6 +16,7 @@ def run_full_pipeline_by_retailer(retailer_code):
     """
     retailer = Retailer.objects.get(code=retailer_code)
     logger = get_product_logger(retailer_code)
+    log_session_separator(logger, f"{retailer_code} 상품 수집 및 등록 파이프라인")
 
     # 수집 시작 시간 기록
     retailer.last_fetch_started_at = timezone.now()
@@ -131,6 +135,26 @@ def run_full_pipeline_by_retailer(retailer_code):
 
             # 등록된 개수 측정
             register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
+
+
+
+        # 더블F 추가 (IT-F-01)
+        elif retailer_code == "IT-F-01":  # THE DOUBLE F
+            from shop.api.thedoublef.thedoublef import main
+            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer, sync_soldout_products_from_raw
+
+            logger.info("🟡 [1/3] 더블F 상품 수집 및 저장 시작")
+            fetch_count = main()
+
+            logger.info("🟡 [2/3] 가공상품 등록 시작")
+            bulk_convert_or_update_products_by_retailer(retailer_code)
+
+            logger.info("🟡 [3/3] 상품 솔드아웃 처리")
+            sync_soldout_products_from_raw(retailer_code)
+
+            register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
+            logger.info(f"✅ 더블F 전체 프로세스 완료 - 수집: {fetch_count}개 / 등록: {register_count}개")
+
 
 
 
