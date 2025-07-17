@@ -1,0 +1,15 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>📦 거래처별 시즌 요약</h1>
+<table class="table">
+  <thead><tr><th>거래처 코드</th><th>시즌 목록</th></tr></thead>
+  <tbody>
+    {% for item in summary_list %}
+      <tr>
+        <td>{{ item.retailer }}</td>
+        <td>{{ item.seasons }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

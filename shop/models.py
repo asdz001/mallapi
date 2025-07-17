@@ -86,6 +86,7 @@ class Product(models.Model):
     color = models.CharField(max_length=50, verbose_name=_("색상명"), blank=True, null=True)
     origin = models.CharField(max_length=100, verbose_name=_("원산지"), blank=True, null=True)
     price_org = models.DecimalField(max_digits=12, decimal_places=2, verbose_name=_("COST"), default=0)
+    markup = models.FloatField(null=True, blank=True, verbose_name=_("마크업"))
     price_supply = models.DecimalField(max_digits=12, decimal_places=2, verbose_name=_("공급가"), default=0)
     discount_rate = models.DecimalField(_("할인율 (%)"), max_digits=5, decimal_places=2, null=True, blank=True)
     price_retail = models.DecimalField(max_digits=12, decimal_places=2, verbose_name=_("소비자가"), default=0)
@@ -110,10 +111,18 @@ class Product(models.Model):
         markup = get_markup_from_product(self) or 1
         return self.price_org * Decimal(str(markup))
     
+    # 마크업 저장 로직
+    def save(self, *args, **kwargs):
+        self.markup = get_markup_from_product(self) or 1.0
+        super().save(*args, **kwargs)
+
+
     #원화 계산
-    @property
-    def calculated_price_krw(self):
-        return calculate_final_price(self)
+    def save(self, *args, **kwargs):
+        # ✅ 마크업 계산 및 저장
+        self.markup = get_markup_from_product(self) or 1.0
+        self.calculated_price_krw = calculate_final_price(self)
+        super().save(*args, **kwargs)
 
     #상품명
     def __str__(self):

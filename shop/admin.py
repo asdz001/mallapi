@@ -228,9 +228,7 @@ class ProductAdmin(admin.ModelAdmin):
     
     # 원화가
     def formatted_price_krw(self, obj):
-        if obj.calculated_price_krw is not None:
-            return f"{obj.calculated_price_krw:,.0f}"
-        return "-"
+        return f"{obj.calculated_price_krw:,.0f}" if obj.calculated_price_krw else "-"
     formatted_price_krw.short_description = _("원화가")
 
     # 공급가
@@ -240,8 +238,7 @@ class ProductAdmin(admin.ModelAdmin):
 
     # 마크업
     def markup_display(self, obj):
-        markup = get_markup_from_product(obj)
-        return f"{markup:.2f}" if markup else "-"
+        return f"{obj.markup:.2f}" if obj.markup else "-"
     markup_display.short_description = _("마크업")
     
     # ✅ 원산지 (select_related 최적화 필요시 추가 가능)

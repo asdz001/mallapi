@@ -269,3 +269,11 @@ class PriceFormulaRange(models.Model):
 
 
 
+class RetailerSeasonSummary(models.Model):
+    retailer_code = models.CharField(max_length=20, db_index=True)
+    seasons = models.TextField(help_text="comma-separated 시즌 목록")
+
+    class Meta:
+        verbose_name = "거래처 시즌 요약"
+        verbose_name_plural = "거래처 시즌 요약"
+

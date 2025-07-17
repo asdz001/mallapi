@@ -1,4 +1,4 @@
-# pricing/admin.py에서 BrandSetting 관련 부분만 새로 작성
+# pricing/admin.py - 기존 코드에 최소 수정만 적용
 
 from django.contrib import admin, messages
 from django.urls import path, reverse
@@ -18,9 +18,16 @@ import traceback
 import logging
 from shop.models import Product
 from django.utils.translation import gettext_lazy as _
+from pricing.models import RetailerSeasonSummary
+from collections import defaultdict
+from django.template.response import TemplateResponse
+from shop.utils.markup_util import get_markup_from_product
+from shop.services.price_calculator import calculate_final_price
+# ✅ 새로 추가된 유일한 import
+from pricing.utils.price_update_utils import update_all_products_pricing, update_products_by_retailer
 
 
-# ✅ BrandMarkupDetail Inline Admin
+# ✅ BrandMarkupDetail Inline Admin (기존 코드 유지)
 class BrandMarkupDetailInline(admin.TabularInline):
     model = BrandMarkupDetail
     extra = 1
@@ -30,7 +37,7 @@ class BrandMarkupDetailInline(admin.TabularInline):
     verbose_name_plural = "성별/카테고리별 마크업 설정"
 
 
-# ✅ 새로운 구조에 맞는 BrandSetting Admin
+# ✅ 새로운 구조에 맞는 BrandSetting Admin (기존 코드 + 최소 수정)
 @admin.register(BrandSetting)
 class BrandSettingAdmin(admin.ModelAdmin):
     list_display = [
@@ -58,7 +65,7 @@ class BrandSettingAdmin(admin.ModelAdmin):
         })
     ]
     
-    # ✅ 엑셀 업로드/다운로드 URL 추가
+    # ✅ 엑셀 업로드/다운로드 URL 추가 (기존 코드 유지)
     change_list_template = "admin/brandsetting_change_list.html"
     
     def get_urls(self):
@@ -87,8 +94,14 @@ class BrandSettingAdmin(admin.ModelAdmin):
         for instance in instances:
             instance.save()
         formset.save_m2m()
+        
+        # ✅ 유일한 수정사항: 인라인 저장 후 해당 거래처의 상품 업데이트
+        if hasattr(form, 'instance') and form.instance:
+            retailer_code = form.instance.retailer.code
+            updated_count = update_products_by_retailer(retailer_code)
+            self.message_user(request, f"{updated_count}개 상품의 마크업 및 원화가가 업데이트되었습니다.")
     
-    # ✅ 커스텀 표시 메서드들
+    # ✅ 커스텀 표시 메서드들 (기존 코드 유지)
     def season_display(self, obj):
         return obj.season_display()
     season_display.short_description = "시즌"
@@ -112,7 +125,7 @@ class BrandSettingAdmin(admin.ModelAdmin):
         return format_html('<span style="color: blue;">{}</span>', summary)
     markup_summary.short_description = "마크업 요약"
     
-    # ✅ 엑셀 관련 메서드들
+    # ✅ 엑셀 관련 메서드들 (기존 코드 유지)
     def changelist_view(self, request, extra_context=None):
         if extra_context is None:
             extra_context = {}
@@ -183,7 +196,7 @@ class BrandSettingAdmin(admin.ModelAdmin):
     def import_excel(self, request):
         """엑셀 파일 대량 업로드 - 스마트 업데이트 방식"""
         if request.method == "POST" and request.FILES.get("excel_file"):
-            # ✅ 로거 설정
+            # ✅ 로거 설정 (기존 코드 유지)
             logger = logging.getLogger('brandsetting_import')
             import_start_time = timezone.now()
             upload_filename = request.FILES["excel_file"].name
@@ -195,8 +208,9 @@ class BrandSettingAdmin(admin.ModelAdmin):
                 created_settings, updated_settings, skipped = 0, 0, 0
                 failed_rows = []
                 
-                # ✅ 1단계: 데이터를 BrandSetting별로 그룹핑
+                # ✅ 1단계: 데이터를 BrandSetting별로 그룹핑 (기존 코드 유지)
                 grouped_data = {}
+                affected_retailers = set()
                 
                 for idx, row in df.iterrows():
                     try:
@@ -216,7 +230,6 @@ class BrandSettingAdmin(admin.ModelAdmin):
                                 "오류": error_msg,
                                 "데이터": dict(row)
                             })
-                            # ✅ 로그 파일에 기록
                             logger.error(f"[행 {idx + 2}] {error_msg} | 데이터: {dict(row)}")
                             skipped += 1
                             continue
@@ -224,6 +237,7 @@ class BrandSettingAdmin(admin.ModelAdmin):
                         # 거래처 존재 확인
                         try:
                             retailer = Retailer.objects.get(code=retailer_code)
+                            affected_retailers.add(retailer_code)
                         except Retailer.DoesNotExist:
                             error_msg = f"거래처 찾을 수 없음: {retailer_code}"
                             failed_rows.append({
@@ -231,7 +245,6 @@ class BrandSettingAdmin(admin.ModelAdmin):
                                 "오류": error_msg,
                                 "데이터": dict(row)
                             })
-                            # ✅ 로그 파일에 기록
                             logger.error(f"[행 {idx + 2}] {error_msg} | 데이터: {dict(row)}")
                             skipped += 1
                             continue
@@ -261,7 +274,6 @@ class BrandSettingAdmin(admin.ModelAdmin):
                                 "오류": error_msg,
                                 "데이터": dict(row)
                             })
-                            # ✅ 로그 파일에 기록
                             logger.error(f"[행 {idx + 2}] {error_msg} | 데이터: {dict(row)}")
                             skipped += 1
                             continue
@@ -277,12 +289,11 @@ class BrandSettingAdmin(admin.ModelAdmin):
                             "오류": error_msg,
                             "데이터": dict(row)
                         })
-                        # ✅ 로그 파일에 기록
                         logger.error(f"[행 {idx + 2}] {error_msg} | 데이터: {dict(row)} | 상세오류: {traceback.format_exc()}")
                         skipped += 1
                         continue
                 
-                # ✅ 2단계: 그룹핑된 데이터로 DB에 저장
+                # ✅ 2단계: 그룹핑된 데이터로 DB에 저장 (기존 코드 유지)
                 for setting_key, data in grouped_data.items():
                     try:
                         # BrandSetting 생성/업데이트
@@ -307,10 +318,6 @@ class BrandSettingAdmin(admin.ModelAdmin):
                             logger.info(f"✏️ BrandSetting 수정: {data['brand_name']} | {data['seasons']} | 행: {data['row_numbers']}")
                         
                         # ✅ 3단계: 엑셀에 포함된 성별+카테고리 조합만 삭제
-                        excel_genders = list(set([gender for gender, category, markup in data['markups']]))
-                        excel_categories = list(set([category for gender, category, markup in data['markups']]))
-                        
-                        # 기존 마크업 중 엑셀에 해당하는 조합만 삭제
                         deleted_count = 0
                         for gender, category, markup in data['markups']:
                             deleted, _ = BrandMarkupDetail.objects.filter(
@@ -343,19 +350,27 @@ class BrandSettingAdmin(admin.ModelAdmin):
                             "오류": error_msg,
                             "브랜드": data['brand_name']
                         })
-                        # ✅ 로그 파일에 기록
                         logger.error(f"[행 {data['row_numbers']}] {error_msg} | 브랜드: {data['brand_name']} | 상세오류: {traceback.format_exc()}")
                         skipped += 1
                         continue
                 
-                # ✅ 5단계: 결과 메시지 및 로그 기록
+                # ✅ 5단계: 영향받은 거래처들의 상품 가격 업데이트 (수정된 부분)
+                total_updated = 0
+                for retailer_code in affected_retailers:
+                    updated_count = update_products_by_retailer(retailer_code)
+                    total_updated += updated_count
+                
+                # ✅ 6단계: 결과 메시지 및 로그 기록 (기존 코드 유지)
                 success_msg = f"✅ 브랜드설정 생성: {created_settings}개, ✏️ 수정: {updated_settings}개, ⏭️ 건너뜀: {skipped}개"
+                
+                if total_updated > 0:
+                    success_msg += f" | 🔄 상품 가격 업데이트: {total_updated:,}개"
                 
                 # ✅ 최종 결과 로그 기록
                 total_processed = len(df)
                 processing_time = (timezone.now() - import_start_time).total_seconds()
                 
-                logger.info(f"[브랜드설정 엑셀 업로드 완료] 총 처리: {total_processed}행 | 생성: {created_settings}개 | 수정: {updated_settings}개 | 실패: {skipped}개 | 처리시간: {processing_time:.2f}초")
+                logger.info(f"[브랜드설정 엑셀 업로드 완료] 총 처리: {total_processed}행 | 생성: {created_settings}개 | 수정: {updated_settings}개 | 실패: {skipped}개 | 상품 업데이트: {total_updated}개 | 처리시간: {processing_time:.2f}초")
                 
                 if failed_rows:
                     # ✅ 실패 요약 로그
@@ -384,7 +399,6 @@ class BrandSettingAdmin(admin.ModelAdmin):
                 
             except Exception as e:
                 error_msg = f"파일 처리 중 오류가 발생했습니다: {str(e)}"
-                # ✅ 로그 파일에 기록
                 logger.error(f"[치명적 오류] {error_msg} | 상세오류: {traceback.format_exc()}")
                 
                 self.message_user(
@@ -396,16 +410,27 @@ class BrandSettingAdmin(admin.ModelAdmin):
         return render(request, "admin/import_brandsettings.html")
 
 
-# ✅ BrandMarkupDetail 독립 Admin (필요시)
+# ✅ BrandMarkupDetail 독립 Admin (수정된 부분)
 @admin.register(BrandMarkupDetail)
 class BrandMarkupDetailAdmin(admin.ModelAdmin):
     list_display = ['brand_setting', 'gender', 'category', 'markup', 'is_active', 'created_at']
     list_filter = ['gender', 'category', 'is_active', 'brand_setting__retailer']
     search_fields = ['brand_setting__brand_name', 'brand_setting__retailer__name']
     
+    # ✅ 최적화된 쿼리 사용 (기존 코드 유지)
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
         return queryset.select_related('brand_setting', 'brand_setting__retailer')
+
+    # ✅ 저장 후 상품 마크업 업데이트 (수정된 부분)
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        
+        # ✅ 해당 거래처의 모든 상품 마크업 및 원화가 업데이트
+        retailer_code = obj.brand_setting.retailer.code
+        updated_count = update_products_by_retailer(retailer_code)
+        
+        self.message_user(request, f"✅ {updated_count}개 상품의 마크업 및 원화가가 업데이트되었습니다.")
 
 
 # ✅ 거래처 관리자 (기존 코드 유지)
@@ -473,7 +498,7 @@ class RetailerAdmin(admin.ModelAdmin):
         return redirect("..")
 
 
-# ✅ FTA 관련 관리자들 (기존 코드 유지)
+# ✅ FTA 관련 관리자들 (기존 코드 + 최소 수정)
 class CountryAliasInline(admin.TabularInline):
     model = CountryAlias
     extra = 1
@@ -490,6 +515,20 @@ class FixedCountryAdmin(admin.ModelAdmin):
     ordering = ['name']
     inlines = [CountryAliasInline]
     change_list_template = "admin/fixedcountry_change_list.html"
+
+    # ✅ 수정된 부분: FTA 설정 변경 시 상품 가격 업데이트
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        
+        updated_count = update_all_products_pricing()
+        self.message_user(request, f"{updated_count}개 상품의 원화가가 업데이트되었습니다.")
+    
+    def save_formset(self, request, form, formset, change):
+        """CountryAlias 인라인 저장 시에도 가격 업데이트"""
+        super().save_formset(request, form, formset, change)
+        
+        updated_count = update_all_products_pricing()
+        self.message_user(request, f"{updated_count}개 상품의 원화가가 업데이트되었습니다.")
 
     def get_urls(self):
         urls = super().get_urls()
@@ -533,7 +572,10 @@ class FixedCountryAdmin(admin.ModelAdmin):
                 else:
                     skipped += 1
 
-            self.message_user(request, f"✅ 등록됨: {created}개, ⏭ 건너뜀: {skipped}개")
+            # ✅ 수정된 부분: 엑셀 업로드 후 상품 가격 업데이트
+            updated_count = update_all_products_pricing()
+            
+            self.message_user(request, f"✅ 등록됨: {created}개, ⏭ 건너뜀: {skipped}개 | 상품 가격 업데이트: {updated_count}개")
             return redirect("..")
 
         return render(request, "admin/import_fixedcountry.html", {
@@ -591,7 +633,7 @@ class FixedCountryAdmin(admin.ModelAdmin):
     alias_list.short_description = "원본 국가명"
 
 
-# ✅ 표준계산식 관리자 (기존 코드 유지)
+# ✅ 표준계산식 관리자 (기존 코드 + 최소 수정)
 class PriceFormulaRangeInline(admin.TabularInline):
     model = PriceFormulaRange
     extra = 1
@@ -602,3 +644,42 @@ class GlobalPricingSettingAdmin(admin.ModelAdmin):
         'exchange_rate', 'shipping_fee', 'VAT', 'margin_rate', 'special_tax_rate'
     )
     inlines = [PriceFormulaRangeInline]
+    
+    # ✅ 수정된 부분: 환율/배송비/마진율 변경 시 상품 가격 업데이트
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        
+        updated_count = update_all_products_pricing()
+        self.message_user(request, f"{updated_count}개 상품의 원화가가 업데이트되었습니다.")
+    
+    def save_formset(self, request, form, formset, change):
+        """PriceFormulaRange 인라인 저장 시에도 가격 업데이트"""
+        super().save_formset(request, form, formset, change)
+        
+        updated_count = update_all_products_pricing()
+        self.message_user(request, f"{updated_count}개 상품의 원화가가 업데이트되었습니다.")
+
+
+# ✅ 거래처 시즌 요약 관리자 (기존 코드 유지)
+@admin.register(RetailerSeasonSummary)
+class RetailerSeasonSummaryAdmin(admin.ModelAdmin):
+    change_list_template = "admin/retailer_season_summary.html"
+    model = RetailerSeasonSummary  # 실제 모델은 아님
+
+    def changelist_view(self, request, extra_context=None):
+        season_map = defaultdict(set)
+
+        # Product에서 리테일러-시즌 수집
+        for row in Product.objects.exclude(season__isnull=True).exclude(season="").values("retailer", "season").distinct():
+            season_map[row["retailer"]].add(row["season"].strip())
+
+        summary = [
+            {"retailer": k, "seasons": ", ".join(sorted(v))}
+            for k, v in sorted(season_map.items())
+        ]
+
+        context = {
+            "title": "거래처별 시즌 요약 보기",
+            "summary_list": summary
+        }
+        return TemplateResponse(request, "admin/retailer_season_summary.html", context)
