@@ -17,7 +17,7 @@ from shop.models import Order, OrderItem
 MILANESE_ADDRESS = {
     "billing": {
         "name": "",
-        "surname": "",
+        "surname": "MILANESE KOREA CO LTD",
         "email": "md@milanese.co.kr",
         "streetName": "JOJUNGDAE-RO",
         "streetNumber": "F1025, 45",
@@ -33,7 +33,7 @@ MILANESE_ADDRESS = {
     },
     "shipping": {
         "name": "",
-        "surname": "",
+        "surname": "MILANESE KOREA CO LTD",
         "email": "md@milanese.co.kr",
         "streetName": "JOJUNGDAE-RO",
         "streetNumber": "F1025, 45", 

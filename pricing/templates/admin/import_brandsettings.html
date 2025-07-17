@@ -2,13 +2,7 @@
 
 {% block content %}
   <div class="content">
-    <h1>엑셀 파일로 브랜드 정리 대량 등록</h1>
-
-    <p>
-      <strong>※ 엑셀 형식:</strong><br>
-      <code>업체코드</code> / <code>시즌</code> / <code>브랜드명</code> / <code>카테고리</code> / <code>마크업율</code>  
-      다섯 열로 구성된 .xlsx 파일이어야 합니다.
-    </p>
+    <h1>엑셀 파일로 브랜드 마크업 대량 등록</h1>
 
     <p>
       <a href="./example/" class="button default">⬇ 예제 파일 다운로드</a>
@@ -20,5 +14,111 @@
       <p><input type="file" name="excel_file" accept=".xlsx" required></p>
       <button type="submit" class="default">업로드</button>
     </form>
+
+    <p>
+      <strong>※ 엑셀 형식:</strong><br>
+      <code>거래처코드</code> / <code>브랜드명</code> / <code>시즌</code> / <code>우선순위</code> / <code>성별</code> / <code>카테고리</code> / <code>마크업</code>  
+      일곱 열로 구성된 .xlsx 파일이어야 합니다.
+    </p>
+
+    <div style="background-color: #f0f8ff; padding: 15px; margin: 10px 0; border-left: 4px solid #007cba;">
+      <h3>📋 컬럼 설명:</h3>
+      <ul>
+        <li><strong>거래처코드:</strong> IT-R-01, IT-G-03 등</li>
+        <li><strong>브랜드명:</strong> GUCCI, PRADA, 전체, ETC 등</li>
+        <li><strong>시즌:</strong> FW25,SS25 (쉼표로 여러 시즌 입력 가능)</li>
+        <li><strong>우선순위:</strong> 1(최우선), 2(일반), 3(폴백)</li>
+        <li><strong>성별:</strong> 남성, 여성, 키즈, 라이프, 전체 중 <span style="color: red;">하나만</span> 입력</li>
+        <li><strong>카테고리:</strong> 의류, 신발, 가방, 액세서리, 전체 중 <span style="color: red;">하나만</span> 입력</li>
+        <li><strong>마크업:</strong> 2.5, 1.8 등 숫자</li>
+      </ul>
+    </div>
+
+    <div style="background-color: #fff3cd; padding: 15px; margin: 10px 0; border-left: 4px solid #ffc107;">
+      <h3>🔄 스마트 업데이트 방식:</h3>
+      <p><strong>기본 그룹:</strong> 같은 <span style="color: #0066cc;">거래처+브랜드+시즌+우선순위</span>는 하나의 브랜드 설정으로 관리됩니다.</p>
+      <p><strong>개별 마크업:</strong> 각 <span style="color: #cc6600;">성별+카테고리</span> 조합마다 별도의 마크업이 적용됩니다.</p>
+      
+      <p><strong>📝 예시:</strong></p>
+      <table style="border-collapse: collapse; margin: 10px 0; width: 100%;">
+        <tr style="background-color: #f8f9fa;">
+          <th style="border: 1px solid #ddd; padding: 8px;">입력 예시</th>
+          <th style="border: 1px solid #ddd; padding: 8px;">결과</th>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #ddd; padding: 8px;">
+            IT-R-01 | GUCCI | FW25 | 1 | 남성 | 의류 | 2.5<br>
+            IT-R-01 | GUCCI | FW25 | 1 | 남성 | 가방 | 2.8<br>
+            IT-R-01 | GUCCI | FW25 | 1 | 여성 | 의류 | 2.3
+          </td>
+          <td style="border: 1px solid #ddd; padding: 8px;">
+            <strong>GUCCI FW25 1순위</strong> 브랜드 설정 1개 생성<br>
+            └ 남성-의류: 2.5<br>
+            └ 남성-가방: 2.8<br>
+            └ 여성-의류: 2.3
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="background-color: #e7f3ff; padding: 15px; margin: 10px 0; border-left: 4px solid #2196f3;">
+      <h3>⚡ 업데이트 규칙:</h3>
+      <ul>
+        <li><strong>✅ 안전한 업데이트:</strong> 엑셀에 포함된 성별+카테고리 조합만 수정됩니다</li>
+        <li><strong>🛡️ 기존 데이터 보호:</strong> 엑셀에 없는 기존 마크업은 그대로 유지됩니다</li>
+        <li><strong>🚫 중복 방지:</strong> 같은 브랜드 설정 내에서 성별+카테고리 중복은 불가능합니다</li>
+        <li><strong>🔄 완전 교체:</strong> 해당 조합의 기존 마크업을 삭제 후 새로 등록합니다</li>
+      </ul>
+      
+      <p><strong>📖 업데이트 예시:</strong></p>
+      <table style="border-collapse: collapse; margin: 10px 0; width: 100%;">
+        <tr style="background-color: #f1f8e9;">
+          <th style="border: 1px solid #4caf50; padding: 8px;">기존 DB</th>
+          <th style="border: 1px solid #4caf50; padding: 8px;">엑셀 입력</th>
+          <th style="border: 1px solid #4caf50; padding: 8px;">최종 결과</th>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #ddd; padding: 8px;">
+            GUCCI FW25:<br>
+            • 남성-의류: 2.5<br>
+            • 남성-가방: 2.8<br>
+            • 여성-신발: 3.0
+          </td>
+          <td style="border: 1px solid #ddd; padding: 8px;">
+            GUCCI FW25:<br>
+            • 남성-의류: 2.7<br>
+            • 남성-액세서리: 2.2
+          </td>
+          <td style="border: 1px solid #ddd; padding: 8px;">
+            GUCCI FW25:<br>
+            • 남성-의류: <span style="color: #ff9800;">2.7 (수정)</span><br>
+            • 남성-가방: <span style="color: #4caf50;">2.8 (유지)</span><br>
+            • 여성-신발: <span style="color: #4caf50;">3.0 (유지)</span><br>
+            • 남성-액세서리: <span style="color: #2196f3;">2.2 (신규)</span>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="background-color: #ffebee; padding: 15px; margin: 10px 0; border-left: 4px solid #f44336;">
+      <h3>⚠️ 주의사항:</h3>
+      <ul>
+        <li><strong>중복 금지:</strong> 같은 파일 내에서 동일한 거래처+브랜드+시즌+우선순위+성별+카테고리 조합은 불가능</li>
+        <li><strong>필수 입력:</strong> 거래처코드, 브랜드명, 성별, 카테고리, 마크업은 반드시 입력해야 함</li>
+        <li><strong>거래처 확인:</strong> 존재하지 않는 거래처코드는 처리되지 않음</li>
+        <li><strong>한 행 = 한 마크업:</strong> 각 행은 하나의 성별+카테고리 조합에 대한 마크업입니다</li>
+      </ul>
+    </div>
+
+
+    <div style="background-color: #e8f5e8; padding: 15px; margin: 10px 0; border-left: 4px solid #4caf50;">
+      <h3>📊 처리 결과 확인:</h3>
+      <p>업로드 후 다음 정보를 확인할 수 있습니다:</p>
+      <ul>
+        <li><strong>성공:</strong> 생성된 브랜드 설정 수, 수정된 브랜드 설정 수</li>
+        <li><strong>실패:</strong> 처리되지 않은 행 수 및 실패 원인</li>
+        <li><strong>상세 로그:</strong> 서버 콘솔에서 각 처리 단계별 상세 정보 확인 가능</li>
+      </ul>
+    </div>
   </div>
 {% endblock %}
