@@ -424,13 +424,14 @@ class BrandMarkupDetailAdmin(admin.ModelAdmin):
 
     # ✅ 저장 후 상품 마크업 업데이트 (수정된 부분)
     def save_model(self, request, obj, form, change):
+        self.message_user(request, "⏳ 가격 계산 시작... 잠시만 기다려주세요.", level=messages.INFO)
         super().save_model(request, obj, form, change)
         
         # ✅ 해당 거래처의 모든 상품 마크업 및 원화가 업데이트
         retailer_code = obj.brand_setting.retailer.code
         updated_count = update_products_by_retailer(retailer_code)
         
-        self.message_user(request, f"✅ {updated_count}개 상품의 마크업 및 원화가가 업데이트되었습니다.")
+        self.message_user(request, f"✅ {updated_count:,}개 상품의 원화가가 업데이트되었습니다.", level=messages.SUCCESS)
 
 
 # ✅ 거래처 관리자 (기존 코드 유지)
@@ -518,10 +519,11 @@ class FixedCountryAdmin(admin.ModelAdmin):
 
     # ✅ 수정된 부분: FTA 설정 변경 시 상품 가격 업데이트
     def save_model(self, request, obj, form, change):
+        self.message_user(request, "⏳ 가격 계산 시작... 잠시만 기다려주세요.", level=messages.INFO)
         super().save_model(request, obj, form, change)
-        
+
         updated_count = update_all_products_pricing()
-        self.message_user(request, f"{updated_count}개 상품의 원화가가 업데이트되었습니다.")
+        self.message_user(request, f"{updated_count}개 상품의 원화가가 업데이트되었습니다.", level=messages.SUCCESS)
     
     def save_formset(self, request, form, formset, change):
         """CountryAlias 인라인 저장 시에도 가격 업데이트"""
@@ -647,17 +649,19 @@ class GlobalPricingSettingAdmin(admin.ModelAdmin):
     
     # ✅ 수정된 부분: 환율/배송비/마진율 변경 시 상품 가격 업데이트
     def save_model(self, request, obj, form, change):
+        self.message_user(request, "⏳ 가격 계산 시작... 잠시만 기다려주세요.", level=messages.INFO)
         super().save_model(request, obj, form, change)
         
         updated_count = update_all_products_pricing()
-        self.message_user(request, f"{updated_count}개 상품의 원화가가 업데이트되었습니다.")
+        self.message_user(request, f"✅ {updated_count:,}개 상품의 원화가가 업데이트되었습니다.", level=messages.SUCCESS)
     
     def save_formset(self, request, form, formset, change):
+        self.message_user(request, "⏳ 가격 계산 시작... 잠시만 기다려주세요.", level=messages.INFO)
         """PriceFormulaRange 인라인 저장 시에도 가격 업데이트"""
         super().save_formset(request, form, formset, change)
         
         updated_count = update_all_products_pricing()
-        self.message_user(request, f"{updated_count}개 상품의 원화가가 업데이트되었습니다.")
+        self.message_user(request, f"✅ {updated_count:,}개 상품의 원화가가 업데이트되었습니다.", level=messages.SUCCESS)
 
 
 # ✅ 거래처 시즌 요약 관리자 (기존 코드 유지)
