@@ -1,4 +1,4 @@
-# pricing/admin.py - 기존 코드에 최소 수정만 적용
+# pricing/admin.py - 기존 코드에 최적화된 비동기 처리 적용
 
 from django.contrib import admin, messages
 from django.urls import path, reverse
@@ -23,8 +23,62 @@ from collections import defaultdict
 from django.template.response import TemplateResponse
 from shop.utils.markup_util import get_markup_from_product
 from shop.services.price_calculator import calculate_final_price
-# ✅ 새로 추가된 유일한 import
+
+# ✅ 비동기 처리를 위한 import 추가
+import threading
+from django.core.cache import cache
 from pricing.utils.price_update_utils import update_all_products_pricing, update_products_by_retailer
+from utils.bulk_update_logger import get_bulk_update_logger, log_progress
+
+
+# ✅ 최적화된 비동기 처리 유틸리티
+def run_async_price_update(request, update_func, success_message, cache_key='bulk_update_running'):
+    """
+    통합된 비동기 가격 업데이트 실행기
+    
+    Args:
+        request: Django request 객체
+        update_func: 실행할 업데이트 함수 (람다 또는 함수)
+        success_message: 성공 시 표시할 메시지
+        cache_key: 중복 실행 방지용 캐시 키
+    
+    Returns:
+        bool: 실행 성공 여부
+    """
+    # 중복 실행 체크
+    if cache.get(cache_key):
+        request._messages.add(
+            messages.WARNING,
+            "⚠️ 이미 가격 업데이트 작업이 진행 중입니다. 완료 후 다시 시도해주세요."
+        )
+        return False
+    
+    # 백그라운드 함수 정의
+    def background_task():
+        logger = get_bulk_update_logger()
+        try:
+            log_progress(logger, f"[비동기] 가격 업데이트 시작 - 사용자: {request.user.username}")
+            
+            # 실제 업데이트 실행
+            result = update_func()
+            
+            log_progress(logger, f"[비동기] 가격 업데이트 완료 - 결과: {result}")
+            
+        except Exception as e:
+            log_progress(logger, f"[비동기] 가격 업데이트 실패 - 오류: {str(e)}")
+            logger.error(f"[비동기 작업 에러] {str(e)}", exc_info=True)
+        finally:
+            cache.delete(cache_key)
+            log_progress(logger, "[비동기] 작업 종료, 캐시 플래그 해제")
+    
+    # 캐시 설정 및 스레드 시작
+    cache.set(cache_key, True, timeout=3600)  # 1시간 안전장치
+    thread = threading.Thread(target=background_task, daemon=True)
+    thread.start()
+    
+    # 즉시 메시지 표시
+    request._messages.add(messages.SUCCESS, success_message)
+    return True
 
 
 # ✅ BrandMarkupDetail Inline Admin (기존 코드 유지)
@@ -37,7 +91,7 @@ class BrandMarkupDetailInline(admin.TabularInline):
     verbose_name_plural = "성별/카테고리별 마크업 설정"
 
 
-# ✅ 새로운 구조에 맞는 BrandSetting Admin (기존 코드 + 최소 수정)
+# ✅ BrandSetting Admin (기존 코드 유지)
 @admin.register(BrandSetting)
 class BrandSettingAdmin(admin.ModelAdmin):
     list_display = [
@@ -65,7 +119,6 @@ class BrandSettingAdmin(admin.ModelAdmin):
         })
     ]
     
-    # ✅ 엑셀 업로드/다운로드 URL 추가 (기존 코드 유지)
     change_list_template = "admin/brandsetting_change_list.html"
     
     def get_urls(self):
@@ -87,7 +140,7 @@ class BrandSettingAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
     
     def save_formset(self, request, form, formset, change):
-        """Inline 저장 시 생성자/수정자 기록"""
+        """Inline 저장 시 생성자/수정자 기록 및 비동기 가격 업데이트"""
         instances = formset.save(commit=False)
         for obj in formset.deleted_objects:
             obj.delete()
@@ -95,11 +148,15 @@ class BrandSettingAdmin(admin.ModelAdmin):
             instance.save()
         formset.save_m2m()
         
-        # ✅ 유일한 수정사항: 인라인 저장 후 해당 거래처의 상품 업데이트
+        # ✅ 비동기 가격 업데이트 (최적화된 버전)
         if hasattr(form, 'instance') and form.instance:
             retailer_code = form.instance.retailer.code
-            updated_count = update_products_by_retailer(retailer_code)
-            self.message_user(request, f"{updated_count}개 상품의 마크업 및 원화가가 업데이트되었습니다.")
+            
+            run_async_price_update(
+                request,
+                lambda: update_products_by_retailer(retailer_code, request.user),
+                f"✅ 마크업 설정이 저장되었습니다. 🚀 {retailer_code} 거래처 상품 가격 업데이트가 백그라운드에서 시작되었습니다."
+            )
     
     # ✅ 커스텀 표시 메서드들 (기존 코드 유지)
     def season_display(self, obj):
@@ -125,7 +182,6 @@ class BrandSettingAdmin(admin.ModelAdmin):
         return format_html('<span style="color: blue;">{}</span>', summary)
     markup_summary.short_description = "마크업 요약"
     
-    # ✅ 엑셀 관련 메서드들 (기존 코드 유지)
     def changelist_view(self, request, extra_context=None):
         if extra_context is None:
             extra_context = {}
@@ -137,7 +193,7 @@ class BrandSettingAdmin(admin.ModelAdmin):
         return super().changelist_view(request, extra_context=extra_context)
     
     def download_example(self, request):
-        """엑셀 샘플 파일 다운로드"""
+        """엑셀 샘플 파일 다운로드 (기존 코드 유지)"""
         df = pd.DataFrame({
             "거래처코드": ["IT-R-01", "IT-R-01", "IT-R-01", "IT-R-01", "IT-R-01"],
             "브랜드명": ["GUCCI", "GUCCI", "GUCCI", "PRADA", "ETC"],
@@ -161,7 +217,7 @@ class BrandSettingAdmin(admin.ModelAdmin):
         return response
     
     def export_all_excel(self, request):
-        """전체 데이터 엑셀 다운로드"""
+        """전체 데이터 엑셀 다운로드 (기존 코드 유지)"""
         data = []
         
         for brand_setting in BrandSetting.objects.all().prefetch_related('markups'):
@@ -194,9 +250,8 @@ class BrandSettingAdmin(admin.ModelAdmin):
         return response
     
     def import_excel(self, request):
-        """엑셀 파일 대량 업로드 - 스마트 업데이트 방식"""
+        """엑셀 파일 대량 업로드 - 기존 로직 + 비동기 업데이트"""
         if request.method == "POST" and request.FILES.get("excel_file"):
-            # ✅ 로거 설정 (기존 코드 유지)
             logger = logging.getLogger('brandsetting_import')
             import_start_time = timezone.now()
             upload_filename = request.FILES["excel_file"].name
@@ -208,13 +263,12 @@ class BrandSettingAdmin(admin.ModelAdmin):
                 created_settings, updated_settings, skipped = 0, 0, 0
                 failed_rows = []
                 
-                # ✅ 1단계: 데이터를 BrandSetting별로 그룹핑 (기존 코드 유지)
+                # ✅ 기존 데이터 처리 로직 (동일)
                 grouped_data = {}
                 affected_retailers = set()
                 
                 for idx, row in df.iterrows():
                     try:
-                        # 필수 필드 검증
                         retailer_code = str(row.get("거래처코드", "")).strip()
                         brand_name = str(row.get("브랜드명", "")).strip()
                         seasons = str(row.get("시즌", "")).strip()
@@ -234,7 +288,6 @@ class BrandSettingAdmin(admin.ModelAdmin):
                             skipped += 1
                             continue
                         
-                        # 거래처 존재 확인
                         try:
                             retailer = Retailer.objects.get(code=retailer_code)
                             affected_retailers.add(retailer_code)
@@ -249,7 +302,6 @@ class BrandSettingAdmin(admin.ModelAdmin):
                             skipped += 1
                             continue
                         
-                        # BrandSetting 그룹핑 키 생성
                         setting_key = (retailer_code, brand_name, seasons, int(priority))
                         
                         if setting_key not in grouped_data:
@@ -258,15 +310,13 @@ class BrandSettingAdmin(admin.ModelAdmin):
                                 'brand_name': brand_name,
                                 'seasons': seasons,
                                 'priority': int(priority),
-                                'markups': [],  # [(성별, 카테고리, 마크업), ...]
-                                'excel_combinations': set(),  # 엑셀에 포함된 성별+카테고리 조합
+                                'markups': [],
+                                'excel_combinations': set(),
                                 'row_numbers': []
                             }
                         
-                        # 마크업 조합 추가
                         markup_combination = (gender, category)
                         
-                        # 중복 체크 (같은 BrandSetting 내에서 성별+카테고리 중복 방지)
                         if markup_combination in grouped_data[setting_key]['excel_combinations']:
                             error_msg = f"중복된 성별+카테고리 조합: {gender}-{category}"
                             failed_rows.append({
@@ -293,10 +343,9 @@ class BrandSettingAdmin(admin.ModelAdmin):
                         skipped += 1
                         continue
                 
-                # ✅ 2단계: 그룹핑된 데이터로 DB에 저장 (기존 코드 유지)
+                # ✅ 기존 DB 저장 로직 (동일)
                 for setting_key, data in grouped_data.items():
                     try:
-                        # BrandSetting 생성/업데이트
                         brand_setting, created_flag = BrandSetting.objects.update_or_create(
                             retailer=data['retailer'],
                             brand_name=data['brand_name'],
@@ -317,7 +366,6 @@ class BrandSettingAdmin(admin.ModelAdmin):
                             updated_settings += 1
                             logger.info(f"✏️ BrandSetting 수정: {data['brand_name']} | {data['seasons']} | 행: {data['row_numbers']}")
                         
-                        # ✅ 3단계: 엑셀에 포함된 성별+카테고리 조합만 삭제
                         deleted_count = 0
                         for gender, category, markup in data['markups']:
                             deleted, _ = BrandMarkupDetail.objects.filter(
@@ -329,7 +377,6 @@ class BrandSettingAdmin(admin.ModelAdmin):
                         
                         logger.info(f"   🗑️ 기존 마크업 삭제: {deleted_count}개")
                         
-                        # ✅ 4단계: 새로운 마크업들 생성
                         created_markups = []
                         for gender, category, markup in data['markups']:
                             markup_detail = BrandMarkupDetail.objects.create(
@@ -354,29 +401,28 @@ class BrandSettingAdmin(admin.ModelAdmin):
                         skipped += 1
                         continue
                 
-                # ✅ 5단계: 영향받은 거래처들의 상품 가격 업데이트 (수정된 부분)
-                total_updated = 0
-                for retailer_code in affected_retailers:
-                    updated_count = update_products_by_retailer(retailer_code)
-                    total_updated += updated_count
-                
-                # ✅ 6단계: 결과 메시지 및 로그 기록 (기존 코드 유지)
+                # ✅ 비동기 가격 업데이트 (최적화된 버전)
                 success_msg = f"✅ 브랜드설정 생성: {created_settings}개, ✏️ 수정: {updated_settings}개, ⏭️ 건너뜀: {skipped}개"
                 
-                if total_updated > 0:
-                    success_msg += f" | 🔄 상품 가격 업데이트: {total_updated:,}개"
+                if affected_retailers:
+                    # 각 거래처별로 비동기 업데이트
+                    for retailer_code in affected_retailers:
+                        run_async_price_update(
+                            request,
+                            lambda rc=retailer_code: update_products_by_retailer(rc, request.user),
+                            f"{success_msg} | 🚀 {len(affected_retailers)}개 거래처 상품 가격 업데이트가 백그라운드에서 시작되었습니다.",
+                            cache_key=f'bulk_update_running_{retailer_code}'
+                        )
                 
-                # ✅ 최종 결과 로그 기록
+                # ✅ 최종 결과 로그 기록 (기존과 동일)
                 total_processed = len(df)
                 processing_time = (timezone.now() - import_start_time).total_seconds()
                 
-                logger.info(f"[브랜드설정 엑셀 업로드 완료] 총 처리: {total_processed}행 | 생성: {created_settings}개 | 수정: {updated_settings}개 | 실패: {skipped}개 | 상품 업데이트: {total_updated}개 | 처리시간: {processing_time:.2f}초")
+                logger.info(f"[브랜드설정 엑셀 업로드 완료] 총 처리: {total_processed}행 | 생성: {created_settings}개 | 수정: {updated_settings}개 | 실패: {skipped}개 | 처리시간: {processing_time:.2f}초")
                 
                 if failed_rows:
-                    # ✅ 실패 요약 로그
                     logger.warning(f"[실패 요약] 총 {len(failed_rows)}개 행 실패")
                     
-                    # 콘솔에도 출력 (기존 기능 유지)
                     print("\n" + "="*50)
                     print("❌ 실패한 행들:")
                     print("="*50)
@@ -386,7 +432,6 @@ class BrandSettingAdmin(admin.ModelAdmin):
                             print(f"   데이터: {fail['data']}")
                         print("-"*30)
                     
-                    # 사용자에게도 알림
                     self.message_user(
                         request, 
                         f"{success_msg} | ❌ 실패: {len(failed_rows)}개 (로그 파일 확인)",
@@ -410,28 +455,27 @@ class BrandSettingAdmin(admin.ModelAdmin):
         return render(request, "admin/import_brandsettings.html")
 
 
-# ✅ BrandMarkupDetail 독립 Admin (수정된 부분)
+# ✅ BrandMarkupDetail 독립 Admin (비동기 처리 적용)
 @admin.register(BrandMarkupDetail)
 class BrandMarkupDetailAdmin(admin.ModelAdmin):
     list_display = ['brand_setting', 'gender', 'category', 'markup', 'is_active', 'created_at']
     list_filter = ['gender', 'category', 'is_active', 'brand_setting__retailer']
     search_fields = ['brand_setting__brand_name', 'brand_setting__retailer__name']
     
-    # ✅ 최적화된 쿼리 사용 (기존 코드 유지)
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
         return queryset.select_related('brand_setting', 'brand_setting__retailer')
 
-    # ✅ 저장 후 상품 마크업 업데이트 (수정된 부분)
     def save_model(self, request, obj, form, change):
-        self.message_user(request, "⏳ 가격 계산 시작... 잠시만 기다려주세요.", level=messages.INFO)
+        """저장 후 비동기 상품 마크업 업데이트"""
         super().save_model(request, obj, form, change)
         
-        # ✅ 해당 거래처의 모든 상품 마크업 및 원화가 업데이트
         retailer_code = obj.brand_setting.retailer.code
-        updated_count = update_products_by_retailer(retailer_code)
-        
-        self.message_user(request, f"✅ {updated_count:,}개 상품의 원화가가 업데이트되었습니다.", level=messages.SUCCESS)
+        run_async_price_update(
+            request,
+            lambda: update_products_by_retailer(retailer_code, request.user),
+            f"✅ 마크업이 저장되었습니다. 🚀 {retailer_code} 거래처 상품 가격 업데이트가 백그라운드에서 시작되었습니다."
+        )
 
 
 # ✅ 거래처 관리자 (기존 코드 유지)
@@ -499,7 +543,7 @@ class RetailerAdmin(admin.ModelAdmin):
         return redirect("..")
 
 
-# ✅ FTA 관련 관리자들 (기존 코드 + 최소 수정)
+# ✅ FTA 관련 관리자들 (비동기 처리 적용)
 class CountryAliasInline(admin.TabularInline):
     model = CountryAlias
     extra = 1
@@ -517,20 +561,25 @@ class FixedCountryAdmin(admin.ModelAdmin):
     inlines = [CountryAliasInline]
     change_list_template = "admin/fixedcountry_change_list.html"
 
-    # ✅ 수정된 부분: FTA 설정 변경 시 상품 가격 업데이트
     def save_model(self, request, obj, form, change):
-        self.message_user(request, "⏳ 가격 계산 시작... 잠시만 기다려주세요.", level=messages.INFO)
+        """FTA 설정 변경 시 비동기 상품 가격 업데이트"""
         super().save_model(request, obj, form, change)
 
-        updated_count = update_all_products_pricing()
-        self.message_user(request, f"{updated_count}개 상품의 원화가가 업데이트되었습니다.", level=messages.SUCCESS)
+        run_async_price_update(
+            request,
+            lambda: update_all_products_pricing(request.user, f"FTA설정변경({obj.name})"),
+            f"✅ {obj.name}의 FTA 설정이 저장되었습니다. 🚀 전체 상품 가격 업데이트가 백그라운드에서 시작되었습니다."
+        )
     
     def save_formset(self, request, form, formset, change):
-        """CountryAlias 인라인 저장 시에도 가격 업데이트"""
+        """CountryAlias 인라인 저장 시 비동기 처리"""
         super().save_formset(request, form, formset, change)
         
-        updated_count = update_all_products_pricing()
-        self.message_user(request, f"{updated_count}개 상품의 원화가가 업데이트되었습니다.")
+        run_async_price_update(
+            request,
+            lambda: update_all_products_pricing(request.user, "국가별칭변경"),
+            "✅ 국가별칭이 저장되었습니다. 🚀 전체 상품 가격 업데이트가 백그라운드에서 시작되었습니다."
+        )
 
     def get_urls(self):
         urls = super().get_urls()
@@ -548,6 +597,7 @@ class FixedCountryAdmin(admin.ModelAdmin):
         return super().changelist_view(request, extra_context=extra_context)
    
     def import_excel(self, request):
+        """엑셀 업로드 후 비동기 가격 업데이트"""
         context = {}
         if request.method == "POST" and request.FILES.get("excel_file"):
             df = pd.read_excel(request.FILES["excel_file"])
@@ -574,10 +624,12 @@ class FixedCountryAdmin(admin.ModelAdmin):
                 else:
                     skipped += 1
 
-            # ✅ 수정된 부분: 엑셀 업로드 후 상품 가격 업데이트
-            updated_count = update_all_products_pricing()
-            
-            self.message_user(request, f"✅ 등록됨: {created}개, ⏭ 건너뜀: {skipped}개 | 상품 가격 업데이트: {updated_count}개")
+            # ✅ 비동기 가격 업데이트
+            run_async_price_update(
+                request,
+                lambda: update_all_products_pricing(request.user, "FTA엑셀업로드"),
+                f"✅ FTA 설정 등록됨: {created}개, ⏭ 건너뜀: {skipped}개 | 🚀 전체 상품 가격 업데이트가 백그라운드에서 시작되었습니다."
+            )
             return redirect("..")
 
         return render(request, "admin/import_fixedcountry.html", {
@@ -586,6 +638,7 @@ class FixedCountryAdmin(admin.ModelAdmin):
         })
 
     def download_example(self, request):
+        """엑셀 샘플 파일 다운로드"""
         df = pd.DataFrame({
             "표준국가명": ["이탈리아", "미국"],
             "FTA적용": ["TRUE", "FALSE"],
@@ -600,6 +653,7 @@ class FixedCountryAdmin(admin.ModelAdmin):
         return response
  
     def export_all_excel(self, request):
+        """전체 데이터 엑셀 다운로드"""
         data = []
         for country in FixedCountry.objects.all().order_by('name'):
             alias_list = country.countryalias_set.all().values_list("origin_name", flat=True)
@@ -630,12 +684,13 @@ class FixedCountryAdmin(admin.ModelAdmin):
         return response
 
     def alias_list(self, obj):
+        """원본 국가명 목록 표시"""
         aliases = obj.countryalias_set.all().values_list('origin_name', flat=True)
         return ", ".join(aliases) if aliases else "-"
     alias_list.short_description = "원본 국가명"
 
 
-# ✅ 표준계산식 관리자 (기존 코드 + 최소 수정)
+# ✅ 표준계산식 관리자 (비동기 처리 적용)
 class PriceFormulaRangeInline(admin.TabularInline):
     model = PriceFormulaRange
     extra = 1
@@ -647,21 +702,25 @@ class GlobalPricingSettingAdmin(admin.ModelAdmin):
     )
     inlines = [PriceFormulaRangeInline]
     
-    # ✅ 수정된 부분: 환율/배송비/마진율 변경 시 상품 가격 업데이트
     def save_model(self, request, obj, form, change):
-        self.message_user(request, "⏳ 가격 계산 시작... 잠시만 기다려주세요.", level=messages.INFO)
+        """환율/배송비/마진율 변경 시 비동기 상품 가격 업데이트"""
         super().save_model(request, obj, form, change)
         
-        updated_count = update_all_products_pricing()
-        self.message_user(request, f"✅ {updated_count:,}개 상품의 원화가가 업데이트되었습니다.", level=messages.SUCCESS)
+        run_async_price_update(
+            request,
+            lambda: update_all_products_pricing(request.user, "전체상품업데이트(비동기)"),
+            "✅ 설정이 저장되었습니다. 🚀 전체 상품 가격 업데이트가 백그라운드에서 시작되었습니다. (완료까지 약 5분 소요)"
+        )
     
     def save_formset(self, request, form, formset, change):
-        self.message_user(request, "⏳ 가격 계산 시작... 잠시만 기다려주세요.", level=messages.INFO)
-        """PriceFormulaRange 인라인 저장 시에도 가격 업데이트"""
+        """PriceFormulaRange 인라인 저장 시 비동기 처리"""
         super().save_formset(request, form, formset, change)
         
-        updated_count = update_all_products_pricing()
-        self.message_user(request, f"✅ {updated_count:,}개 상품의 원화가가 업데이트되었습니다.", level=messages.SUCCESS)
+        run_async_price_update(
+            request,
+            lambda: update_all_products_pricing(request.user, "전체상품업데이트(가격구간변경)"),
+            "✅ 가격 구간 설정이 저장되었습니다. 🚀 전체 상품 가격 업데이트가 백그라운드에서 시작되었습니다."
+        )
 
 
 # ✅ 거래처 시즌 요약 관리자 (기존 코드 유지)
@@ -687,3 +746,16 @@ class RetailerSeasonSummaryAdmin(admin.ModelAdmin):
             "summary_list": summary
         }
         return TemplateResponse(request, "admin/retailer_season_summary.html", context)
+
+
+# ✅ 작업 상태 확인 유틸리티 함수들
+def is_bulk_update_running(cache_key='bulk_update_running'):
+    """현재 가격 업데이트 작업이 실행 중인지 확인"""
+    return cache.get(cache_key, False)
+
+def get_bulk_update_status():
+    """가격 업데이트 작업 상태 반환"""
+    return {
+        'is_running': cache.get('bulk_update_running', False),
+        'cache_key': 'bulk_update_running'
+    }
