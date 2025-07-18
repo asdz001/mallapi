@@ -82,32 +82,70 @@ def update_all_products_pricing(user=None, label="전체상품업데이트"):
         
         log_progress(logger, f"계산 완료 - 총 {len(all_updates):,}개 상품 변경 필요")
         
-        # 3단계: 한번에 저장
+        # 3단계: 나누어서 저장 (서버 과부하 방지)
         if all_updates:
             log_progress(logger, "벌크 저장 시작...")
             
-            # Product 객체들 한번에 조회
-            product_ids = [update['id'] for update in all_updates]
-            product_objects = {p.id: p for p in Product.objects.filter(id__in=product_ids)}
+            # 저장용 배치 크기 (작게!)
+            save_batch_size = 500
+            total_saved = 0
+            save_batch_count = (len(all_updates) + save_batch_size - 1) // save_batch_size
             
-            # 업데이트할 객체들 준비
-            bulk_updates = []
-            for update in all_updates:
-                if update['id'] in product_objects:
-                    product_obj = product_objects[update['id']]
-                    product_obj.markup = update['markup']
-                    product_obj.calculated_price_krw = update['calculated_price_krw']
-                    bulk_updates.append(product_obj)
+            log_progress(logger, f"{save_batch_count}개 저장 배치로 나누어 처리")
             
-            # 한번에 저장
-            with transaction.atomic():
-                Product.objects.bulk_update(
-                    bulk_updates, 
-                    ['markup', 'calculated_price_krw'],
-                    batch_size=1000
-                )
+            for save_idx in range(0, len(all_updates), save_batch_size):
+                save_batch_num = save_idx // save_batch_size + 1
+                save_end = min(save_idx + save_batch_size, len(all_updates))
+                
+                log_progress(logger, f"저장 배치 {save_batch_num}/{save_batch_count} 처리 중... ({save_idx:,} ~ {save_end:,})")
+                
+                # 배치별로 Product 객체 조회
+                batch_updates = all_updates[save_idx:save_end]
+                product_ids = [update['id'] for update in batch_updates]
+                product_objects = {p.id: p for p in Product.objects.filter(id__in=product_ids)}
+                
+                # 업데이트할 객체들 준비
+                bulk_updates = []
+                for update in batch_updates:
+                    if update['id'] in product_objects:
+                        product_obj = product_objects[update['id']]
+                        product_obj.markup = update['markup']
+                        product_obj.calculated_price_krw = update['calculated_price_krw']
+                        bulk_updates.append(product_obj)
+                
+                # 작은 배치로 저장
+                if bulk_updates:
+                    try:
+                        with transaction.atomic():
+                            Product.objects.bulk_update(
+                                bulk_updates, 
+                                ['markup', 'calculated_price_krw'],
+                                batch_size=100  # 더 작게
+                            )
+                        
+                        total_saved += len(bulk_updates)
+                        log_progress(logger, f"저장 배치 {save_batch_num}: {len(bulk_updates)}개 저장 완료")
+                        
+                    except Exception as save_error:
+                        log_progress(logger, f"저장 배치 {save_batch_num} 실패: {str(save_error)}")
+                        # 개별 저장으로 복구
+                        for update in batch_updates:
+                            try:
+                                Product.objects.filter(id=update['id']).update(
+                                    markup=update['markup'],
+                                    calculated_price_krw=update['calculated_price_krw']
+                                )
+                                total_saved += 1
+                            except:
+                                continue
+                        log_progress(logger, f"저장 배치 {save_batch_num}: 개별 저장으로 복구 완료")
+                
+                # 서버 부하 감소
+                if save_batch_num % 5 == 0:
+                    import time
+                    time.sleep(0.1)
             
-            log_progress(logger, f"벌크 저장 완료 - {len(bulk_updates):,}개 상품 업데이트")
+            log_progress(logger, f"벌크 저장 완료 - {total_saved:,}개 상품 업데이트")
         else:
             log_progress(logger, "변경할 상품이 없습니다")
         
