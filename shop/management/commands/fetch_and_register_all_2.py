@@ -11,7 +11,9 @@ class Command(BaseCommand):
         commands = [
             "fetch_and_register_nugnes",
             "fetch_and_register_leam",
+            "fetch_and_register_thedoublef",
             "fetch_and_register_eleonorabonucci",
+            
 
         ]
 

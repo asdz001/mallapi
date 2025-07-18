@@ -1,149 +1,171 @@
-# pricing/utils/optimized_price_update_utils.py - 진짜 버전 1 방식 복구
+# pricing/utils/optimized_price_update_utils.py - 로거 분리 적용
 
 from shop.models import Product
 from pricing.models import BrandSetting, GlobalPricingSetting, FixedCountry, Retailer, CountryAlias, PriceFormulaRange
 from django.db import transaction
 from decimal import Decimal, ROUND_CEILING
+from datetime import datetime
 
-def update_all_products_pricing():
-    """🚀 진짜 버전 1 방식: values() + 딕셔너리 계산 + 빠른 속도"""
-    print("🚀 최적화된 전체 상품 가격 업데이트 시작...")
+# ✅ 분리된 로거 import
+from utils.bulk_update_logger import (
+    get_bulk_update_logger, 
+    log_start_session, 
+    log_end_session, 
+    log_error_session, 
+    log_progress
+)
+
+def update_all_products_pricing(user=None, label="전체상품업데이트"):
+    """🚀 최적화된 방식: 한번에 불러오기 → 나눠서 계산 → 한번에 저장"""
+    # ✅ 분리된 로거 사용
+    logger = get_bulk_update_logger()
+    start_time = datetime.now()
     
-    # 1단계: 필요한 필드만 딕셔너리로 가져오기 (버전 1 방식)
-    print("📊 필요한 데이터 일괄 로딩...")
-    products = list(Product.objects.values(
-        'id', 'retailer', 'raw_brand_name', 'gender', 
-        'category1', 'category2', 'origin', 'price_org',
-        'markup', 'calculated_price_krw', 'season'
-    ))
+    # 시작 로그
+    log_start_session(logger, user, label)
     
-    # 캐시 데이터 로드 (한번만)
-    markup_cache = _load_markup_cache_exact()
-    price_cache = _load_price_cache_exact()
-    
-    print(f"📊 로딩 완료 - 상품: {len(products):,}개")
-    
-    # 2단계: 딕셔너리 기반 빠른 계산 (버전 1 방식)
-    print("🧮 벌크 계산 시작...")
-    updates = []
-    
-    for product_dict in products:
-        # 딕셔너리 데이터로 계산 (빠름!)
-        new_markup = _get_markup_bulk_dict(product_dict, markup_cache) or 1.0
-        new_price = _calculate_price_bulk_dict(product_dict, new_markup, price_cache) or 0
+    try:
+        # 1단계: 한번에 모든 상품 불러오기
+        log_progress(logger, "전체 상품 데이터 로딩 중...")
+        all_products = list(Product.objects.values(
+            'id', 'retailer', 'raw_brand_name', 'gender', 
+            'category1', 'category2', 'origin', 'price_org',
+            'markup', 'calculated_price_krw', 'season'
+        ))
         
-        # 변경 감지
-        current_markup = product_dict['markup'] or 0
-        current_price = float(product_dict['calculated_price_krw'] or 0)
+        total_count = len(all_products)
+        log_progress(logger, f"총 {total_count:,}개 상품 로딩 완료")
         
-        markup_changed = abs(current_markup - new_markup) > 0.001
-        price_changed = abs(current_price - new_price) > 0.5
+        # 캐시 데이터 로드
+        log_progress(logger, "설정 데이터 캐시 중...")
+        markup_cache = _load_markup_cache()
+        price_cache = _load_price_cache()
+        log_progress(logger, "캐시 완료")
         
-        if markup_changed or price_changed:
-            updates.append({
-                'id': product_dict['id'],
-                'markup': new_markup,
-                'calculated_price_krw': new_price
-            })
-    
-    print(f"🔄 계산 완료 - {len(updates):,}개 상품 변경 감지")
-    
-    # 3단계: 한번에 저장 (버전 1 방식)
-    if updates:
-        print("💾 벌크 저장 시작...")
+        # 2단계: 나눠서 계산 (메모리 절약)
+        log_progress(logger, "가격 계산 시작...")
+        batch_size = 1000  # 계산용 배치
+        all_updates = []
         
-        # Product 객체들을 id로 한번에 조회
-        product_ids = [update['id'] for update in updates]
-        product_objects = {
-            p.id: p for p in Product.objects.filter(id__in=product_ids)
-        }
+        batch_count = (total_count + batch_size - 1) // batch_size
+        log_progress(logger, f"{batch_count}개 배치로 나누어 계산")
         
-        # 업데이트할 객체들 준비
-        bulk_updates = []
-        for update in updates:
-            product_obj = product_objects[update['id']]
-            product_obj.markup = update['markup']
-            product_obj.calculated_price_krw = update['calculated_price_krw']
-            bulk_updates.append(product_obj)
+        for batch_idx in range(0, total_count, batch_size):
+            batch_num = batch_idx // batch_size + 1
+            batch_end = min(batch_idx + batch_size, total_count)
+            
+            log_progress(logger, f"배치 {batch_num}/{batch_count} 계산 중... ({batch_idx:,} ~ {batch_end:,})")
+            
+            batch_products = all_products[batch_idx:batch_end]
+            batch_updates = []
+            
+            for product_dict in batch_products:
+                try:
+                    new_markup = _get_markup_bulk_dict(product_dict, markup_cache) or 1.0
+                    new_price = _calculate_price_bulk_dict(product_dict, new_markup, price_cache) or 0
+                    
+                    current_markup = product_dict['markup'] or 0
+                    current_price = float(product_dict['calculated_price_krw'] or 0)
+                    
+                    if (abs(current_markup - new_markup) > 0.001 or 
+                        abs(current_price - new_price) > 0.5):
+                        batch_updates.append({
+                            'id': product_dict['id'],
+                            'markup': new_markup,
+                            'calculated_price_krw': new_price
+                        })
+                except:
+                    continue
+            
+            all_updates.extend(batch_updates)
+            log_progress(logger, f"배치 {batch_num}: {len(batch_updates)}개 변경 감지")
         
-        # 한번에 업데이트
-        with transaction.atomic():
-            Product.objects.bulk_update(
-                bulk_updates, 
-                ['markup', 'calculated_price_krw'],
-                batch_size=1000
-            )
+        log_progress(logger, f"계산 완료 - 총 {len(all_updates):,}개 상품 변경 필요")
         
-        print(f"✅ 벌크 저장 완료 - {len(updates):,}개 상품 업데이트")
-    else:
-        print("📋 업데이트할 상품이 없습니다")
-    
-    return len(updates)
+        # 3단계: 한번에 저장
+        if all_updates:
+            log_progress(logger, "벌크 저장 시작...")
+            
+            # Product 객체들 한번에 조회
+            product_ids = [update['id'] for update in all_updates]
+            product_objects = {p.id: p for p in Product.objects.filter(id__in=product_ids)}
+            
+            # 업데이트할 객체들 준비
+            bulk_updates = []
+            for update in all_updates:
+                if update['id'] in product_objects:
+                    product_obj = product_objects[update['id']]
+                    product_obj.markup = update['markup']
+                    product_obj.calculated_price_krw = update['calculated_price_krw']
+                    bulk_updates.append(product_obj)
+            
+            # 한번에 저장
+            with transaction.atomic():
+                Product.objects.bulk_update(
+                    bulk_updates, 
+                    ['markup', 'calculated_price_krw'],
+                    batch_size=1000
+                )
+            
+            log_progress(logger, f"벌크 저장 완료 - {len(bulk_updates):,}개 상품 업데이트")
+        else:
+            log_progress(logger, "변경할 상품이 없습니다")
+        
+        # 성공 완료 로그
+        end_time = datetime.now()
+        total_time = (end_time - start_time).total_seconds()
+        log_end_session(logger, len(all_updates), total_time, success=True)
+        
+        return len(all_updates)
+        
+    except Exception as e:
+        # 실패 로그
+        end_time = datetime.now()
+        total_time = (end_time - start_time).total_seconds()
+        log_error_session(logger, str(e), total_time)
+        return 0
 
 
-def _load_markup_cache_exact():
-    """마크업 캐시 로드 (기존 함수 로직 반영)"""
-    cache = {
-        'retailers': {},
-        'brand_settings': {}
-    }
+def _load_markup_cache():
+    """마크업 캐시"""
+    cache = {'retailers': {}, 'brand_settings': {}}
     
-    # Retailer 캐시
     for retailer in Retailer.objects.all():
         cache['retailers'][retailer.code] = retailer
     
-    # BrandSetting + BrandMarkupDetail 캐시
-    brand_settings = BrandSetting.objects.filter(is_active=True).order_by('priority', 'id')
-    
-    for setting in brand_settings:
+    for setting in BrandSetting.objects.filter(is_active=True).order_by('priority', 'id'):
         retailer_code = setting.retailer.code
         if retailer_code not in cache['brand_settings']:
             cache['brand_settings'][retailer_code] = []
         
-        cache['brand_settings'][retailer_code].append({
+        setting_data = {
             'id': setting.id,
             'brand_name': setting.brand_name,
             'seasons': setting.seasons,
             'priority': setting.priority,
             'markups': []
-        })
-    
-    # BrandMarkupDetail 캐시
-    for setting in brand_settings:
-        retailer_code = setting.retailer.code
-        setting_data = None
+        }
         
-        for bs in cache['brand_settings'][retailer_code]:
-            if bs['id'] == setting.id:
-                setting_data = bs
-                break
+        for markup in setting.markups.filter(is_active=True):
+            setting_data['markups'].append({
+                'gender': markup.gender,
+                'category': markup.category,
+                'markup': markup.markup,
+                'is_active': markup.is_active
+            })
         
-        if setting_data:
-            for markup in setting.markups.filter(is_active=True):
-                setting_data['markups'].append({
-                    'gender': markup.gender,
-                    'category': markup.category,
-                    'markup': markup.markup,
-                    'is_active': markup.is_active
-                })
+        cache['brand_settings'][retailer_code].append(setting_data)
     
     return cache
 
 
-def _load_price_cache_exact():
-    """가격 계산 캐시 로드 (기존 함수 로직 반영)"""
-    cache = {
-        'retailers': {},
-        'global_setting': None,
-        'country_aliases': {},
-        'price_formula_ranges': []
-    }
+def _load_price_cache():
+    """가격 계산 캐시"""
+    cache = {'retailers': {}, 'global_setting': None, 'country_aliases': {}, 'price_formula_ranges': []}
     
-    # Retailer 캐시
     for retailer in Retailer.objects.all():
         cache['retailers'][retailer.code] = retailer
     
-    # GlobalPricingSetting 캐시
     try:
         global_setting = GlobalPricingSetting.objects.first()
         if global_setting:
@@ -159,21 +181,18 @@ def _load_price_cache_exact():
     
     if not cache['global_setting']:
         cache['global_setting'] = {
-            'exchange_rate': Decimal("1600"),
-            'shipping_fee': Decimal("1.50"),
+            'exchange_rate': Decimal("1300"),
+            'shipping_fee': Decimal("1.10"),
             'vat': Decimal("1.10"),
             'margin': Decimal("1.20"),
             'special_tax_rate': Decimal("0.20")
         }
     
-    # CountryAlias 캐시
     for alias in CountryAlias.objects.select_related("standard_country").all():
         cache['country_aliases'][alias.origin_name] = {
-            'standard_country_name': alias.standard_country.name,
             'fta_applicable': alias.standard_country.fta_applicable
         }
     
-    # PriceFormulaRange 캐시
     for range_obj in PriceFormulaRange.objects.all():
         cache['price_formula_ranges'].append({
             'min_price': range_obj.min_price,
@@ -185,116 +204,35 @@ def _load_price_cache_exact():
 
 
 def _get_markup_bulk_dict(product_dict, markup_cache):
-    """딕셔너리 기반 마크업 계산 (버전 1 방식 + 기존 함수 로직)"""
+    """마크업 계산"""
     retailer_code = product_dict['retailer']
     product_brand = product_dict['raw_brand_name']
     product_gender = product_dict['gender'] or '전체'
     product_category = product_dict['category1'] or '전체'
     product_season = product_dict['season'] or '전체'
     
-    # 거래처 확인
-    if retailer_code not in markup_cache['retailers']:
+    if retailer_code not in markup_cache['retailers'] or not product_brand:
         return None
     
-    # 필수값 검증
-    if not product_brand:
-        return None
-    
-    # 성별 또는 카테고리가 빈칸이면 특별 처리
-    if not product_dict['gender'] or not product_dict['category1']:
-        markup = _get_fallback_markup_dict(retailer_code, markup_cache)
-        if markup is not None:
-            return markup
-    
-    # 브랜드 설정 조회
     if retailer_code not in markup_cache['brand_settings']:
         return None
     
-    brand_settings = markup_cache['brand_settings'][retailer_code]
-    
-    if not brand_settings:
-        return None
-    
-    # 우선순위 순으로 검사
-    for setting in brand_settings:
+    for setting in markup_cache['brand_settings'][retailer_code]:
         # 브랜드 매칭
-        if not _is_brand_match_dict(setting['brand_name'], product_brand):
+        if setting['brand_name'] != "전체" and setting['brand_name'] != product_brand:
             continue
         
         # 시즌 매칭
-        if not _is_season_match_dict(setting, product_season):
-            continue
+        if setting['seasons']:
+            if "전체" not in setting['seasons']:
+                setting_seasons = [s.strip() for s in setting['seasons'].split(',')]
+                if product_season not in setting_seasons:
+                    continue
         
-        # 성별 + 카테고리 매칭
-        markup = _find_markup_detail_dict(setting, product_gender, product_category)
-        if markup is not None:
-            return markup
-    
-    return None
-
-
-def _get_fallback_markup_dict(retailer_code, markup_cache):
-    """딕셔너리 기반 fallback 마크업"""
-    if retailer_code not in markup_cache['brand_settings']:
-        return None
-    
-    brand_settings = markup_cache['brand_settings'][retailer_code]
-    sorted_settings = sorted(brand_settings, key=lambda x: (-x['priority'], -x['id']))
-    
-    for setting in sorted_settings:
-        markup = _find_markup_detail_dict(setting, "전체", "전체")
-        if markup is not None:
-            return markup
-    
-    return None
-
-
-def _is_brand_match_dict(setting_brand, product_brand):
-    """딕셔너리 기반 브랜드 매칭"""
-    if setting_brand == "전체":
-        return True
-    
-    if not product_brand or product_brand.strip() == "":
-        return False
-    
-    return setting_brand == product_brand
-
-
-def _is_season_match_dict(brand_setting, product_season):
-    """딕셔너리 기반 시즌 매칭"""
-    if not brand_setting['seasons']:
-        return True
-    
-    setting_seasons_raw = brand_setting['seasons'].strip()
-    
-    if "전체" in setting_seasons_raw:
-        return True
-    
-    if not product_season or product_season.strip() == "":
-        return False
-    
-    setting_seasons = [s.strip() for s in setting_seasons_raw.split(',') if s.strip()]
-    return product_season in setting_seasons
-
-
-def _find_markup_detail_dict(brand_setting, product_gender, product_category):
-    """딕셔너리 기반 마크업 상세 검색"""
-    if not product_gender or product_gender.strip() == "":
-        product_gender = "전체"
-    if not product_category or product_category.strip() == "":
-        product_category = "전체"
-    
-    search_scenarios = [
-        (product_gender, product_category),
-        (product_gender, "전체"),
-        ("전체", product_category),
-        ("전체", "전체"),
-    ]
-    
-    for gender, category in search_scenarios:
-        for markup_detail in brand_setting['markups']:
-            if (markup_detail['gender'] == gender and 
-                markup_detail['category'] == category and 
+        # 마크업 찾기
+        for markup_detail in setting['markups']:
+            if (markup_detail['gender'] in [product_gender, '전체'] and 
+                markup_detail['category'] in [product_category, '전체'] and 
                 markup_detail['is_active']):
                 return markup_detail['markup']
     
@@ -302,24 +240,19 @@ def _find_markup_detail_dict(brand_setting, product_gender, product_category):
 
 
 def _calculate_price_bulk_dict(product_dict, markup, price_cache):
-    """딕셔너리 기반 가격 계산 (버전 1 방식 + 기존 함수 로직)"""
-    # price_supply 계산 (기존 로직: price_org * markup)
+    """가격 계산"""
     price_org = product_dict['price_org'] or 0
     if price_org <= 0:
         return 0
     
     price_supply = Decimal(str(price_org)) * Decimal(str(markup))
-    
     category1 = product_dict['category1']
     retailer_code = product_dict['retailer']
     origin = product_dict['origin']
     
-    # Retailer 확인
     if retailer_code not in price_cache['retailers']:
-        print(f"❌ [오류] Retailer 변환 실패: {retailer_code}")
         return None
     
-    # 글로벌 설정
     global_setting = price_cache['global_setting']
     exchange_rate = global_setting['exchange_rate']
     shipping_fee = global_setting['shipping_fee']
@@ -327,20 +260,15 @@ def _calculate_price_bulk_dict(product_dict, markup, price_cache):
     margin = global_setting['margin']
     special_tax_rate = global_setting['special_tax_rate']
     
-    # 관세 계산
+    # 관세
     tariff = Decimal("1.00")
-    
     if origin in price_cache['country_aliases']:
-        alias_data = price_cache['country_aliases'][origin]
-        fta = alias_data['fta_applicable']
-        
-        if not fta:
+        if not price_cache['country_aliases'][origin]['fta_applicable']:
             if category1 in ["의류", "신발"]:
                 tariff = Decimal("1.13")
             elif category1 in ["가방", "액세서리"]:
                 tariff = Decimal("1.08")
     else:
-        # CountryAlias.DoesNotExist 케이스
         if category1 in ["의류", "신발"]:
             tariff = Decimal("1.13")
         elif category1 in ["가방", "액세서리"]:
@@ -352,12 +280,12 @@ def _calculate_price_bulk_dict(product_dict, markup, price_cache):
     extra_fee = Decimal("0")
     try:
         for range_data in price_cache['price_formula_ranges']:
-            if (range_data['min_price'] <= base <= range_data['max_price']):
+            if range_data['min_price'] <= base <= range_data['max_price']:
                 formula = range_data['formula'].replace("가격", str(base))
                 extra_fee = Decimal(str(eval(formula)))
                 break
     except:
-        extra_fee = Decimal("0")
+        pass
     
     # 최종 계산
     if base > Decimal("2000000"):
@@ -367,112 +295,157 @@ def _calculate_price_bulk_dict(product_dict, markup, price_cache):
     else:
         result = (base * shipping_fee) * tariff * vat * margin + extra_fee
     
-    # 1000원 단위 반올림
     rounded_result = (result / Decimal("1000")).to_integral_value(rounding=ROUND_CEILING) * Decimal("1000")
-    
     return int(rounded_result)
 
 
-def update_products_by_retailer(retailer_code):
-    """거래처별 업데이트 (버전 1 방식)"""
-    print(f"🚀 거래처 {retailer_code} 상품 업데이트 시작...")
+def update_products_by_retailer(retailer_code, user=None):
+    """거래처별 업데이트"""
+    logger = get_bulk_update_logger()
+    start_time = datetime.now()
     
-    products = list(Product.objects.filter(retailer=retailer_code).values(
-        'id', 'retailer', 'raw_brand_name', 'gender', 
-        'category1', 'category2', 'origin', 'price_org',
-        'markup', 'calculated_price_krw', 'season'
-    ))
+    log_start_session(logger, user, f"거래처업데이트 ({retailer_code})")
     
-    if not products:
-        print(f"📋 거래처 {retailer_code}에 상품이 없습니다")
+    try:
+        # 해당 거래처 상품만 한번에 불러오기
+        products = list(Product.objects.filter(retailer=retailer_code).values(
+            'id', 'retailer', 'raw_brand_name', 'gender', 
+            'category1', 'category2', 'origin', 'price_org',
+            'markup', 'calculated_price_krw', 'season'
+        ))
+        
+        if not products:
+            log_progress(logger, f"거래처 {retailer_code}: 상품 없음")
+            log_end_session(logger, 0, (datetime.now() - start_time).total_seconds(), success=True)
+            return 0
+        
+        log_progress(logger, f"거래처 {retailer_code}: {len(products)}개 상품 로딩 완료")
+        
+        # 캐시 로드
+        markup_cache = _load_markup_cache()
+        price_cache = _load_price_cache()
+        
+        # 계산
+        updates = []
+        for product_dict in products:
+            try:
+                new_markup = _get_markup_bulk_dict(product_dict, markup_cache) or 1.0
+                new_price = _calculate_price_bulk_dict(product_dict, new_markup, price_cache) or 0
+                
+                current_markup = product_dict['markup'] or 0
+                current_price = float(product_dict['calculated_price_krw'] or 0)
+                
+                if (abs(current_markup - new_markup) > 0.001 or 
+                    abs(current_price - new_price) > 0.5):
+                    updates.append({
+                        'id': product_dict['id'],
+                        'markup': new_markup,
+                        'calculated_price_krw': new_price
+                    })
+            except:
+                continue
+        
+        # 저장
+        if updates:
+            product_ids = [update['id'] for update in updates]
+            product_objects = {p.id: p for p in Product.objects.filter(id__in=product_ids)}
+            
+            bulk_updates = []
+            for update in updates:
+                if update['id'] in product_objects:
+                    product_obj = product_objects[update['id']]
+                    product_obj.markup = update['markup']
+                    product_obj.calculated_price_krw = update['calculated_price_krw']
+                    bulk_updates.append(product_obj)
+            
+            with transaction.atomic():
+                Product.objects.bulk_update(bulk_updates, ['markup', 'calculated_price_krw'])
+            
+            log_progress(logger, f"거래처 {retailer_code}: {len(bulk_updates)}개 업데이트 완료")
+        else:
+            log_progress(logger, f"거래처 {retailer_code}: 변경사항 없음")
+        
+        # 완료 로그
+        total_time = (datetime.now() - start_time).total_seconds()
+        log_end_session(logger, len(updates), total_time, success=True)
+        
+        return len(updates)
+        
+    except Exception as e:
+        total_time = (datetime.now() - start_time).total_seconds()
+        log_error_session(logger, str(e), total_time)
         return 0
-    
-    markup_cache = _load_markup_cache_exact()
-    price_cache = _load_price_cache_exact()
-    
-    updates = []
-    for product_dict in products:
-        new_markup = _get_markup_bulk_dict(product_dict, markup_cache) or 1.0
-        new_price = _calculate_price_bulk_dict(product_dict, new_markup, price_cache) or 0
-        
-        current_markup = product_dict['markup'] or 0
-        current_price = float(product_dict['calculated_price_krw'] or 0)
-        
-        if (abs(current_markup - new_markup) > 0.001 or 
-            abs(current_price - new_price) > 0.5):
-            updates.append({
-                'id': product_dict['id'],
-                'markup': new_markup,
-                'calculated_price_krw': new_price
-            })
-    
-    if updates:
-        product_ids = [update['id'] for update in updates]
-        product_objects = {p.id: p for p in Product.objects.filter(id__in=product_ids)}
-        
-        bulk_updates = []
-        for update in updates:
-            product_obj = product_objects[update['id']]
-            product_obj.markup = update['markup']
-            product_obj.calculated_price_krw = update['calculated_price_krw']
-            bulk_updates.append(product_obj)
-        
-        with transaction.atomic():
-            Product.objects.bulk_update(bulk_updates, ['markup', 'calculated_price_krw'])
-        
-        print(f"✅ 거래처 {retailer_code}: {len(updates)}개 상품 업데이트 완료")
-    
-    return len(updates)
 
 
-def update_products_by_brand_and_retailer(retailer_code, brand_name):
-    """거래처+브랜드별 업데이트 (버전 1 방식)"""
+def update_products_by_brand_and_retailer(retailer_code, brand_name, user=None):
+    """거래처+브랜드별 업데이트"""
     if brand_name in ['전체', 'ETC']:
-        return update_products_by_retailer(retailer_code)
+        return update_products_by_retailer(retailer_code, user)
     
-    products = list(Product.objects.filter(
-        retailer=retailer_code,
-        raw_brand_name=brand_name
-    ).values(
-        'id', 'retailer', 'raw_brand_name', 'gender', 
-        'category1', 'category2', 'origin', 'price_org',
-        'markup', 'calculated_price_krw', 'season'
-    ))
+    logger = get_bulk_update_logger()
+    start_time = datetime.now()
     
-    if not products:
+    log_start_session(logger, user, f"브랜드업데이트 ({retailer_code}-{brand_name})")
+    
+    try:
+        products = list(Product.objects.filter(
+            retailer=retailer_code, raw_brand_name=brand_name
+        ).values(
+            'id', 'retailer', 'raw_brand_name', 'gender', 
+            'category1', 'category2', 'origin', 'price_org',
+            'markup', 'calculated_price_krw', 'season'
+        ))
+        
+        if not products:
+            log_end_session(logger, 0, (datetime.now() - start_time).total_seconds(), success=True)
+            return 0
+        
+        markup_cache = _load_markup_cache()
+        price_cache = _load_price_cache()
+        
+        updates = []
+        for product_dict in products:
+            try:
+                new_markup = _get_markup_bulk_dict(product_dict, markup_cache) or 1.0
+                new_price = _calculate_price_bulk_dict(product_dict, new_markup, price_cache) or 0
+                
+                current_markup = product_dict['markup'] or 0
+                current_price = float(product_dict['calculated_price_krw'] or 0)
+                
+                if (abs(current_markup - new_markup) > 0.001 or 
+                    abs(current_price - new_price) > 0.5):
+                    updates.append({
+                        'id': product_dict['id'],
+                        'markup': new_markup,
+                        'calculated_price_krw': new_price
+                    })
+            except:
+                continue
+        
+        if updates:
+            product_ids = [update['id'] for update in updates]
+            product_objects = {p.id: p for p in Product.objects.filter(id__in=product_ids)}
+            
+            bulk_updates = []
+            for update in updates:
+                if update['id'] in product_objects:
+                    product_obj = product_objects[update['id']]
+                    product_obj.markup = update['markup']
+                    product_obj.calculated_price_krw = update['calculated_price_krw']
+                    bulk_updates.append(product_obj)
+            
+            with transaction.atomic():
+                Product.objects.bulk_update(bulk_updates, ['markup', 'calculated_price_krw'])
+        
+        log_progress(logger, f"거래처 {retailer_code}, 브랜드 {brand_name}: {len(updates)}개 완료")
+        
+        # 완료 로그
+        total_time = (datetime.now() - start_time).total_seconds()
+        log_end_session(logger, len(updates), total_time, success=True)
+        
+        return len(updates)
+        
+    except Exception as e:
+        total_time = (datetime.now() - start_time).total_seconds()
+        log_error_session(logger, str(e), total_time)
         return 0
-    
-    markup_cache = _load_markup_cache_exact()
-    price_cache = _load_price_cache_exact()
-    
-    updates = []
-    for product_dict in products:
-        new_markup = _get_markup_bulk_dict(product_dict, markup_cache) or 1.0
-        new_price = _calculate_price_bulk_dict(product_dict, new_markup, price_cache) or 0
-        
-        current_markup = product_dict['markup'] or 0
-        current_price = float(product_dict['calculated_price_krw'] or 0)
-        
-        if (abs(current_markup - new_markup) > 0.001 or 
-            abs(current_price - new_price) > 0.5):
-            updates.append({
-                'id': product_dict['id'],
-                'markup': new_markup,
-                'calculated_price_krw': new_price
-            })
-    
-    if updates:
-        product_ids = [update['id'] for update in updates]
-        product_objects = {p.id: p for p in Product.objects.filter(id__in=product_ids)}
-        
-        bulk_updates = []
-        for update in updates:
-            product_obj = product_objects[update['id']]
-            product_obj.markup = update['markup']
-            product_obj.calculated_price_krw = update['calculated_price_krw']
-            bulk_updates.append(product_obj)
-        
-        with transaction.atomic():
-            Product.objects.bulk_update(updates, ['markup', 'calculated_price_krw'])
-    
-    return len(updates)
