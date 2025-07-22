@@ -121,7 +121,7 @@ def run_full_pipeline_by_retailer(retailer_code):
         elif retailer_code == "IT-E-01":  # 엘레노라
             from shop.api.eleonorabonucci import eleonorabonucci
             from shop.api.eleonorabonucci import register_raw_products
-            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer
+            from shop.services.product.conversion_service import bulk_convert_or_update_products_by_retailer, sync_soldout_products_from_raw
 
             # 1. 수집 및 병합 → JSON
             product_count, _ = eleonorabonucci.fetch_and_merge_all()
