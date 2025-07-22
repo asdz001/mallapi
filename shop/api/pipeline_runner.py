@@ -133,6 +133,9 @@ def run_full_pipeline_by_retailer(retailer_code):
             # 3. Raw → Product 가공 등록
             bulk_convert_or_update_products_by_retailer(retailer_code)
 
+
+            sync_soldout_products_from_raw(retailer_code)            
+
             # 등록된 개수 측정
             register_count = RawProduct.objects.filter(retailer=retailer_code, status='converted').count()
 

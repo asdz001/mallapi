@@ -9,7 +9,7 @@ from typing import Dict, List, Tuple, Optional
 RETAILER_CODE = "IT-E-01"
 RETAILER_NAME = "ELEONORA"
 JSON_PATH = Path("export") / RETAILER_NAME / "eleonora_merged_raw_products.json"
-BATCH_SIZE = 500
+BATCH_SIZE = 1000
 TEST_LIMIT = None  # 테스트용 제한 (나중에 None으로 변경)
 
 # ✅ 로깅 설정
@@ -22,9 +22,10 @@ class EleonoraRegistration:
         self.stats = {
             'total_items': 0,
             'products_created': 0,
+            'products_updated': 0,  # ✅ 업데이트 통계 추가
             'products_skipped': 0,
-            'products_updated': 0,
             'options_created': 0,
+            'options_updated': 0,   # ✅ 업데이트 통계 추가
             'options_skipped': 0,
             'errors': []
         }
@@ -189,6 +190,12 @@ class EleonoraRegistration:
         
         return True
     
+    def normalize_value(self, value) -> str:
+        """🔧 비교용 값 정규화 (None → "", 숫자 → 문자열)"""
+        if value is None:
+            return ""
+        return str(value).strip()
+
     def create_product_object(self, item: Dict) -> Optional[RawProduct]:
         """RawProduct 객체 생성"""
         try:
@@ -229,6 +236,7 @@ class EleonoraRegistration:
         """RawProductOption 객체들 생성"""
         options = []
         stock_items = item.get("Stock_Item", [])
+        product_url = item.get("Url", "")  # ✅ 상품 URL 추출
         
         for opt in stock_items:
             try:
@@ -260,6 +268,7 @@ class EleonoraRegistration:
                     option_name=opt.get("Size", ""),
                     price=float(supply_price),  # 공급가만 사용
                     stock=int(opt.get("Stock", 0)),
+                    option_url=product_url,  # ✅ 상품 URL 할당
                 )
                 options.append(option)
                 
@@ -272,26 +281,42 @@ class EleonoraRegistration:
         return options
     
     def register_products(self) -> bool:
-        """전체 상품 등록 프로세스"""
+        """
+        🔄 전체 상품 등록 프로세스 (업데이트 로직 포함)
+        
+        흐름:
+        1. JSON 데이터 로드
+        2. 기존 상품+옵션 전체 조회 및 매핑
+        3. 각 상품별로 신규/기존 구분하여 처리
+        4. 상품: 가격 비교 후 업데이트 대상 선별
+        5. 옵션: 재고/가격/URL 비교 후 업데이트 대상 선별
+        6. bulk_create + bulk_update로 대량 처리
+        7. 솔드아웃 처리
+        """
         try:
-            # 1. 데이터 로드
+            # 1️⃣ 데이터 로드
             data = self.load_json_data()
             self.stats['total_items'] = len(data)
             
-            # 2. 기존 SKU 조회 (중복 방지)
-            logger.info("🔍 기존 상품 SKU 조회 중...")
-            existing_skus = set(
-                RawProduct.objects.filter(retailer=RETAILER_CODE)
-                .values_list("external_product_id", flat=True)
-            )
-            logger.info(f"📊 기존 상품: {len(existing_skus)}개")
+            # 2️⃣ 기존 상품과 옵션 전체 조회 (뉴네스 방식 적용)
+            logger.info("🔍 기존 상품 및 옵션 조회 중...")
+            existing_products = RawProduct.objects.filter(retailer=RETAILER_CODE)
+            existing_product_map = {p.external_product_id: p for p in existing_products}
             
-            # 3. 상품 및 옵션 객체 생성
-            new_products = []
-            all_options = []
+            existing_options = RawProductOption.objects.filter(product__in=existing_products)
+            existing_option_map = {(o.product.external_product_id, o.external_option_id): o for o in existing_options}
+            
+            logger.info(f"📊 기존 상품: {len(existing_product_map)}개, 기존 옵션: {len(existing_option_map)}개")
+            
+            # 3️⃣ 처리 대상 리스트 초기화
+            products_to_create = []
+            products_to_update = []
+            options_to_create = []
+            options_to_update = []
             
             logger.info("🔄 상품 데이터 처리 중...")
             
+            # 4️⃣ 각 상품별로 처리
             for i, item in enumerate(data, 1):
                 sku = item.get("SKU")
                 
@@ -299,83 +324,194 @@ class EleonoraRegistration:
                     self.stats['products_skipped'] += 1
                     continue
                 
-                if sku in existing_skus:
-                    logger.debug(f"⏭️ 이미 존재하는 상품: {sku}")
+                # 상품 유효성 검증 (재고 체크 포함)
+                if not self.validate_product_data(item):
                     self.stats['products_skipped'] += 1
                     continue
                 
-                # 상품 객체 생성 (재고 체크 포함)
-                product_obj = self.create_product_object(item)
-                if not product_obj:
-                    self.stats['products_skipped'] += 1
-                    continue
+                # 새 상품 데이터 준비
+                supply_price, market_price = self.get_representative_price(item)
                 
-                new_products.append(product_obj)
+                existing_product = existing_product_map.get(sku)
+                
+                if existing_product:
+                    # 🔧 기존 상품: 가격만 비교하여 업데이트 여부 결정
+                    price_changed = False
+                    
+                    old_price_org = self.normalize_value(existing_product.price_org)
+                    new_price_org = self.normalize_value(supply_price)
+                    old_price_retail = self.normalize_value(existing_product.price_retail)
+                    new_price_retail = self.normalize_value(market_price)
+                    
+                    if old_price_org != new_price_org:
+                        existing_product.price_org = supply_price
+                        price_changed = True
+                        logger.debug(f"💰 공급가 변경: {sku} {old_price_org} → {new_price_org}")
+                    
+                    if old_price_retail != new_price_retail:
+                        existing_product.price_retail = market_price
+                        price_changed = True
+                        logger.debug(f"💰 소매가 변경: {sku} {old_price_retail} → {new_price_retail}")
+                    
+                    if price_changed:
+                        products_to_update.append(existing_product)
+                        logger.info(f"🔄 상품 업데이트 대상: {sku}")
+                else:
+                    # 🔧 새 상품: 생성 대상
+                    product_obj = self.create_product_object(item)
+                    if product_obj:
+                        products_to_create.append(product_obj)
                 
                 # 진행 상황 로그
                 if i % 100 == 0:
                     logger.info(f"📦 처리 중: {i}/{len(data)} ({i/len(data)*100:.1f}%)")
             
-            logger.info(f"✅ 처리 완료: {len(new_products)}개 상품 준비")
+            logger.info(f"✅ 상품 처리 완료: 생성 {len(products_to_create)}개, 업데이트 {len(products_to_update)}개")
 
-            collected_ids = set(item["SKU"] for item in data if item.get("SKU"))
+            # 5️⃣ 수집된 SKU 목록 (솔드아웃 처리용)
+            collected_ids = set(item["SKU"] for item in data if item.get("SKU") and self.validate_product_data(item))
 
-            # 복원 처리 (soldout → pending)
-            RawProduct.objects.filter(
+            # 6️⃣ 복원 처리 (soldout → pending)
+            restored_count = RawProduct.objects.filter(
                 retailer=RETAILER_CODE,
                 external_product_id__in=collected_ids,
                 status="soldout"
             ).update(status="pending")
+            
+            if restored_count > 0:
+                logger.info(f"🔄 상품 복원: {restored_count}개 (soldout → pending)")
 
-            # 이번에 수집되지 않은 상품은 soldout 처리
-            RawProduct.objects.filter(
+            # 7️⃣ 이번에 수집되지 않은 상품은 soldout 처리
+            soldout_count = RawProduct.objects.filter(
                 retailer=RETAILER_CODE
             ).exclude(
                 external_product_id__in=collected_ids
             ).update(status="soldout")
-
-            logger.info(f"✅ 품절 처리 완료: {RawProduct.objects.filter(retailer=RETAILER_CODE, status='soldout').count()}개")
-
             
-            # 4. 데이터베이스 저장
-            if not new_products:
-                logger.warning("⚠️ 등록할 상품이 없습니다.")
+            if soldout_count > 0:
+                logger.info(f"📦 품절 처리: {soldout_count}개 (pending → soldout)")
+            
+            # 8️⃣ 데이터베이스 저장 시작
+            if not products_to_create and not products_to_update:
+                logger.warning("⚠️ 등록/업데이트할 상품이 없습니다.")
                 return False
             
             logger.info("💾 데이터베이스 저장 시작...")
             
             with transaction.atomic():
-                # 상품 bulk create
-                inserted_products = RawProduct.objects.bulk_create(
-                    new_products, 
-                    batch_size=BATCH_SIZE
+                # 🔧 상품 대량 처리
+                if products_to_create:
+                    inserted_products = RawProduct.objects.bulk_create(
+                        products_to_create, 
+                        batch_size=BATCH_SIZE
+                    )
+                    self.stats['products_created'] = len(inserted_products)
+                    logger.info(f"✅ 상품 생성: {len(inserted_products)}개")
+                
+                if products_to_update:
+                    RawProduct.objects.bulk_update(
+                        products_to_update,
+                        ['price_org', 'price_retail'],  # 🔧 가격 필드만 업데이트
+                        batch_size=BATCH_SIZE
+                    )
+                    self.stats['products_updated'] = len(products_to_update)
+                    logger.info(f"✅ 상품 업데이트: {len(products_to_update)}개")
+                
+                # 9️⃣ 업데이트된 상품 포함 전체 재조회 (옵션 처리용)
+                all_products = RawProduct.objects.filter(
+                    retailer=RETAILER_CODE, 
+                    external_product_id__in=collected_ids
                 )
-                self.stats['products_created'] = len(inserted_products)
-                logger.info(f"✅ 상품 등록: {len(inserted_products)}개")
+                product_map = {p.external_product_id: p for p in all_products}
                 
-                # 등록된 상품 맵핑 (옵션 등록을 위해)
-                inserted_map = {p.external_product_id: p for p in inserted_products}
-                
-                # 옵션 생성
+                # 🔟 옵션 처리
                 for item in data:
                     sku = item.get("SKU")
-                    product_obj = inserted_map.get(sku)
-                    
+                    if not sku or not self.validate_product_data(item):
+                        continue
+                        
+                    product_obj = product_map.get(sku)
                     if not product_obj:
                         continue
                     
-                    options = self.create_option_objects(item, product_obj)
-                    all_options.extend(options)
+                    stock_items = item.get("Stock_Item", [])
+                    product_url = item.get("Url", "")  # ✅ 상품 URL
+                    
+                    for opt in stock_items:
+                        sku_item = opt.get("SKU_item")
+                        if not sku_item or opt.get("Stock", 0) <= 0:
+                            continue
+                        
+                        # 옵션 가격 결정
+                        supply_price = opt.get("Supply_Price")
+                        if supply_price is None:
+                            supply_price = item.get("Supply_Price", 0)
+                        
+                        if supply_price is None:
+                            continue
+                        
+                        key = (sku, sku_item)
+                        existing_option = existing_option_map.get(key)
+                        
+                        stock = int(opt.get("Stock", 0))
+                        price = float(supply_price)
+                        option_url = product_url
+                        
+                        if existing_option:
+                            # 🔧 기존 옵션: 재고/가격/URL만 비교
+                            option_changed = False
+                            
+                            if existing_option.stock != stock:
+                                existing_option.stock = stock
+                                option_changed = True
+                                logger.debug(f"📦 재고 변경: {sku_item} {existing_option.stock} → {stock}")
+                            
+                            old_price = self.normalize_value(existing_option.price)
+                            new_price = self.normalize_value(price)
+                            if old_price != new_price:
+                                existing_option.price = price
+                                option_changed = True
+                                logger.debug(f"💰 옵션가격 변경: {sku_item} {old_price} → {new_price}")
+                            
+                            old_url = self.normalize_value(existing_option.option_url)
+                            new_url = self.normalize_value(option_url)
+                            if old_url != new_url:
+                                existing_option.option_url = option_url
+                                option_changed = True
+                                logger.debug(f"🔗 URL 변경: {sku_item}")
+                            
+                            if option_changed:
+                                options_to_update.append(existing_option)
+                        else:
+                            # 🔧 새 옵션: 생성 대상
+                            new_option = RawProductOption(
+                                product=product_obj,
+                                external_option_id=sku_item,
+                                option_name=opt.get("Size", ""),
+                                price=price,
+                                stock=stock,
+                                option_url=option_url,
+                            )
+                            options_to_create.append(new_option)
                 
-                # 옵션 bulk create
-                if all_options:
+                # 1️⃣1️⃣ 옵션 대량 처리
+                if options_to_create:
                     RawProductOption.objects.bulk_create(
-                        all_options, 
+                        options_to_create, 
                         batch_size=BATCH_SIZE
                     )
-                    self.stats['options_created'] = len(all_options)
-                    logger.info(f"✅ 옵션 등록: {len(all_options)}개")
+                    self.stats['options_created'] = len(options_to_create)
+                    logger.info(f"✅ 옵션 생성: {len(options_to_create)}개")
                 
+                if options_to_update:
+                    RawProductOption.objects.bulk_update(
+                        options_to_update,
+                        ['stock', 'price', 'option_url'],  # 🔧 선별된 필드만 업데이트
+                        batch_size=BATCH_SIZE
+                    )
+                    self.stats['options_updated'] = len(options_to_update)
+                    logger.info(f"✅ 옵션 업데이트: {len(options_to_update)}개")
+            
             return True
             
         except Exception as e:
@@ -386,12 +522,14 @@ class EleonoraRegistration:
     def print_summary(self):
         """등록 결과 요약 출력"""
         print("\n" + "="*60)
-        print("📊 엘레노라 상품 등록 결과")
+        print("📊 엘레노라 상품 등록 결과 (업데이트 포함)")
         print("="*60)
         print(f"📦 총 상품 수: {self.stats['total_items']:,}개")
-        print(f"✅ 등록된 상품: {self.stats['products_created']:,}개")
+        print(f"✅ 생성된 상품: {self.stats['products_created']:,}개")
+        print(f"🔄 업데이트된 상품: {self.stats['products_updated']:,}개")  # ✅ 추가
         print(f"⏭️ 건너뛴 상품: {self.stats['products_skipped']:,}개")
-        print(f"🔧 등록된 옵션: {self.stats['options_created']:,}개")
+        print(f"🔧 생성된 옵션: {self.stats['options_created']:,}개")
+        print(f"🔄 업데이트된 옵션: {self.stats['options_updated']:,}개")  # ✅ 추가
         print(f"⏭️ 건너뛴 옵션: {self.stats['options_skipped']:,}개")
         
         if self.stats['errors']:
@@ -402,15 +540,16 @@ class EleonoraRegistration:
             if len(self.stats['errors']) > 10:
                 print(f"   ... 및 {len(self.stats['errors']) - 10}개 더")
         
-        if self.stats['products_created'] > 0:
-            success_rate = (self.stats['products_created'] / self.stats['total_items']) * 100
-            print(f"📈 등록 성공률: {success_rate:.1f}%")
+        total_processed = self.stats['products_created'] + self.stats['products_updated']
+        if total_processed > 0:
+            success_rate = (total_processed / self.stats['total_items']) * 100
+            print(f"📈 처리 성공률: {success_rate:.1f}%")
         
         print("="*60)
 
 # ✅ 메인 실행 함수
 def register_raw_products_from_json(test_mode: bool = True):
-    """엘레노라 상품 등록 메인 함수"""
+    """엘레노라 상품 등록 메인 함수 (업데이트 로직 포함)"""
     registrar = EleonoraRegistration(test_mode=test_mode)
     
     try:
@@ -418,12 +557,13 @@ def register_raw_products_from_json(test_mode: bool = True):
         registrar.print_summary()
 
         if success:
-            logger.info("🎉 상품 등록 완료!")
+            logger.info("🎉 상품 등록/업데이트 완료!")
         else:
-            logger.error("💥 상품 등록 실패!")
+            logger.error("💥 상품 등록/업데이트 실패!")
 
-        # ✅ 등록된 상품 수 리턴
-        return registrar.stats['products_created']
+        # ✅ 생성+업데이트된 상품 수 리턴
+        total_processed = registrar.stats['products_created'] + registrar.stats['products_updated']
+        return total_processed
 
     except Exception as e:
         logger.error(f"❌ 등록 프로세스 실패: {e}")

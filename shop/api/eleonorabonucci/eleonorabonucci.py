@@ -27,7 +27,6 @@ def fetch_season_list():
     response = requests.get(url, params=params)
 
     if response.status_code != 200:
-        logger.error(f"❌ 시즌 수집 실패: {response.status_code}")
         return []
 
     seasons = response.json()
@@ -41,11 +40,9 @@ def fetch_total_pages(season_code):
     response = requests.get(url, params=params)
 
     if response.status_code != 200:
-        logger.error(f"❌ 시즌 '{season_code}' 페이지 수 실패: {response.status_code}")
         return 0
 
     total_pages = response.json().get("TotalPages", 0)
-    logger.info(f"📘 시즌 {season_code} → 총 {total_pages} 페이지")
     return total_pages
 
 # ✅ 상품 수집 함수 (작동하는 코드와 완전히 동일)
@@ -55,13 +52,11 @@ def fetch_article_page(season, page):
     response = requests.get(url, params=params)
 
     if response.status_code != 200:
-        logger.error(f"❌ 실패: 시즌={season}, 페이지={page}, 상태코드={response.status_code}")
         failed_pages.append((season, page))
         return []
 
     data = response.json()
     articles = data.get("ARTICLE", [])
-    logger.info(f"📦 수집됨 → 시즌 {season} / 페이지 {page} → {len(articles)}개")
     return articles
 
 # ✅ 모든 시즌 전체 페이지에서 상품 수집 (작동하는 코드 기반으로 수정)
@@ -78,7 +73,6 @@ def fetch_all_articles(max_workers=10):  # 동시 작업 수 줄임
         if total_pages == 0:
             continue
 
-        logger.info(f"\n📘 시즌 {season} → 총 {total_pages}페이지 수집 시작")
 
         season_articles = []
         futures = []
