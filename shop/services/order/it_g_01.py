@@ -1,8 +1,9 @@
 """
-지앤비 (IT-G-01) B2B 주문 전송 모듈
-===================================
+지앤비 (IT-G-01) B2B 주문 전송 모듈 - 최종 운영 버전
+========================================================
 🏢 BeeStore SOAP API를 사용하는 지앤비 부티크 전용
 📋 order_service.py에서 호출되는 주문 전송 함수
+🔧 직접 XML SOAP 요청 방식 (zeep 우회)
 """
 
 import requests
@@ -17,7 +18,7 @@ GNB_CONFIG = {
     'user': 'milaneseb2b',
     'password': 'w8Yc$K',
     'igu_negozio': '179',
-    'igu_cliente': '13\\4\\3\\6867\\242476\\0',  # 백슬래시 형식
+    'igu_cliente': '13\\4\\3\\6867\\242476\\0',  # 백슬래시 형식 (성공 확인됨)
     'cod_iva': 'NI08',
     'retailer_name': 'GNB(지앤비)',
     'retailer_code': 'IT-G-01'
@@ -32,12 +33,17 @@ def send_order(order: Order):
         order: Django Order 객체
         
     Returns:
-        List[Dict]: [{"sku": "", "item_id": "", "success": bool, "reason": ""}]
+        Tuple: (results, payload_data, response_data)
+               - results: List[Dict] 각 주문 항목별 성공/실패 결과
+               - payload_data: Dict 전송된 SOAP XML 데이터
+               - response_data: Dict 받은 응답 데이터
     """
     
     results = []
+    payload_data = {}
+    response_data = {}
     
-    # 📦 주문 항목별 정보 수집
+    # 📦 주문 항목별 정보 수집 및 초기화
     items_info = []
     for item in order.items.all():
         item_info = {
@@ -48,27 +54,46 @@ def send_order(order: Order):
         }
         items_info.append(item_info)
         
-        # 결과 리스트 초기화
+        # 결과 리스트 초기화 (order_service.py 형식에 맞춤)
         results.append({
             "sku": item.option.external_option_id,
             "item_id": item.id,
             "success": False,
-            "reason": ""
+            "reason": "",
+            "stock": -1  # BeeStore는 재고 정보 별도 제공 안함
         })
     
     # 🔧 단일 상품만 처리 (BeeStore API 제한사항)
     if not order.items.exists():
+        error_msg = "주문 항목이 없음"
         log_order_send(
             order.id, GNB_CONFIG['retailer_name'], [],
-            success=False, reason="주문 항목이 없음"
+            success=False, reason=error_msg
         )
-        return results
+        return results, payload_data, {"error": error_msg}
     
     first_item = order.items.first()
     
     try:
         # 📋 SOAP XML 구성
         soap_xml = _build_soap_xml(order, first_item)
+        
+        # 📝 페이로드 데이터 저장 (로그용)
+        payload_data = {
+            "soap_endpoint": GNB_CONFIG['soap_endpoint'],
+            "method": "fInserimentoDocumento",
+            "order_id": order.id,
+            "item_id": first_item.id,
+            "product_code": first_item.option.external_option_id,
+            "quantity": first_item.quantity,
+            "price_retail": float(first_item.product.price_retail or Decimal("0.0")),
+            "price_net": float(first_item.option.price or Decimal("0.0")),
+            "xml_size": len(soap_xml),
+            "headers": {
+                'Content-Type': 'text/xml; charset=utf-8',
+                'SOAPAction': 'urn:fInserimentoDocumentoAction'
+            }
+        }
         
         # 📤 SOAP 요청 전송
         headers = {
@@ -86,54 +111,78 @@ def send_order(order: Order):
         # 📥 응답 처리
         success, document_id, error_msg = _parse_soap_response(response)
         
+        # 📝 응답 데이터 저장 (로그용)
+        response_data = {
+            "http_status": response.status_code,
+            "response_size": len(response.content),
+            "success": success,
+            "document_id": document_id if success else None,
+            "error_message": error_msg if not success else None,
+            "raw_response": response.text[:500] + "..." if len(response.text) > 500 else response.text
+        }
+        
         if success:
             # ✅ 성공 처리
             reason = f"주문 생성 성공 (문서ID: {document_id})"
-            
-            # 주문 상태 업데이트
-            order.status = "SENT"
-            order.memo = f"[GNB 전송완료] {reason}"
-            order.save()
-            
-            # 주문 항목 상태 업데이트 (첫 번째 항목만)
-            first_item.order_status = "SENT"
-            first_item.order_message = reason
-            first_item.save()
             
             # 결과 업데이트
             for i, result in enumerate(results):
                 if i == 0:  # 첫 번째 항목만 성공
                     result["success"] = True
                     result["reason"] = reason
-                else:  # 나머지는 미처리
+                else:  # 나머지는 미처리 (BeeStore API 제한)
+                    result["success"] = False
                     result["reason"] = "단일 상품만 처리됨 (BeeStore 제한)"
             
             # 📝 성공 로그
             log_order_send(
                 order.id, GNB_CONFIG['retailer_name'], items_info,
-                success=True, reason=reason, response=f"문서ID: {document_id}"
+                success=True, reason=reason, 
+                payload=payload_data, response=response_data
             )
             
         else:
             # ❌ 실패 처리
-            _handle_order_failure(order, first_item, results, error_msg, items_info)
+            _handle_order_failure(results, error_msg, items_info, order.id, payload_data, response_data)
             
     except Exception as e:
         # ❌ 예외 처리
         error_msg = f"SOAP 요청 오류: {str(e)}"
-        _handle_order_failure(order, first_item, results, error_msg, items_info)
+        
+        # 예외 응답 데이터 저장
+        response_data = {
+            "success": False,
+            "error_type": type(e).__name__,
+            "error_message": str(e)
+        }
+        
+        _handle_order_failure(results, error_msg, items_info, order.id, payload_data, response_data)
     
-    return results
+    # ✅ 3개 값 반환 (order_service.py 형식에 맞춤)
+    return results, payload_data, response_data
 
 
 def _build_soap_xml(order, item):
-    """SOAP XML 구성"""
+    """
+    BeeStore fInserimentoDocumento용 SOAP XML 구성
     
-    # 주문 번호 처리 (item.id 사용)
+    Args:
+        order: Django Order 객체
+        item: OrderItem 객체 (첫 번째 항목)
+        
+    Returns:
+        str: SOAP XML 문자열
+    """
+    
+    # 주문 번호 처리 (item.id 사용 - 문서 요구사항에 따라 정수형)
     num_rif = item.id
     
-    # 날짜 형식
+    # 날짜 형식 (YYYY-MM-DD)
     dt_rif = order.created_at.strftime('%Y-%m-%d')
+    
+    # 가격 정보 처리
+    price_retail = float(item.product.price_retail or Decimal("0.0"))
+    price_net = float(item.option.price or Decimal("0.0"))
     
     soap_xml = f'''<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:wsBeestore">
@@ -163,9 +212,9 @@ def _build_soap_xml(order, item):
                 <righe>
                     <codArticolo>{item.option.external_option_id}</codArticolo>
                     <quantitaMov>{item.quantity}</quantitaMov>
-                    <przVenditaLordo>{float(item.product.price_retail or Decimal("0.0"))}</przVenditaLordo>
+                    <przVenditaLordo>{price_retail}</przVenditaLordo>
                     <sconto>0</sconto>
-                    <przVenditaNetto>{float(item.option.price or Decimal("0.0"))}</przVenditaNetto>
+                    <przVenditaNetto>{price_net}</przVenditaNetto>
                     <tipoPrezzo>1</tipoPrezzo>
                     <codIva>{GNB_CONFIG['cod_iva']}</codIva>
                     <matricola></matricola>
@@ -179,7 +228,18 @@ def _build_soap_xml(order, item):
 
 
 def _parse_soap_response(response):
-    """SOAP 응답 파싱"""
+    """
+    BeeStore SOAP 응답 파싱
+    
+    Args:
+        response: requests.Response 객체
+        
+    Returns:
+        Tuple: (success, document_id, error_msg)
+               - success: bool 성공 여부
+               - document_id: str 문서 ID (성공시) 또는 None
+               - error_msg: str 오류 메시지 (실패시) 또는 None
+    """
     
     if response.status_code != 200:
         return False, None, f"HTTP 오류: {response.status_code}"
@@ -207,18 +267,18 @@ def _parse_soap_response(response):
         return False, None, f"XML 파싱 오류: {str(e)}"
 
 
-def _handle_order_failure(order, first_item, results, error_msg, items_info):
-    """주문 실패 처리"""
+def _handle_order_failure(results, error_msg, items_info, order_id, payload_data, response_data):
+    """
+    주문 실패 처리
     
-    # 주문 상태 업데이트
-    order.status = "FAILED"
-    order.memo = f"[GNB 전송실패] {error_msg}"
-    order.save()
-    
-    # 주문 항목 상태 업데이트
-    first_item.order_status = "FAILED"
-    first_item.order_message = error_msg
-    first_item.save()
+    Args:
+        results: List 결과 리스트 (참조로 수정됨)
+        error_msg: str 오류 메시지
+        items_info: List 주문 항목 정보
+        order_id: int 주문 ID
+        payload_data: Dict 페이로드 데이터
+        response_data: Dict 응답 데이터
+    """
     
     # 결과 업데이트
     for result in results:
@@ -227,6 +287,8 @@ def _handle_order_failure(order, first_item, results, error_msg, items_info):
     
     # 📝 실패 로그
     log_order_send(
-        order.id, GNB_CONFIG['retailer_name'], items_info,
-        success=False, reason=error_msg, error=error_msg
+        order_id, GNB_CONFIG['retailer_name'], items_info,
+        success=False, reason=error_msg, 
+        payload=payload_data, response=response_data,
+        error=error_msg
     )
