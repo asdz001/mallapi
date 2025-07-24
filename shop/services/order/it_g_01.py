@@ -1,240 +1,232 @@
-import os
-import json
+"""
+지앤비 (IT-G-01) B2B 주문 전송 모듈
+===================================
+🏢 BeeStore SOAP API를 사용하는 지앤비 부티크 전용
+📋 order_service.py에서 호출되는 주문 전송 함수
+"""
+
 import requests
-from lxml import etree
 from datetime import datetime
 from decimal import Decimal
-from shop.models import Order, OrderItem
+from shop.models import Order
+from utils.order_logger import log_order_send
 
-# ✅ GNB API 접속 정보 - BeeStore SOAP 서비스 연결을 위한 인증 정보
-SOAP_ENDPOINT = "http://93.46.41.5:8180/milaneseb2b/soapBeestore.php"  # SOAP 서비스 엔드포인트
-SOAP_USER = "milaneseb2b"  # SOAP 인증 사용자명
-SOAP_PSW = "w8Yc$K"  # SOAP 인증 비밀번호
-SOAP_IGUNEGOZIO = "179"  # 상점 ID
-SOAP_IGUCLIENTE = "13/4/3/6867/242476/0"  # 고객 ID (성공 확인된 포맷)
-SOAP_CODIVA = "NI08"  # 세금 코드
+# 🔑 지앤비 전용 BeeStore API 설정
+GNB_CONFIG = {
+    'soap_endpoint': 'http://93.46.41.5:8180/milaneseb2b/soapBeestore.php',
+    'user': 'milaneseb2b',
+    'password': 'w8Yc$K',
+    'igu_negozio': '179',
+    'igu_cliente': '13\\4\\3\\6867\\242476\\0',  # 백슬래시 형식
+    'cod_iva': 'NI08',
+    'retailer_name': 'GNB(지앤비)',
+    'retailer_code': 'IT-G-01'
+}
 
-# ✅ 요청 및 응답 로그 디렉토리 설정
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-LOG_DIR_RES = "soap_responses"  # 응답 로그 저장 디렉토리
-os.makedirs(LOG_DIR_RES, exist_ok=True)  # 디렉토리가 없으면 생성
 
 def send_order(order: Order):
     """
-    GNB(지앤비) 거래처로 SOAP 주문을 전송하는 함수
+    지앤비 B2B 주문 전송 함수 (order_service.py에서 호출)
     
     Args:
-        order: Django Order 객체 - 전송할 주문 정보
+        order: Django Order 객체
         
     Returns:
-        list: 각 주문 항목별 전송 결과 리스트
-              [{"sku": "상품코드", "item_id": 항목ID, "success": True/False, "reason": "메시지"}]
+        List[Dict]: [{"sku": "", "item_id": "", "success": bool, "reason": ""}]
     """
-
-    # ✅ 로그 저장용 디렉토리 설정 및 타임스탬프 생성
-    now_str = datetime.now().strftime("%Y%m%d_%H%M%S")  # 현재 시간을 문자열로 변환
-    log_file_path = os.path.join(LOG_DIR_RES, "gnb_order_log.json")  # 로그 파일 경로
-
-    # ✅ SOAP Envelope 구성용 네임스페이스 정의
-    NS_SOAPENV = "http://schemas.xmlsoap.org/soap/envelope/"  # SOAP 표준 네임스페이스
-    NS_URN = "urn:wsBeestore"  # BeeStore 서비스 네임스페이스
-    nsmap = {"soapenv": NS_SOAPENV, "urn": NS_URN}  # 네임스페이스 맵핑
-
-    # ✅ SOAP Envelope 및 Body 생성
-    envelope = etree.Element(etree.QName(NS_SOAPENV, "Envelope"), nsmap=nsmap)
-    body = etree.SubElement(envelope, etree.QName(NS_SOAPENV, "Body"))
-
-    # ✅ fInserimentoDocumento 메서드 호출 - BeeStore의 문서 삽입 메서드
-    method = etree.SubElement(body, etree.QName(NS_URN, "fInserimentoDocumento"))
-    etree.SubElement(method, "user").text = SOAP_USER  # 사용자 인증
-    etree.SubElement(method, "password").text = SOAP_PSW  # 비밀번호 인증
-    inserimento = etree.SubElement(method, "inserimentoDocumento")  # 문서 삽입 데이터
-
-    # ✅ testata(헤더) 구성 - 주문 기본 정보
-    testata = etree.SubElement(inserimento, "testata")
-    etree.SubElement(testata, "iguNegozio").text = SOAP_IGUNEGOZIO  # 상점 ID
-    etree.SubElement(testata, "iguNegozioDest").text = ""  # 목적지 상점 (비어있음)
-    etree.SubElement(testata, "dtRif").text = order.created_at.strftime("%Y-%m-%d")  # 주문 생성 날짜
-
-    # ✅ 주문번호 설정: 첫번째 상품의 external_order_number 사용
-    numrif = "-"  # 기본값
+    
+    results = []
+    
+    # 📦 주문 항목별 정보 수집
+    items_info = []
     for item in order.items.all():
-        if hasattr(item, "external_order_number") and item.external_order_number:
-            numrif = item.external_order_number
-            break
-    etree.SubElement(testata, "numRif").text = numrif  # 참조 번호
-
-    # ✅ 문서 타입 및 고객 정보 설정
-    etree.SubElement(testata, "iguTipoDocumento").text = "B2BORD"  # B2B 주문 타입
-    etree.SubElement(testata, "iguCliente").text = SOAP_IGUCLIENTE  # 고객 ID
-    etree.SubElement(testata, "tessera").text = ""  # 멤버십 카드 (비어있음)
-    
-    # ✅ 고객 주소 정보 - 하드코딩된 배송지 정보
-    etree.SubElement(testata, "nominativo").text = "MILANESE"  # 고객명
-    etree.SubElement(testata, "indirizzo").text = "JOJUNGDAE-RO F1025, 45"  # 주소
-    etree.SubElement(testata, "citta").text = "HANAM-SI"  # 도시
-    etree.SubElement(testata, "cap").text = "12918"  # 우편번호
-    etree.SubElement(testata, "provincia").text = "GYEONGGI-DO"  # 주/도
-    etree.SubElement(testata, "telefono").text = "01073360902"  # 전화번호
-    etree.SubElement(testata, "codiceStato").text = "KOR"  # 국가 코드
-    etree.SubElement(testata, "partitaIva").text = "6178605369"  # 부가세 번호
-    etree.SubElement(testata, "codFisc").text = "6178605369"  # 세무 번호
-
-    # ✅ 상품 정보 생성 - 단일 상품만 처리 (BeeStore API 제한사항)
-    first_item = order.items.first()  # 첫 번째 주문 항목만 처리
-    if first_item:
-        try:
-            # ✅ righe 요소 생성 (build_test_order_fixed.py와 동일한 구조)
-            righe = etree.SubElement(inserimento, "righe")  # 소문자 "righe" 사용
-            
-            # ✅ 상품 상세 정보 설정
-            etree.SubElement(righe, "codArticolo").text = first_item.option.external_option_id  # 상품 코드
-            etree.SubElement(righe, "quantitaMov").text = str(first_item.quantity)  # 수량
-            etree.SubElement(righe, "przVenditaLordo").text = str(first_item.product.price_retail or Decimal("0.0"))  # 정가
-            etree.SubElement(righe, "sconto").text = "0"  # 할인 (기본값 0)
-            etree.SubElement(righe, "przVenditaNetto").text = str(first_item.option.price or Decimal("0.0"))  # 판매가
-            etree.SubElement(righe, "tipoPrezzo").text = "1"  # 가격 타입
-            etree.SubElement(righe, "codIva").text = SOAP_CODIVA  # 세금 코드
-            etree.SubElement(righe, "matricola").text = ""  # 시리얼 번호 (비어있음)
-            
-        except Exception as e:
-            print(f"❌ 상품 라인 오류: {first_item.id} → {e}")
-
-    # ✅ SOAP XML 문자열로 변환
-    xml_data = etree.tostring(envelope, pretty_print=True, encoding="utf-8", xml_declaration=True)
-
-    # ✅ HTTP 전송 헤더 설정
-    headers = {"Content-Type": "text/xml; charset=utf-8"}
-    
-    # ✅ 로그 저장용 디버그 정보 구성
-    debug = {
-        "order_id": order.id,  # 주문 ID
-        "timestamp": now_str,  # 전송 시간
-        "request_xml": xml_data.decode("utf-8"),  # 전송된 XML 데이터
-        "order_data": {  # 주문 상세 데이터 추가
-            "created_at": order.created_at.isoformat(),
-            "total_items": order.items.count(),
-            "processed_item": {
-                "item_id": first_item.id if first_item else None,
-                "external_option_id": first_item.option.external_option_id if first_item else None,
-                "quantity": first_item.quantity if first_item else None,
-                "price_retail": str(first_item.product.price_retail) if first_item and first_item.product.price_retail else None,
-                "option_price": str(first_item.option.price) if first_item and first_item.option.price else None,
-                "external_order_number": getattr(first_item, 'external_order_number', None) if first_item else None
-            } if first_item else None
-        },
-        "soap_config": {  # SOAP 설정 정보
-            "endpoint": SOAP_ENDPOINT,
-            "user": SOAP_USER,
-            "igu_negozio": SOAP_IGUNEGOZIO,
-            "igu_cliente": SOAP_IGUCLIENTE,
-            "cod_iva": SOAP_CODIVA
+        item_info = {
+            'item_id': item.id,
+            'sku': item.option.external_option_id,
+            'quantity': item.quantity,
+            'product_id': item.product.id
         }
-    }
-
+        items_info.append(item_info)
+        
+        # 결과 리스트 초기화
+        results.append({
+            "sku": item.option.external_option_id,
+            "item_id": item.id,
+            "success": False,
+            "reason": ""
+        })
+    
+    # 🔧 단일 상품만 처리 (BeeStore API 제한사항)
+    if not order.items.exists():
+        log_order_send(
+            order.id, GNB_CONFIG['retailer_name'], [],
+            success=False, reason="주문 항목이 없음"
+        )
+        return results
+    
+    first_item = order.items.first()
+    
     try:
-        # ✅ SOAP 요청 전송
-        print(f"🚀 주문 전송 시작: Order ID {order.id}")
-        response = requests.post(SOAP_ENDPOINT, data=xml_data, headers=headers, timeout=30)
+        # 📋 SOAP XML 구성
+        soap_xml = _build_soap_xml(order, first_item)
         
-        # ✅ 응답 기본 정보 저장
-        debug["http_status"] = response.status_code
-        debug["raw_response"] = response.text
-        debug["response_headers"] = dict(response.headers)
-        
-        # ✅ XML 응답 파싱 및 분석
-        try:
-            tree = etree.fromstring(response.content)
-            # SOAP 응답에서 주요 정보 추출
-            debug["faultstring"] = tree.xpath("//faultstring/text()") or []
-            debug["esito"] = tree.xpath("//esito/text()") or []
-            debug["descrizione"] = tree.xpath("//descrizione/text()") or []
-            debug["iguDocumento"] = tree.xpath("//iguDocumento/text()") or []
-            debug["success"] = "true" in (debug["esito"][0] if debug["esito"] else "")
-            
-            # 성공 시 문서 ID 확인
-            if debug["iguDocumento"]:
-                debug["success"] = True
-                debug["document_id"] = debug["iguDocumento"][0]
-        except Exception as parse_error:
-            debug["xml_parse_error"] = str(parse_error)
-            debug["success"] = False
-
-        # ✅ 상태코드 기반 메시지 지정
-        if debug["success"]:
-            order_status = "SENT"
-            order_msg = f"주문 전송 성공 (문서 ID: {debug.get('document_id', 'N/A')})"
-        elif response.status_code == 403:
-            order_status = "FAILED"
-            order_msg = "인증 오류 또는 접근 제한 (403 Forbidden)"
-        elif response.status_code == 404:
-            order_status = "FAILED"
-            order_msg = "API 엔드포인트 오류 (404 Not Found)"
-        elif response.status_code == 500 and debug.get("faultstring"):
-            order_status = "FAILED"
-            order_msg = f"서버 오류: {debug['faultstring'][0]}"
-        else:
-            order_status = "FAILED"
-            order_msg = f"기타 오류 ({response.status_code})"
-
-        # ✅ 결과를 주문 및 항목에 기록
-        order.status = order_status
-        order.memo = f"[GNB {order_status}] {order_msg}"
-        order.save()
-
-        # ✅ 각 주문 상품(orderitem)별 상태 저장
-        for item in order.items.all():
-            item.order_status = order_status
-            item.order_message = order_msg
-            item.save()
-
-        print(f"✅ 주문 처리 완료: {order_status} - {order_msg}")
-
-    except Exception as e:
-        # ✅ 예외 발생 시 처리
-        print(f"❌ 주문 전송 예외 발생: {e}")
-        debug["success"] = False
-        debug["error"] = str(e)
-        debug["error_type"] = type(e).__name__
-        
-        # 주문 상태를 실패로 업데이트
-        order.status = "FAILED"
-        order.memo = f"[GNB 예외 오류] {e}"
-        order.save()
-        
-        # 모든 주문 항목 상태 업데이트
-        for item in order.items.all():
-            item.order_status = "FAILED"
-            item.order_message = str(e)
-            item.save()
-
-    # ✅ 누적 JSON 로그 저장 - 기존 로그에 새 로그 추가
-    if os.path.exists(log_file_path):
-        try:
-            with open(log_file_path, "r", encoding="utf-8") as f:
-                all_logs = json.load(f)
-        except json.JSONDecodeError:
-            # 파일이 손상된 경우 새로 시작
-            all_logs = []
-    else:
-        all_logs = []
-
-    # 새 로그 추가
-    all_logs.append(debug)
-
-    # 로그 파일 저장
-    with open(log_file_path, "w", encoding="utf-8") as f:
-        json.dump(all_logs, f, indent=2, ensure_ascii=False)
-
-    print(f"📋 로그 저장 완료: {log_file_path}")
-
-    # ✅ 함수 반환값 - 각 주문 항목별 처리 결과
-    return [
-        {
-            "sku": item.option.external_option_id,  # 상품 코드
-            "item_id": item.id,  # 주문 항목 ID
-            "success": item.order_status == "SENT",  # 성공 여부
-            "reason": item.order_message  # 결과 메시지
+        # 📤 SOAP 요청 전송
+        headers = {
+            'Content-Type': 'text/xml; charset=utf-8',
+            'SOAPAction': 'urn:fInserimentoDocumentoAction'
         }
-        for item in order.items.all()
-    ]
+        
+        response = requests.post(
+            GNB_CONFIG['soap_endpoint'],
+            data=soap_xml.encode('utf-8'),
+            headers=headers,
+            timeout=30
+        )
+        
+        # 📥 응답 처리
+        success, document_id, error_msg = _parse_soap_response(response)
+        
+        if success:
+            # ✅ 성공 처리
+            reason = f"주문 생성 성공 (문서ID: {document_id})"
+            
+            # 주문 상태 업데이트
+            order.status = "SENT"
+            order.memo = f"[GNB 전송완료] {reason}"
+            order.save()
+            
+            # 주문 항목 상태 업데이트 (첫 번째 항목만)
+            first_item.order_status = "SENT"
+            first_item.order_message = reason
+            first_item.save()
+            
+            # 결과 업데이트
+            for i, result in enumerate(results):
+                if i == 0:  # 첫 번째 항목만 성공
+                    result["success"] = True
+                    result["reason"] = reason
+                else:  # 나머지는 미처리
+                    result["reason"] = "단일 상품만 처리됨 (BeeStore 제한)"
+            
+            # 📝 성공 로그
+            log_order_send(
+                order.id, GNB_CONFIG['retailer_name'], items_info,
+                success=True, reason=reason, response=f"문서ID: {document_id}"
+            )
+            
+        else:
+            # ❌ 실패 처리
+            _handle_order_failure(order, first_item, results, error_msg, items_info)
+            
+    except Exception as e:
+        # ❌ 예외 처리
+        error_msg = f"SOAP 요청 오류: {str(e)}"
+        _handle_order_failure(order, first_item, results, error_msg, items_info)
+    
+    return results
+
+
+def _build_soap_xml(order, item):
+    """SOAP XML 구성"""
+    
+    # 주문 번호 처리 (item.id 사용)
+    num_rif = item.id
+    
+    # 날짜 형식
+    dt_rif = order.created_at.strftime('%Y-%m-%d')
+    
+    soap_xml = f'''<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:wsBeestore">
+    <soapenv:Body>
+        <urn:fInserimentoDocumento>
+            <user>{GNB_CONFIG['user']}</user>
+            <password>{GNB_CONFIG['password']}</password>
+            <inserimentoDocumento>
+                <testata>
+                    <iguNegozio>{GNB_CONFIG['igu_negozio']}</iguNegozio>
+                    <iguNegozioDest></iguNegozioDest>
+                    <dtRif>{dt_rif}</dtRif>
+                    <numRif>{num_rif}</numRif>
+                    <iguTipoDocumento>B2BORD</iguTipoDocumento>
+                    <iguCliente>{GNB_CONFIG['igu_cliente']}</iguCliente>
+                    <tessera></tessera>
+                    <nominativo>MILANESE</nominativo>
+                    <indirizzo>JOJUNGDAE-RO F1025, 45</indirizzo>
+                    <citta>HANAM-SI</citta>
+                    <cap>12918</cap>
+                    <provincia>GYEONGGI-DO</provincia>
+                    <telefono>01073360902</telefono>
+                    <codiceStato>KOR</codiceStato>
+                    <partitaIva>6178605369</partitaIva>
+                    <codFisc>6178605369</codFisc>
+                </testata>
+                <righe>
+                    <codArticolo>{item.option.external_option_id}</codArticolo>
+                    <quantitaMov>{item.quantity}</quantitaMov>
+                    <przVenditaLordo>{float(item.product.price_retail or Decimal("0.0"))}</przVenditaLordo>
+                    <sconto>0</sconto>
+                    <przVenditaNetto>{float(item.option.price or Decimal("0.0"))}</przVenditaNetto>
+                    <tipoPrezzo>1</tipoPrezzo>
+                    <codIva>{GNB_CONFIG['cod_iva']}</codIva>
+                    <matricola></matricola>
+                </righe>
+            </inserimentoDocumento>
+        </urn:fInserimentoDocumento>
+    </soapenv:Body>
+</soapenv:Envelope>'''
+    
+    return soap_xml
+
+
+def _parse_soap_response(response):
+    """SOAP 응답 파싱"""
+    
+    if response.status_code != 200:
+        return False, None, f"HTTP 오류: {response.status_code}"
+    
+    try:
+        import xml.etree.ElementTree as ET
+        root = ET.fromstring(response.content)
+        
+        # SOAP Fault 확인
+        fault_elements = root.findall('.//{http://schemas.xmlsoap.org/soap/envelope/}Fault')
+        if fault_elements:
+            fault_string = fault_elements[0].find('.//{http://schemas.xmlsoap.org/soap/envelope/}faultstring')
+            if fault_string is not None:
+                return False, None, f"SOAP Fault: {fault_string.text}"
+        
+        # 성공 시 문서 ID 추출
+        doc_id_elements = root.findall('.//iguDocumento')
+        if doc_id_elements:
+            document_id = doc_id_elements[0].text
+            return True, document_id, None
+        else:
+            return False, None, "응답에서 문서 ID를 찾을 수 없음"
+            
+    except Exception as e:
+        return False, None, f"XML 파싱 오류: {str(e)}"
+
+
+def _handle_order_failure(order, first_item, results, error_msg, items_info):
+    """주문 실패 처리"""
+    
+    # 주문 상태 업데이트
+    order.status = "FAILED"
+    order.memo = f"[GNB 전송실패] {error_msg}"
+    order.save()
+    
+    # 주문 항목 상태 업데이트
+    first_item.order_status = "FAILED"
+    first_item.order_message = error_msg
+    first_item.save()
+    
+    # 결과 업데이트
+    for result in results:
+        result["success"] = False
+        result["reason"] = error_msg
+    
+    # 📝 실패 로그
+    log_order_send(
+        order.id, GNB_CONFIG['retailer_name'], items_info,
+        success=False, reason=error_msg, error=error_msg
+    )

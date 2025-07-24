@@ -15,3 +15,4 @@ django-multiselectfield
 psutil
 zeep
 selenium
+beautifulsoup4
