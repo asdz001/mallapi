@@ -11,6 +11,7 @@ import os
 from django.conf import settings
 from openpyxl import load_workbook
 from shop.models import RawProduct, RawProductOption
+from shop.models import Product, ProductOption
 from shop.utils.excel_helper import generate_failed_excel
 import io
 
@@ -125,6 +126,9 @@ def export_rawproduct_excel(request):
 
 
 
+
+
+#가공상품 등록
 @staff_member_required
 @csrf_exempt
 def import_product_excel(request):
@@ -151,13 +155,13 @@ def import_product_excel(request):
                         raise Exception(f"{i}행: retailer 또는 external_product_id가 없습니다.")
 
                     # ✅ 상품 등록 또는 업데이트
-                    product_obj, _ = RawProduct.objects.update_or_create(
+                    product_obj, _ = Product.objects.update_or_create(
                         retailer=row_data["retailer"],
                         external_product_id=row_data["external_product_id"],
                         defaults={
                             "brand_name": row_data.get("brand_name"),
-                            "product_name": row_data.get("product_name"),
-                            "raw_product_name": row_data.get("raw_product_name"),
+                            "raw_brand_name": row_data.get("raw_brand_name"),
+                            "product_name": row_data.get("product_name"),                            
                             "gender": row_data.get("gender"),
                             "category1": row_data.get("category1"),
                             "category2": row_data.get("category2"),
@@ -171,7 +175,6 @@ def import_product_excel(request):
                             "image_url_3": row_data.get("image_url_3"),
                             "image_url_4": row_data.get("image_url_4"),
                             "price_org": row_data.get("price_org") or 0,
-                            "price_supply": row_data.get("price_supply") or 0,
                             "discount_rate": row_data.get("discount_rate") or 0,
                             "price_retail": row_data.get("price_retail") or 0,
                             "markup" : row_data.get("markup") or 0,
@@ -181,11 +184,17 @@ def import_product_excel(request):
                         }
                     )
 
+                    if "price_supply" in row_data:
+                        try:
+                            product_obj.__dict__["price_supply"] = row_data.get("price_supply") or 0
+                        except Exception as e:
+                            print("가격 세팅 오류:", e)
+
                     # ✅ 옵션 등록 (필수값: external_option_id, option_name)
                     if not row_data.get("external_option_id") or not row_data.get("option_name"):
                         raise Exception(f"{i}행: 옵션 필수값 누락 (external_option_id, option_name)")
 
-                    RawProductOption.objects.update_or_create(
+                    ProductOption.objects.update_or_create(
                         external_option_id=row_data["external_option_id"],
                         defaults={
                             "product": product_obj,

@@ -22,6 +22,13 @@ def calculate_final_price(product):
         retailer_obj = None
         print(f"❌ [오류] Retailer 변환 실패: {retailer_code}")
         return None  # 혹은 fallback 값 처리
+    
+
+    # ✅ 특정 리테일러는 가격 계산 제외
+    EXCLUDED_RETAILERS = ["MLKR",]
+    if retailer_obj.code in EXCLUDED_RETAILERS:
+        print(f"⛔ 가격 계산 제외 리테일러: {retailer_obj.code}")
+        return None
 
 
 
@@ -106,5 +113,7 @@ def calculate_final_price(product):
     return int(rounded_result)
 
 def apply_price_to_product(product):
-    product.calculated_price_krw = calculate_final_price(product)
+    new_price = calculate_final_price(product)
+    if new_price is not None:
+        product.calculated_price_krw = new_price  # ✅ 계산된 값이 있을 때만 덮어씀
     return product

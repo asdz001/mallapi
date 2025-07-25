@@ -172,7 +172,7 @@ class ProductOptionInline(admin.TabularInline):
 class ProductAdmin(admin.ModelAdmin):
     # ✅ 2번 수정: cart_button을 맨 마지막으로 이동
     list_display = (
-        'id', 'retailer', 'brand_name', 'image_tag', 'product_name', 
+        'retailer', 'brand_name', 'image_tag', 'product_name', 
         'gender', 'category1', 'category2', 'season', 'sku', 'color', 
         'origin_display', 'price_retail', 'discount_rate', 'price_org', 
         'formatted_price_supply', 'markup_display', 'formatted_price_krw', 
@@ -181,7 +181,7 @@ class ProductAdmin(admin.ModelAdmin):
     )
 
     search_fields = (
-        'id','product_name', 'brand_name', 'sku', 'color', 'origin'
+        'external_product_id','product_name', 'brand_name', 'sku', 'color', 'origin'
     )
 
     inlines = [ProductOptionInline]
@@ -191,7 +191,7 @@ class ProductAdmin(admin.ModelAdmin):
     readonly_fields = ('image_tag',)
     
     # ✅ 페이지네이션 설정 (핵심 최적화)
-    list_per_page = 50
+    list_per_page = 100
     list_max_show_all = 200
     
     # ✅ CSS 추가 - ADD TO CART 우측 고정 (마지막 컬럼)
