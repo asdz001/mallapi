@@ -238,3 +238,121 @@ def send_order(order: Order):
         }
         for item in order.items.all()
     ]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
+BeeStore API 연결 테스트 (IT-G-01)
+단계별 누적 테스트 방식
+"""
+import requests
+import zeep
+
+def test_beestore_step1_2_3_4():
+    """1+2+3+4단계: 설정값 + WSDL 접근 + SOAP 클라이언트 + API 함수 호출"""
+    print("=== 1단계: 설정값 검증 ===")
+    
+    # BeeStore 연결 정보
+    wsdl_url = "http://93.46.41.5:8180/milaneseb2b/soapBeestore.wsdl"
+    user = "milaneseb2b"
+    password = "w8Yc$K"
+    igu_negozio = "179"
+    igu_cliente = "13/4/3/6867/242476/0"
+    cod_iva = "NI08"
+    
+    print(f"WSDL URL: {wsdl_url}")
+    print(f"User: {user}")
+    print(f"IGU Negozio: {igu_negozio}")
+    print(f"IGU Cliente: {igu_cliente}")
+    print(f"Cod IVA: {cod_iva}")
+    
+    print("✓ 1단계 완료: 설정값 확인됨")
+    
+    print("\n=== 2단계: WSDL 접근 체크 ===")
+    
+    try:
+        response = requests.get(wsdl_url, timeout=10)
+        print(f"WSDL 응답 코드: {response.status_code}")
+        print(f"응답 크기: {len(response.content)} bytes")
+        
+        if response.status_code == 200:
+            print("✓ 2단계 완료: WSDL 접근 성공")
+        else:
+            print("✗ 2단계 실패: WSDL 접근 불가")
+            return False
+            
+    except Exception as e:
+        print(f"✗ 2단계 실패: {str(e)}")
+        return False
+    
+    print("\n=== 3단계: SOAP 클라이언트 생성 ===")
+    
+    try:
+        client = zeep.Client(wsdl_url)
+        print("✓ SOAP 클라이언트 생성 성공")
+        
+        # 실제 서비스 함수들 확인
+        try:
+            operations = [op.name for op in client.service._binding._operations.values()]
+            print(f"사용 가능한 API 함수들: {operations}")
+        except:
+            print("함수 목록 조회 중 오류 (정상 동작)")
+        
+        print("✓ 3단계 완료: SOAP 클라이언트 준비됨")
+        
+    except Exception as e:
+        print(f"✗ 3단계 실패: {str(e)}")
+        return False
+    
+    print("\n=== 4단계: API 함수 호출 테스트 ===")
+
+    try:
+        # 간단한 재고 조회로 API 연결 테스트
+        print("fDisponibilita 함수 호출 시도...")
+    
+        response = client.service.fDisponibilita(
+            articolo="2000016869262",          # CodiceArticolo → articolo
+            barcode="",                  # 그대로
+            iguNegozio=igu_negozio,     # IGUNegozio → iguNegozio  
+            user=user,                   # User → user
+            password=password            # Password → password
+        )
+    
+        print(f"API 응답: {response}")
+        print("✓ 4단계 완료: API 함수 호출 성공")
+        return True
+    
+    except Exception as e:
+        print(f"API 호출 결과: {str(e)}")
+        # 에러가 나더라도 연결은 된 것으로 판단
+        if "103" in str(e) or "Product not found" in str(e):
+            print("✓ 4단계 완료: API 연결 성공 (상품 코드만 잘못됨)")
+            return True
+        else:
+            print(f"✗ 4단계 실패: 실제 연결 문제")
+            return False
+
+
+if __name__ == "__main__":
+    # 1+2+3+4단계 테스트
+    result = test_beestore_step1_2_3_4()

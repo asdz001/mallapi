@@ -1,7 +1,7 @@
 
 from django.contrib import admin
 from django.urls import path, include  # ★ include를 추가합니다.
-from shop.views_admin import save_cart_option
+from shop.admin_views.cart_actions import save_cart_option
 from django.http import HttpResponse
 from django.conf.urls.i18n import i18n_patterns
 from django.conf import settings
