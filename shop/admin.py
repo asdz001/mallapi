@@ -210,20 +210,24 @@ class ProductAdmin(admin.ModelAdmin):
 
     # 이미지노출
     def image_tag(self, obj):
-        if obj.image_url:
-            url = obj.image_url
+        # 최대 4개의 이미지 필드를 리스트로 정리
+        urls = [obj.image_url_1, obj.image_url_2, obj.image_url_3, obj.image_url_4]
 
-            # http로 시작하지 않으면 /media 붙이기
+        tags = []
+        for url in urls:
+            if not url:
+                continue
             if not url.startswith("http"):
                 url = settings.MEDIA_URL.rstrip("/") + "/" + url.lstrip("/")
-
-            return format_html('''
-                <img src="{}" style="width:60px; height:60px; transition: 0.3s;" 
+            tags.append(format_html(
+                '''
+                <img src="{}" style="width:60px; height:60px; margin-right:4px; transition:0.3s;" 
                      onmouseover="this.style.transform='scale(3)'" 
                      onmouseout="this.style.transform='scale(1)'"/>
-            ''', url)
+                ''', url
+            ))
 
-        return "-"
+        return format_html(''.join(tags)) if tags else "-"
     image_tag.short_description = _('이미지')
     
     # 원화가
@@ -384,8 +388,11 @@ class CartAdmin(admin.ModelAdmin):
     get_product_name.short_description = _("상품명")
 
     def get_image(self, obj):
-        if obj.product.image_url:
-            return format_html(f'<img src="{obj.product.image_url}" width="50" height="50">')
+        url = getattr(obj.product, "image_url_1", None)
+        if url:
+            if not url.startswith("http"):
+                url = settings.MEDIA_URL.rstrip("/") + "/" + url.lstrip("/")
+            return format_html(f'<img src="{url}" width="50" height="50">')
         return "-"
     get_image.short_description = _("이미지")
 

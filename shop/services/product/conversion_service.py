@@ -177,6 +177,13 @@ class UltraOptimizedConversionService:
         
         return result
     
+    # 단일 상품 변환
+    def convert_single_product(self, raw_product):
+        return self.bulk_convert_ultra_optimized(
+            queryset=RawProduct.objects.filter(pk=raw_product.pk),
+            batch_size=1
+        )[0] == 1
+    
     def bulk_convert_ultra_optimized(self, queryset, batch_size: int = 500) -> Tuple[int, int]:
         """
         대폭 최적화된 대량 상품 변환
@@ -277,7 +284,10 @@ class UltraOptimizedConversionService:
                     'gender': std_cat1,
                     'category1': std_cat2,
                     'category2': std_cat3,
-                    'image_url': raw_product.image_url_1,
+                    'image_url_1': raw_product.image_url_1,
+                    'image_url_2': raw_product.image_url_2,
+                    'image_url_3': raw_product.image_url_3,
+                    'image_url_4': raw_product.image_url_4,
                     'raw_brand_name': raw_product.raw_brand_name,
                     'brand_name': std_brand,
                     'product_name': raw_product.product_name,
@@ -355,8 +365,8 @@ class UltraOptimizedConversionService:
                     if products_to_update:
                         Product.objects.bulk_update(
                             products_to_update, 
-                            ['season', 'gender', 'category1', 'category2', 'image_url', 
-                             'brand_name', 'product_name', 'sku', 'price_retail', 'price_org', 
+                            ['season', 'gender', 'category1', 'category2', 'image_url_1',
+                             'image_url_2', 'image_url_3', 'image_url_4', 'brand_name', 'product_name', 'sku', 'price_retail', 'price_org', 
                              'discount_rate', 'color', 'material', 'origin', 'status', 'updated_at'], 
                             batch_size=200
                         )
@@ -424,6 +434,11 @@ class UltraOptimizedConversionService:
 
         # DB 작업 통계
         self.logger.info(f"🔥 DB 작업: 생성 {self.stats['bulk_creates']:,}개 / 업데이트 {self.stats['bulk_updates']:,}개")
+
+
+
+
+
 
 
 # ========== 호환성 유지를 위한 기존 클래스 ==========
@@ -518,6 +533,8 @@ def convert_or_update_product(raw_product):
     service = get_conversion_service()
     # 단일 상품 변환 로직은 기존과 동일
     return service.convert_single_product(raw_product)
+
+
 
 def bulk_convert_or_update_products(batch_size=500):
     """

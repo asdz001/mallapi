@@ -12,5 +12,7 @@ urlpatterns = [
     path('admin/shop/product/import-excel/', admin_import.import_product_excel, name='import_product_excel'),
     path('admin/shop/rawproduct/export-excel/', admin_import.export_rawproduct_excel,name='export_rawproduct_excel'),
     path("admin/shop/rawproduct/sample-download/", downloads.download_rawproduct_sample, name="download_rawproduct_sample"),
+    path('admin/shop/product/export-excel/', admin_import.export_product_excel,name='export_product_excel'),
+    path("admin/shop/product/sample-download/", downloads.download_product_sample, name="download_product_sample"),
 
 ]

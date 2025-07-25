@@ -1,0 +1,50 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<h1>📦 Product 엑셀 등록</h1>
+
+<p style="margin-bottom: 10px;">
+  <strong>※ 업로드 형식:</strong><br>
+  아래 제공된 양식을 기반으로 .xlsx 파일을 업로드해주세요.
+</p>
+
+<div style="margin-bottom: 20px;">
+  <a class="button default" href="{% url 'download_product_sample' %}">
+    ⬇️ 예제 파일 다운로드
+  </a>
+
+  <a class="button default" href="{% url 'export_product_excel' %}">
+    📊 전체 엑셀 다운로드
+  </a>
+</div>
+
+{% if error %}
+  <p style="color:red; font-weight:bold;">❌ {{ error }}</p>
+{% endif %}
+{% if success %}
+  <p style="color:green; font-weight:bold;">✅ {{ success }}</p>
+{% endif %}
+{% if errors %}
+  <ul style="color:red;">
+    {% for err in errors %}
+      <li>{{ err }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" style="margin-top:15px;">
+  {% csrf_token %}
+  <label for="excel_file"><strong>엑셀 파일 선택:</strong></label><br>
+  <input type="file" name="excel_file" accept=".xlsx, .xls" required><br><br>
+  <button type="submit" class="default">📤 업로드 시작</button>
+</form>
+{% endblock %}
+
+
+{% if failed_file_url %}
+  <p style="color:red; font-weight:bold;">
+    ❌ 실패 항목 있음 → 
+    <a href="{% static failed_file_url %}">[엑셀 다운로드]</a>
+  </p>
+{% endif %}

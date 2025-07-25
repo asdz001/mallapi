@@ -2,3 +2,13 @@
 {% block content_title %}
   {{ title }} - 총 상품 수: {{ cl.result_count }}
 {% endblock %}
+
+
+
+<!-- 엑셀대량 등록수정 -->
+{% block object-tools-items %}
+  <li>
+    <a href="{% url 'import_product_excel' %}" class="button">📥 엑셀 등록/수정</a>
+  </li>
+  {{ block.super }}
+{% endblock %}
