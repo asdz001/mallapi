@@ -10,6 +10,10 @@ import logging
 from utils.product_logger import get_product_logger
 import time
 from collections import defaultdict
+from shop.services.price_calculator import calculate_final_price
+from shop.utils.markup_util import get_markup_from_product
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -276,6 +280,9 @@ class UltraOptimizedConversionService:
                 
                 # ========== 6단계: Product 처리 ==========
                 external_id = raw_product.external_product_id
+
+                markup = get_markup_from_product(raw_product)  # 브랜드, 성별, 카테고리 기반
+                final_price = calculate_final_price(raw_product)  # 공급가 기준 원화가 계산
                 
                 # Product 데이터 준비
                 product_data = {
@@ -294,6 +301,8 @@ class UltraOptimizedConversionService:
                     'sku': raw_product.sku,
                     'price_retail': raw_product.price_retail,
                     'price_org': raw_product.price_org,
+                    'markup': markup,
+                    'calculated_price_krw': final_price,
                     'discount_rate': raw_product.discount_rate or 0,
                     'color': raw_product.color,
                     'material': raw_product.material,

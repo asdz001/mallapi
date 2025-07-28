@@ -76,7 +76,7 @@ def import_rawproduct_excel(request):
                         external_option_id=row_data["external_option_id"],
                         defaults={
                             "product": product_obj,
-                            "option_name": row_data.get("option_name"),
+                            "option_name": str(row_data.get("option_name") or "").strip().upper(),
                             "stock": row_data.get("stock") or 0,
                             "price": row_data.get("price") or 0,
                             "option_url": row_data.get("option_url"),
@@ -198,7 +198,7 @@ def import_product_excel(request):
                         external_option_id=row_data["external_option_id"],
                         defaults={
                             "product": product_obj,
-                            "option_name": row_data.get("option_name"),
+                            "option_name": str(row_data.get("option_name") or "").strip().upper(),
                             "stock": row_data.get("stock") or 0,
                             "price": row_data.get("price") or 0,
                             "option_url": row_data.get("option_url"),
