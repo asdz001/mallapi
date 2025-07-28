@@ -433,22 +433,20 @@ def save_images_for_products(products: List[Dict]):
 def register_raw_products_bulk(products: List[Dict]):
     """DB 저장 처리: 신규/수정/품절"""
     
-    # 거래처 객체 조회
-    retailer = Retailer.objects.get(code=RETAILER_CODE)
     
     # 수집한 상품 ID만 추출
     incoming_ids = [p["external_product_id"] for p in products]
     
     # 기존 상품 조회 (업데이트 대상만)
     existing_products = RawProduct.objects.filter(
-        retailer=retailer,
+        retailer=RETAILER_CODE, 
         external_product_id__in=incoming_ids
     )
     existing_map = {p.external_product_id: p for p in existing_products}
 
     # 전체 상품 ID만 추출 (soldout 판별용)
     all_existing_ids = set(
-        RawProduct.objects.filter(retailer=retailer)
+        RawProduct.objects.filter(retailer=RETAILER_CODE)
         .values_list("external_product_id", flat=True)
     )
 
@@ -540,7 +538,7 @@ def register_raw_products_bulk(products: List[Dict]):
         # 수집되지 않은 기존 상품 → soldout 처리
         missing_ids = all_existing_ids - set(incoming_ids)
         RawProduct.objects.filter(
-            retailer=retailer,
+            retailer=RETAILER_CODE,
             external_product_id__in=missing_ids
         ).update(status="soldout", updated_at=now_dt)
 
