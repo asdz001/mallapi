@@ -51,6 +51,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'dashboard',  # ✅ 대시보드 앱 추가
+    'django.contrib.humanize',
 
     'shop.apps.ShopConfig',
     'pricing.apps.PricingConfig',

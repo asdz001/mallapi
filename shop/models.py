@@ -139,6 +139,12 @@ class Product(models.Model):
     image_tag.allow_tags = True
     image_tag.short_description = _("이미지")
 
+    #옵션별 수량 총합
+    @property
+    def total_stock(self):
+        # 연결된 옵션의 재고(stock)를 모두 더함
+        return sum(option.stock for option in self.options.all())    
+
     class Meta:
         verbose_name = _("상품")
         verbose_name_plural = _("2. 가공상품")

@@ -8,6 +8,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 
+
 def home(request):
     return HttpResponse("🎉 Django 서버가 정상 작동 중입니다!")
 
@@ -18,6 +19,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('shop/', include('shop.urls')),  # ★ shop 앱의 urls.py 연결
     path('', home),  # ← 이거 추가
+    path('dashboard/', include('dashboard.urls')),
 
 ]
 
