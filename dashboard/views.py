@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from shop.models import Product
 from django.core.paginator import Paginator
+from django.db.models import Q
 
 
 
@@ -30,6 +31,10 @@ def product_list(request):
         'page': page,
         'per_page_options': per_page_options,
     })
+
+
+
+
 
 # 상품 추가 페이지
 def product_add(request):

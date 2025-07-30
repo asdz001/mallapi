@@ -1,21 +1,25 @@
 {% load i18n static %}
-{% load static %}
-<link rel="stylesheet" href="{% static 'dashboard/css/base_dashboard.css' %}">
 
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>{% block title %}관리자 대시보드{% endblock %}</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}관리자 대시보드{% endblock %}</title>
+    
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="{% static 'dashboard/css/bootstrap.css' %}">
+    <!-- AdminLTE -->
+    <link rel="stylesheet" href="{% static 'dashboard/css/adminlte.css' %}">
+    <!-- Font Awesome - 아이콘 폰트 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- 커스텀 CSS는 항상 마지막에! -->
+    <link rel="stylesheet" href="{% static 'dashboard/css/base_dashboard.css' %}">
 
-  <!-- AdminLTE + Bootstrap CDN -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css">
+    {# ✅ 커스텀 CSS 삽입을 위한 블록 추가 #}
+    {% block extrahead %}
+    {% endblock %}
 
-  {# ✅ 커스텀 CSS 삽입을 위한 블록 추가 #}
-  {% block extrahead %}
-  {% endblock %}
 </head>
 <body class="hold-transition sidebar-mini">
 <div class="wrapper">
@@ -30,8 +34,8 @@
 </div>
 
 <!-- Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
+<script src="{% static 'dashboard/js/jquery.js' %}"></script>
+<script src="{% static 'dashboard/js/bootstrap.bundle.js' %}"></script>
+<script src="{% static 'dashboard/js/adminlte.js' %}"></script>
 </body>
 </html>

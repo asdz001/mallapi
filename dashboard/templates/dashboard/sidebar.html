@@ -1,34 +1,33 @@
-
-<!-- {# 
-  📄 sidebar.html
-  관리자 대시보드의 좌측 메뉴 템플릿
-  - base_admin.html에서 include됨
-  - 다국어(i18n) 적용: 한국어 / 영어 / 이탈리아어
-  - 각 메뉴는 실제 URL/view 연결 예정 (지금은 placeholder 링크)
+<!-- {# 📁 sidebar.html
+   관리자 대시보드 사이드바 템플릿
+   - AdminLTE 구조 기반
+   - request.path를 이용한 메뉴 활성화 판별
+   - base_dashboard.css에서 active 스타일 제어
 #} -->
 
-
 {% load i18n %}
+{% with request.path as path %}
 <aside class="main-sidebar sidebar-dark-primary elevation-4">
+  <!-- 좌측 상단 브랜드 영역 -->
   <a href="{% url 'dashboard:home' %}" class="brand-link">
     <span class="brand-text font-weight-light text-light">{% trans "관리자 대시보드" %}</span>
   </a>
 
   <div class="sidebar">
     <nav class="mt-2">
-      <ul class="nav nav-pills nav-sidebar flex-column" role="menu">
+      <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
 
-        <!-- 홈 -->
+        {# 📌 대시보드 (홈) 메뉴 - 단일 메뉴 #}
         <li class="nav-item">
-          <a href="{% url 'dashboard:home' %}" class="nav-link">
+          <a href="{% url 'dashboard:home' %}" class="nav-link {% if path == '/dashboard/' %}active{% endif %}">
             <i class="nav-icon fas fa-home"></i>
             <p>{% trans "대시보드" %}</p>
           </a>
         </li>
 
-        <!-- 상품 관리 -->
-        <li class="nav-item has-treeview menu-open">
-          <a href="#" class="nav-link active bg-purple">
+        {# 📁 상품 관리 - 하위 메뉴 있음 #}
+        <li class="nav-item has-treeview {% if '/dashboard/products/' in path %}menu-open{% endif %}">
+          <a href="#" class="nav-link {% if '/dashboard/products/' in path %}active{% endif %}">
             <i class="nav-icon fas fa-box"></i>
             <p>
               {% trans "상품 관리" %}
@@ -37,29 +36,62 @@
           </a>
           <ul class="nav nav-treeview">
             <li class="nav-item">
-              <a href="{% url 'dashboard:product_list' %}" class="nav-link">
+              <a href="{% url 'dashboard:product_list' %}" class="nav-link {% if path == '/dashboard/products/' %}active{% endif %}">
                 <i class="far fa-circle nav-icon"></i>
                 <p>{% trans "상품 목록" %}</p>
               </a>
             </li>
-
-        <!-- 주문 관리 -->
-        <li class="nav-item">
-          <a href="#" class="nav-link">
-            <i class="nav-icon fas fa-shopping-cart"></i>
-            <p>{% trans "주문 관리" %}</p>
-          </a>
+          </ul>
+          <ul class="nav nav-treeview">
+            <li class="nav-item">
+              <a href="#" class="nav-link {% if path == '/dashboard/products/#' %}active{% endif %}">
+                <i class="far fa-circle nav-icon"></i>
+                <p>{% trans "상품 등록" %}</p>
+              </a>
+            </li>
+          </ul>
         </li>
 
-        <!-- 통계/분석 -->
-        <li class="nav-item">
-          <a href="#" class="nav-link">
-            <i class="nav-icon fas fa-chart-line"></i>
-            <p>{% trans "통계/분석" %}</p>
+        {# 🛒 주문 관리 - 하위 메뉴 있음 #}
+        <li class="nav-item has-treeview {% if '/dashboard/orders/' in path %}menu-open{% endif %}">
+          <a href="#" class="nav-link {% if '/dashboard/orders/' in path %}active{% endif %}">
+            <i class="nav-icon fas fa-shopping-cart"></i>
+            <p>
+              {% trans "주문 관리" %}
+              <i class="right fas fa-angle-left"></i>
+            </p>
           </a>
+          <ul class="nav nav-treeview">
+            <li class="nav-item">
+              <a href="#" class="nav-link {% if '/dashboard/orders/' in path %}active{% endif %}">
+                <i class="far fa-circle nav-icon"></i>
+                <p>{% trans "주문 내역" %}</p>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        {# 📊 통계/분석 - 하위 메뉴 있음 #}
+        <li class="nav-item has-treeview {% if '/dashboard/stats/' in path %}menu-open{% endif %}">
+          <a href="#" class="nav-link {% if '/dashboard/stats/' in path %}active{% endif %}">
+            <i class="nav-icon fas fa-chart-line"></i>
+            <p>
+              {% trans "통계/분석" %}
+              <i class="right fas fa-angle-left"></i>
+            </p>
+          </a>
+          <ul class="nav nav-treeview">
+            <li class="nav-item">
+              <a href="#" class="nav-link {% if '/dashboard/stats/' in path %}active{% endif %}">
+                <i class="far fa-circle nav-icon"></i>
+                <p>{% trans "트래픽 분석" %}</p>
+              </a>
+            </li>
+          </ul>
         </li>
 
       </ul>
     </nav>
   </div>
 </aside>
+{% endwith %}

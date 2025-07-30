@@ -1,14 +1,12 @@
 {% extends "dashboard/base_admin.html" %}
 {% load static i18n humanize %}
 
+{# 🔗 기본 템플릿에서 head 영역에 커스텀 CSS 연결 #}
 {% block extrahead %}
-<link rel="stylesheet" href="{% static 'dashboard/css/base_dashboard.css' %}">
+  {# 1. 기본 AdminLTE/Bootstrap은 base_admin.html에서 로드됨 #}
+  {# 2. 커스텀 CSS는 마지막에 추가해야 override가 가능함 #}
+  <link rel="stylesheet" href="{% static 'dashboard/css/base_dashboard.css' %}">
 {% endblock %}
-
-{# ✅ 관리자 대시보드 상품 목록 템플릿 #}
-{# - 검색 필터 기능 포함 (상품명) #}
-{# - 한 페이지에 보여줄 상품 개수 선택 가능 (20/100/500/1000) #}
-{# - 페이지네이션 적용 #}
 
 {% block title %}상품 목록{% endblock %}
 
@@ -28,12 +26,10 @@
   <div class="card shadow-sm">
     <div class="card-body">
 
-      {# ✅ 상단 필터 폼: 검색어, per_page 선택 드롭다운 #}
+      {# 🔍 검색 필터 폼 #}
       <form method="get" class="form-inline mb-3">
-        {# 🔍 상품명 검색 필드 #}
         <input type="text" name="q" value="{{ query }}" class="form-control mr-2" placeholder="{% trans '상품명 검색' %}">
 
-        {# 📄 per_page 드롭다운 (페이지당 표시 개수) #}
         <select name="per_page" class="form-control mr-2" onchange="this.form.submit()">
           {% for count in per_page_options %}
             <option value="{{ count }}" {% if per_page == count %}selected{% endif %}>{{ count }}개씩</option>
@@ -43,70 +39,67 @@
         <button type="submit" class="btn btn-outline-secondary">{% trans "검색" %}</button>
       </form>
 
-      {# ✅ 상품 테이블 목록 #}
-      <table class="table table-striped table-bordered">
-        <thead>
-          <tr>
-            <th>상품ID</th>
-            <th>부띠끄</th>
-            <th>썸네일</th>
-            <th>브랜드</th>
-            <th>상품명</th>
-            <th>SKU</th>
-            <th>성별</th>
-            <th>카테고리</th>
-            <th>시즌</th>            
-            <th>색상</th>
-            <th>COST</th>
-            <th>마크업</th>
-            <th>공급가</th>
-            <th>소비자가</th>
-            <th>원화가</th>
-            <th>재고</th>
-            <th>상태</th>
-            <th>등록일</th>
-            <th>수정일</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for product in products %}
-          <tr>
-            <td>{{ product.external_product_id }}</td>
-            <td>{{ product.retailer }}</td>
-            <td>
-              {% if product.image_url_1 %}
-                <img src="{{ product.image_url_1 }}" width="60" height="60">
-              {% else %}-{% endif %}
-            </td>
-            <td>{{ product.brand_name }}</td>
-            <td>{{ product.product_name }}</td>
-            <td>{{ product.sku }}</td>
-            <td>{{ product.gender }}</td>
-            <td>
-              {{ product.category1 }}
-              {% if product.category2 %}/ {{ product.category2 }}{% endif %}
-            </td>
-            <td>{{ product.season }}</td>
-            <td>{{ product.color }}</td>
-            <td>{{ product.price_org }}</td>
-            <td>{{ product.markup|default:"-" }}</td>
-            <td>{{ product.price_supply|floatformat:0 }}</td>
-            <td>{{ product.price_retail }}</td>
-            <td>{{ product.calculated_price_krw|default:"-" }}</td>
-            <td>{{ product.total_stock }}</td>            
-            <td>{{ product.get_status_display }}</td>
-            <td>{{ product.created_at|date:"Y-m-d" }}</td>
-            <td>{{ product.updated_at|date:"Y-m-d" }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      {# 🧾 상품 리스트 테이블 #}
+      <div class="table-responsive">
+        <table class="table table-striped table-bordered dashboard-table">
+          <thead class="thead-dark text-center">
+            <tr>
+              <th>상품ID</th>
+              <th>부띠끄</th>
+              <th>썸네일</th>
+              <th>브랜드</th>
+              <th>상품명</th>
+              <th>SKU</th>
+              <th>성별</th>
+              <th>카테고리</th>
+              <th>시즌</th>            
+              <th>색상</th>
+              <th>COST</th>
+              <th>마크업</th>
+              <th>공급가</th>
+              <th>소비자가</th>
+              <th>원화가</th>
+              <th>재고</th>
+              <th>상태</th>
+              <th>등록일</th>
+              <th>수정일</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for product in products %}
+            <tr>
+              <td>{{ product.external_product_id }}</td>
+              <td>{{ product.retailer }}</td>
+              <td class="text-center">
+                {% if product.image_url_1 %}
+                  <img src="{{ product.image_url_1 }}" width="60" height="60">
+                {% else %}-{% endif %}
+              </td>
+              <td>{{ product.brand_name }}</td>
+              <td>{{ product.product_name }}</td>
+              <td>{{ product.sku }}</td>
+              <td>{{ product.gender }}</td>
+              <td>{{ product.category1 }}{% if product.category2 %}/ {{ product.category2 }}{% endif %}</td>
+              <td>{{ product.season }}</td>
+              <td>{{ product.color }}</td>
+              <td>{{ product.price_org }}</td>
+              <td>{{ product.markup|default:"-" }}</td>
+              <td>{{ product.price_supply|floatformat:0 }}</td>
+              <td>{{ product.price_retail }}</td>
+              <td>{{ product.calculated_price_krw|default:"-" }}</td>
+              <td>{{ product.total_stock }}</td>            
+              <td>{{ product.get_status_display }}</td>
+              <td>{{ product.created_at|date:"Y-m-d" }}</td>
+              <td>{{ product.updated_at|date:"Y-m-d" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
 
-      {# ✅ 페이지네이션 영역 #}
+      {# 📄 페이지네이션 영역 #}
       <div class="d-flex justify-content-center mt-4">
-        <ul class="pagination">
-
-          {# ◀ 이전 페이지 버튼 #}
+        <ul class="pagination pagination-sm">
           {% if products.has_previous %}
             <li class="page-item">
               <a class="page-link" href="?page={{ products.previous_page_number }}&per_page={{ per_page }}&q={{ query }}">«</a>
@@ -115,18 +108,14 @@
             <li class="page-item disabled"><span class="page-link">«</span></li>
           {% endif %}
 
-          {# 🔢 페이지 번호 버튼들 #}
           {% for num in products.paginator.page_range %}
             {% if products.number == num %}
               <li class="page-item active"><span class="page-link">{{ num }}</span></li>
             {% elif num > products.number|add:'-3' and num < products.number|add:'3' %}
-              <li class="page-item">
-                <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&q={{ query }}">{{ num }}</a>
-              </li>
+              <li class="page-item"><a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&q={{ query }}">{{ num }}</a></li>
             {% endif %}
           {% endfor %}
 
-          {# ▶ 다음 페이지 버튼 #}
           {% if products.has_next %}
             <li class="page-item">
               <a class="page-link" href="?page={{ products.next_page_number }}&per_page={{ per_page }}&q={{ query }}">»</a>
@@ -134,7 +123,6 @@
           {% else %}
             <li class="page-item disabled"><span class="page-link">»</span></li>
           {% endif %}
-
         </ul>
       </div>
 

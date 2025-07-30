@@ -1,0 +1,167 @@
+/* 📁 static/dashboard/css/base_dashboard.css */
+
+/* ✅ 기본 폰트 및 배경 설정 */
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 15px;  /* 전체 글자 작게 */
+  background-color: #f9fafb;
+  color: #343a40;
+}
+
+/* ✅ 타이틀용 헤더 스타일 */
+h1, h2, h3 {
+  font-size: 30px;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+/* ✅ 테이블 스타일 커스터마이징 */
+.table {
+  font-size: 15px;
+  background-color: #ffffff;
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  border: 1px solid #dee2e6;
+}
+
+.table th {
+  background-color: #f1f3f5;
+  color: #212529;
+  font-weight: 600;
+  text-align: center;
+  padding: 10px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.table td {
+  padding: 10px 8px;
+  vertical-align: middle;
+  border-bottom: 1px solid #e9ecef;
+}
+
+/* ✅ 짝수 행 배경 강조 */
+.table tbody tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+/* ✅ 이미지 썸네일 스타일 */
+.table img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+/* ✅ 페이지네이션 스타일 */
+.pagination {
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.pagination li a {
+  font-size: 13px;
+  padding: 6px 10px;
+  color: #6f42c1;  /* 보라색 포인트 */
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  margin: 0 3px;
+}
+
+.pagination li.active a {
+  background-color: #6f42c1;
+  color: #fff;
+  border-color: #6f42c1;
+}
+
+/* ✅ 콘텐츠 전체 영역 여백 */
+.container {
+  padding: 30px 20px;
+}
+
+/* ✅ 커스텀 버튼 스타일 (보라색 계열 버튼) */
+.btn-purple {
+  background-color: #6f42c1;
+  color: white;
+  border-color: #6f42c1;
+}
+
+.btn-purple:hover {
+  background-color: #5936a6;
+  border-color: #5936a6;
+  color: #fff;
+}
+
+
+/* ✅ 테이블 wrapper에 가로스크롤 */
+.table-wrapper {
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+/* ✅ 헤더 고정 */
+.product-table thead th {
+    position: sticky;
+    top: 0;
+    background-color: #343a40; /* 어두운 배경 */
+    color: white;
+    z-index: 2;
+}
+
+/* ✅ 첫 번째 열(상품ID) 고정 예시 */
+.product-table td:first-child,
+.product-table th:first-child {
+    position: sticky;
+    left: 0;
+    background-color: white;
+    z-index: 1;
+    min-width: 100px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+
+/* ✅ 대시보드 테이블 스타일 */
+.dashboard-table {
+  font-size: 15px;
+}
+
+/* ✅ 대시보드 테이블 헤더 스타일 */
+.dashboard-table th {
+  background-color: #f1f3f5;
+  font-weight: 600;
+  text-align: center;
+  font-size: 15px;
+}
+
+/* ✅ 대시보드 테이블 셀 스타일 */
+.dashboard-table td {
+  font-size: 13px;
+  vertical-align: middle;
+  padding: 8px 6px;
+}
+
+
+
+/* ✅ 상위 메뉴만 보라색 강조 */
+.main-sidebar .nav-sidebar > .nav-item > .nav-link.active {
+    background-color: #6f42c1 !important;
+    color: #fff !important;
+}
+
+/* ✅ 아이콘도 강조 */
+.main-sidebar .nav-sidebar > .nav-item > .nav-link.active i {
+    color: #fff !important;
+}
+
+
+/* ✅ 하위 메뉴: 선택된 항목 표시 (보라색 배경, 흰색 텍스트) */
+.main-sidebar .nav-treeview .nav-link.active {
+    background-color: #9374ce !important;
+    color: #fff !important;
+}
+
+/* ✅ 하위 메뉴 아이콘도 강조 */
+.main-sidebar .nav-treeview .nav-link.active i {
+    color: #fff !important;
+}
