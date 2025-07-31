@@ -1,14 +1,12 @@
 {% extends "dashboard/base_admin.html" %}
 {% load static i18n humanize %}
+{% load table_filters %}
 
-{# 🔗 기본 템플릿에서 head 영역에 커스텀 CSS 연결 #}
 {% block extrahead %}
-  {# 1. 기본 AdminLTE/Bootstrap은 base_admin.html에서 로드됨 #}
-  {# 2. 커스텀 CSS는 마지막에 추가해야 override가 가능함 #}
-  <link rel="stylesheet" href="{% static 'dashboard/css/base_dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'dashboard/css/base_dashboard.css' %}">
 {% endblock %}
 
-{% block title %}상품 목록{% endblock %}
+{% block title %}{% trans "상품 목록" %}{% endblock %}
 
 {% block content %}
 <section class="content-header">
@@ -23,110 +21,447 @@
 </section>
 
 <section class="content mt-3">
+
+  {# 🔍 검색 필터 엔진 #}
+  <div class="card mb-3">
+    <div class="card-header py-2">
+      <h6 class="mb-0" style="font-size: 14px;"><i class="fas fa-search"></i> {% trans "검색 필터" %}</h6>
+    </div>
+    <div class="card-body">
+      <form method="get" id="search-form">
+        
+        {# 📋 첫 번째 줄: 기본 검색 #}
+        <div class="row mb-3">
+          <div class="col-md-12">
+            <div class="form-inline">
+              <label class="mr-3" style="font-size: 13px;"><strong>{% trans "검색" %}</strong></label>
+              <select name="search_field" id="search_field" class="form-control form-control-sm mr-3" style="width: 120px; font-size: 13px;">
+                {% for field_value, field_label in search_fields %}
+                  <option value="{{ field_value }}" {% if search_field == field_value %}selected{% endif %}>
+                    {{ field_label }}
+                  </option>
+                {% endfor %}
+              </select>
+              <input type="text" 
+                     name="search_value" 
+                     id="search_value"
+                     value="{{ search_value }}" 
+                     class="form-control form-control-sm" 
+                     style="width: 400px; font-size: 13px;"
+                     placeholder="{% trans '검색어를 입력하세요' %}">
+            </div>
+          </div>
+        </div>
+
+        {# 📋 두 번째 줄: 상품분류 + 날짜 #}
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <div class="form-inline">
+              <label class="mr-3" style="font-size: 13px;"><strong>{% trans "분류" %}</strong></label>
+              <select name="gender" id="gender" class="form-control form-control-sm mr-2" style="width: 90px; font-size: 13px;">
+                {% for value, label in gender_choices %}
+                  <option value="{{ value }}" {% if gender_filter == value %}selected{% endif %}>
+                    {{ label }}
+                  </option>
+                {% endfor %}
+              </select>
+              <select name="category1" id="category1" class="form-control form-control-sm mr-2" style="width: 120px; font-size: 13px;">
+                {% for value, label in category1_choices %}
+                  <option value="{{ value }}" {% if category1_filter == value %}selected{% endif %}>
+                    {{ label }}
+                  </option>
+                {% endfor %}
+              </select>
+              <select name="category2" id="category2" class="form-control form-control-sm mr-3" style="width: 120px; font-size: 13px;">
+                {% for value, label in category2_choices %}
+                  <option value="{{ value }}" {% if category2_filter == value %}selected{% endif %}>
+                    {{ label }}
+                  </option>
+                {% endfor %}
+              </select>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="include_subcategory" 
+                       name="include_subcategory" {% if include_subcategory %}checked{% endif %}>
+                <label class="form-check-label" for="include_subcategory" style="font-size: 13px;">
+                  {% trans "하위분류 포함" %}
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-inline">
+              <label class="mr-3" style="font-size: 13px;"><strong>{% trans "날짜" %}</strong></label>
+              <select name="date_field" id="date_field" class="form-control form-control-sm mr-2" style="width: 90px; font-size: 13px;">
+                {% for value, label in date_field_choices %}
+                  <option value="{{ value }}" {% if date_field == value %}selected{% endif %}>
+                    {{ label }}
+                  </option>
+                {% endfor %}
+              </select>
+              <select name="date_range" id="date_range" class="form-control form-control-sm mr-2" style="width: 120px; font-size: 13px;">
+                {% for value, label in date_range_choices %}
+                  <option value="{{ value }}" {% if date_range == value %}selected{% endif %}>
+                    {{ label }}
+                  </option>
+                {% endfor %}
+              </select>
+              <input type="date" 
+                     name="start_date" 
+                     id="start_date"
+                     value="{{ start_date }}" 
+                     class="form-control form-control-sm mr-2" 
+                     style="width: 140px; font-size: 13px;">
+              <span class="mr-2" style="font-size: 13px;">~</span>
+              <input type="date" 
+                     name="end_date" 
+                     id="end_date"
+                     value="{{ end_date }}" 
+                     class="form-control form-control-sm" 
+                     style="width: 140px; font-size: 13px;">
+            </div>
+          </div>
+        </div>
+
+        {# 📋 세 번째 줄: 재고수량 + 상품가격 #}
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <div class="form-inline">
+              <label class="mr-3" style="font-size: 13px;"><strong>{% trans "재고" %}</strong></label>
+              <select name="stock_status" id="stock_status" class="form-control form-control-sm mr-2" style="width: 100px; font-size: 13px;">
+                {% for value, label in stock_status_choices %}
+                  <option value="{{ value }}" {% if stock_status == value %}selected{% endif %}>
+                    {{ label }}
+                  </option>
+                {% endfor %}
+              </select>
+              <input type="number" 
+                     name="min_stock" 
+                     id="min_stock"
+                     value="{{ min_stock }}" 
+                     class="form-control form-control-sm mr-2" 
+                     style="width: 90px; font-size: 13px;"
+                     placeholder="최소"
+                     min="0">
+              <span class="mr-2" style="font-size: 13px;">~</span>
+              <input type="number" 
+                     name="max_stock" 
+                     id="max_stock"
+                     value="{{ max_stock }}" 
+                     class="form-control form-control-sm mr-2" 
+                     style="width: 90px; font-size: 13px;"
+                     placeholder="최대"
+                     min="0">
+              <span class="text-muted" style="font-size: 13px;">개</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-inline">
+              <label class="mr-3" style="font-size: 13px;"><strong>{% trans "가격" %}</strong></label>
+              <select name="price_field" id="price_field" class="form-control form-control-sm mr-2" style="width: 120px; font-size: 13px;">
+                {% for value, label in price_field_choices %}
+                  <option value="{{ value }}" {% if price_field == value %}selected{% endif %}>
+                    {{ label }}
+                  </option>
+                {% endfor %}
+              </select>
+              <input type="number" 
+                     name="min_price" 
+                     id="min_price"
+                     value="{{ min_price }}" 
+                     class="form-control form-control-sm mr-2" 
+                     style="width: 100px; font-size: 13px;"
+                     placeholder="최소"
+                     min="0"
+                     step="0.01">
+              <span class="mr-2" style="font-size: 13px;">~</span>
+              <input type="number" 
+                     name="max_price" 
+                     id="max_price"
+                     value="{{ max_price }}" 
+                     class="form-control form-control-sm mr-2" 
+                     style="width: 100px; font-size: 13px;"
+                     placeholder="최대"
+                     min="0"
+                     step="0.01">
+              <span class="text-muted" style="font-size: 13px;">원</span>
+            </div>
+          </div>
+        </div>
+
+        {# 📋 네 번째 줄: 품절상태 + 품목판매상태 (UI만) #}
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <div class="form-inline">
+              <label class="mr-3" style="font-size: 13px;"><strong>{% trans "품절상태" %}</strong></label>
+              {% for value, label in sold_out_status_choices %}
+                <div class="form-check form-check-inline mr-3">
+                  <input class="form-check-input" type="radio" 
+                         name="sold_out_status" 
+                         id="sold_out_{{ value }}" 
+                         value="{{ value }}"
+                         {% if sold_out_status == value %}checked{% endif %}>
+                  <label class="form-check-label" for="sold_out_{{ value }}" style="font-size: 13px;">
+                    {{ label }}
+                  </label>
+                </div>
+              {% endfor %}
+              <small class="text-muted" style="font-size: 12px;">(추후 연동)</small>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-inline">
+              <label class="mr-3" style="font-size: 13px;"><strong>{% trans "판매상태" %}</strong></label>
+              {% for value, label in sales_status_choices %}
+                <div class="form-check form-check-inline mr-3">
+                  <input class="form-check-input" type="radio" 
+                         name="sales_status" 
+                         id="sales_{{ value }}" 
+                         value="{{ value }}"
+                         {% if sales_status == value %}checked{% endif %}>
+                  <label class="form-check-label" for="sales_{{ value }}" style="font-size: 13px;">
+                    {{ label }}
+                  </label>
+                </div>
+              {% endfor %}
+              <small class="text-muted" style="font-size: 12px;">(추후 연동)</small>
+            </div>
+          </div>
+        </div>
+
+        {# 🎯 검색 버튼 영역 (중앙 정렬) #}
+        <div class="row">
+          <div class="col-md-12 text-center">
+            <button type="submit" class="btn btn-primary mr-3" style="font-size: 13px; padding: 8px 16px;">
+              <i class="fas fa-search"></i> {% trans "검색" %}
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="reset-search" style="font-size: 13px; padding: 8px 16px;">
+              <i class="fas fa-undo"></i> {% trans "초기화" %}
+            </button>
+          </div>
+        </div>
+
+        {# 🔍 현재 검색 조건 표시 #}
+        {% if search_value or gender_filter or category1_filter or category2_filter or date_range or start_date or end_date or stock_status or min_stock or max_stock or min_price or max_price or sold_out_status or sales_status %}
+        <div class="row mt-4">
+          <div class="col-md-12">
+            <div class="alert alert-info py-2 mb-0">
+              <i class="fas fa-filter"></i>
+              <strong style="font-size: 13px;">{% trans "적용된 검색 조건" %}:</strong>
+              
+              {# 기본 검색 조건 #}
+              {% if search_value %}
+              <span class="badge badge-primary ml-1" style="font-size: 12px;">
+                {% for field_value, field_label in search_fields %}
+                  {% if search_field == field_value %}{{ field_label }}{% endif %}
+                {% endfor %}
+                : "{{ search_value }}"
+              </span>
+              {% endif %}
+              
+              {# 상품분류 조건 #}
+              {% if gender_filter %}
+              <span class="badge badge-success ml-1" style="font-size: 12px;">성별: {{ gender_filter }}</span>
+              {% endif %}
+              {% if category1_filter %}
+              <span class="badge badge-info ml-1" style="font-size: 12px;">카테고리1: {{ category1_filter }}</span>
+              {% endif %}
+              {% if category2_filter %}
+              <span class="badge badge-warning ml-1" style="font-size: 12px;">카테고리2: {{ category2_filter }}</span>
+              {% endif %}
+              {% if include_subcategory %}
+              <span class="badge badge-secondary ml-1" style="font-size: 12px;">하위분류포함</span>
+              {% endif %}
+              
+              {# 날짜 조건 #}
+              {% if date_range %}
+              <span class="badge badge-dark ml-1" style="font-size: 12px;">
+                {% for field_value, field_label in date_field_choices %}
+                  {% if date_field == field_value %}{{ field_label }}{% endif %}
+                {% endfor %}
+                : 
+                {% for range_value, range_label in date_range_choices %}
+                  {% if date_range == range_value %}{{ range_label }}{% endif %}
+                {% endfor %}
+              </span>
+              {% endif %}
+              {% if start_date or end_date %}
+              <span class="badge badge-dark ml-1" style="font-size: 12px;">
+                {% if start_date %}{{ start_date }}{% endif %}
+                {% if start_date and end_date %} ~ {% endif %}
+                {% if end_date %}{{ end_date }}{% endif %}
+              </span>
+              {% endif %}
+
+              {# 재고수량 조건 #}
+              {% if stock_status %}
+              <span class="badge badge-light ml-1" style="font-size: 12px;">
+                재고:
+                {% for status_value, status_label in stock_status_choices %}
+                  {% if stock_status == status_value %}{{ status_label }}{% endif %}
+                {% endfor %}
+              </span>
+              {% endif %}
+              {% if min_stock or max_stock %}
+              <span class="badge badge-light ml-1" style="font-size: 12px;">
+                재고량: 
+                {% if min_stock %}{{ min_stock }}{% endif %}
+                {% if min_stock and max_stock %} ~ {% endif %}
+                {% if max_stock %}{{ max_stock }}{% endif %}
+                개
+              </span>
+              {% endif %}
+
+              {# 상품가격 조건 #}
+              {% if min_price or max_price %}
+              <span class="badge badge-danger ml-1" style="font-size: 12px;">
+                {% for field_value, field_label in price_field_choices %}
+                  {% if price_field == field_value %}{{ field_label }}{% endif %}
+                {% endfor %}
+                : 
+                {% if min_price %}{{ min_price }}{% endif %}
+                {% if min_price and max_price %} ~ {% endif %}
+                {% if max_price %}{{ max_price }}{% endif %}
+                원
+              </span>
+              {% endif %}
+
+              {# 품절상태 조건 (UI만) #}
+              {% if sold_out_status %}
+              <span class="badge badge-secondary ml-1" style="font-size: 12px;">
+                품절상태:
+                {% for status_value, status_label in sold_out_status_choices %}
+                  {% if sold_out_status == status_value %}{{ status_label }}{% endif %}
+                {% endfor %}
+              </span>
+              {% endif %}
+
+              {# 품목판매상태 조건 (UI만) #}
+              {% if sales_status %}
+              <span class="badge badge-secondary ml-1" style="font-size: 12px;">
+                판매상태:
+                {% for status_value, status_label in sales_status_choices %}
+                  {% if sales_status == status_value %}{{ status_label }}{% endif %}
+                {% endfor %}
+              </span>
+              {% endif %}
+              
+              <a href="?per_page={{ per_page }}&sort={{ sort_by }}" class="btn btn-outline-danger btn-sm ml-2" style="color:black; font-size: 14px;">
+                <i class="fas fa-times"></i> {% trans "전체 조건 제거" %}
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+      </form>
+    </div>
+  </div>
+
+
+  {# 📊 표시 설정 #}
+  <div class="card mb-3">
+    <div class="card-body py-2">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          {# 왼쪽 빈 공간 #}
+        </div>
+        <div class="col-md-6">
+          <div class="form-inline justify-content-end">
+            <label class="mr-2" style="font-size: 13px;"><strong>{% trans "나열기준" %}</strong></label>
+            <select name="sort" id="sort" class="form-control form-control-sm mr-3" style="width: 150px; font-size: 13px;" onchange="changeSort(this.value)">
+              {% for value, label in sort_choices %}
+                <option value="{{ value }}" {% if sort_by == value %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+            
+            <label class="mr-2" style="font-size: 13px;"><strong>{% trans "표시설정" %}</strong></label>
+            <select name="per_page" id="per_page" class="form-control form-control-sm mr-3" style="width: 100px; font-size: 13px;" onchange="changePerPage(this.value)">
+              {% for count in per_page_options %}
+                <option value="{{ count }}" {% if per_page == count %}selected{% endif %}>
+                  {{ count }}개씩
+                </option>
+              {% endfor %}
+            </select>
+            
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="column-settings" style="font-size: 13px;">
+              <i class="fas fa-columns"></i> {% trans "컬럼설정" %}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# 📋 상품 목록 테이블 #}
   <div class="card shadow-sm">
     <div class="card-body">
 
-      {# 🔍 검색 필터 폼 #}
-      <form method="get" class="form-inline mb-3">
-        <input type="text" name="q" value="{{ query }}" class="form-control mr-2" placeholder="{% trans '상품명 검색' %}">
-
-        <select name="per_page" class="form-control mr-2" onchange="this.form.submit()">
-          {% for count in per_page_options %}
-            <option value="{{ count }}" {% if per_page == count %}selected{% endif %}>{{ count }}개씩</option>
-          {% endfor %}
-        </select>
-
-        <button type="submit" class="btn btn-outline-secondary">{% trans "검색" %}</button>
-      </form>
-
-      {# 🧾 상품 리스트 테이블 #}
+      {# 🧾 개선된 상품 리스트 테이블 - 설정 기반 동적 생성 #}
       <div class="table-responsive">
         <table class="table table-striped table-bordered dashboard-table">
+          
+          {# 📋 테이블 헤더 - 컬럼 설정을 순회하며 자동 생성 #}
           <thead class="thead-dark text-center">
             <tr>
-              <th>상품ID</th>
-              <th>부띠끄</th>
-              <th>썸네일</th>
-              <th>브랜드</th>
-              <th>상품명</th>
-              <th>SKU</th>
-              <th>성별</th>
-              <th>카테고리</th>
-              <th>시즌</th>            
-              <th>색상</th>
-              <th>COST</th>
-              <th>마크업</th>
-              <th>공급가</th>
-              <th>소비자가</th>
-              <th>원화가</th>
-              <th>재고</th>
-              <th>상태</th>
-              <th>등록일</th>
-              <th>수정일</th>
+              {% for column in table_columns %}
+                <th class="{{ column|get_column_class }}" 
+                    {% if column.width %}style="width: {{ column.width }}; min-width: {{ column.width }};"{% endif %}>
+                  {{ column.header }}
+                </th>
+              {% endfor %}
             </tr>
           </thead>
+          
+          {# 📊 테이블 본문 - 각 상품별로 컬럼 설정에 따라 데이터 출력 #}
           <tbody>
             {% for product in products %}
             <tr>
-              <td>{{ product.external_product_id }}</td>
-              <td>{{ product.retailer }}</td>
-              <td class="text-center">
-                {% if product.image_url_1 %}
-                  <img src="{{ product.image_url_1 }}" width="60" height="60">
-                {% else %}-{% endif %}
+              {% for column in table_columns %}
+                <td class="{{ column|get_column_class }}"
+                    {% if column.width %}style="width: {{ column.width }};"{% endif %}>
+                  
+                  {# 🔧 필드 값을 가져와서 설정에 따라 포맷팅 #}
+                  {% with field_value=product|get_field_value:column %}
+                    {% if column.truncate %}
+                      {# 자르기가 필요한 경우 truncate_smart 필터 적용 #}
+                      {{ field_value|truncate_smart:column }}
+                    {% else %}
+                      {# 자르기가 필요없는 경우 그대로 출력 #}
+                      {{ field_value }}
+                    {% endif %}
+                  {% endwith %}
+                  
+                </td>
+              {% endfor %}
+            </tr>
+            {% empty %}
+            <!-- 상품이 없을 때 -->
+            <tr>
+              <td colspan="{{ table_columns|length }}" class="text-center py-4">
+                <div class="text-muted">
+                  <i class="fas fa-box fa-2x mb-3"></i>
+                  <p>등록된 상품이 없습니다.</p>
+                </div>
               </td>
-              <td>{{ product.brand_name }}</td>
-              <td>{{ product.product_name }}</td>
-              <td>{{ product.sku }}</td>
-              <td>{{ product.gender }}</td>
-              <td>{{ product.category1 }}{% if product.category2 %}/ {{ product.category2 }}{% endif %}</td>
-              <td>{{ product.season }}</td>
-              <td>{{ product.color }}</td>
-              <td>{{ product.price_org }}</td>
-              <td>{{ product.markup|default:"-" }}</td>
-              <td>{{ product.price_supply|floatformat:0 }}</td>
-              <td>{{ product.price_retail }}</td>
-              <td>{{ product.calculated_price_krw|default:"-" }}</td>
-              <td>{{ product.total_stock }}</td>            
-              <td>{{ product.get_status_display }}</td>
-              <td>{{ product.created_at|date:"Y-m-d" }}</td>
-              <td>{{ product.updated_at|date:"Y-m-d" }}</td>
             </tr>
             {% endfor %}
           </tbody>
+          
         </table>
-      </div>
-
-      {# 📄 페이지네이션 영역 #}
-      <div class="d-flex justify-content-center mt-4">
-        <ul class="pagination pagination-sm">
-          {% if products.has_previous %}
-            <li class="page-item">
-              <a class="page-link" href="?page={{ products.previous_page_number }}&per_page={{ per_page }}&q={{ query }}">«</a>
-            </li>
-          {% else %}
-            <li class="page-item disabled"><span class="page-link">«</span></li>
-          {% endif %}
-
-          {% for num in products.paginator.page_range %}
-            {% if products.number == num %}
-              <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-            {% elif num > products.number|add:'-3' and num < products.number|add:'3' %}
-              <li class="page-item"><a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&q={{ query }}">{{ num }}</a></li>
-            {% endif %}
-          {% endfor %}
-
-          {% if products.has_next %}
-            <li class="page-item">
-              <a class="page-link" href="?page={{ products.next_page_number }}&per_page={{ per_page }}&q={{ query }}">»</a>
-            </li>
-          {% else %}
-            <li class="page-item disabled"><span class="page-link">»</span></li>
-          {% endif %}
-        </ul>
       </div>
 
     </div>
   </div>
+
+  {# 📊 표시 설정 및 페이지네이션 (공통 컴포넌트 사용) #}
+  {% include 'common/pagination.html' with items=products sort_choices=sort_choices %}
+  
+
 </section>
+
+{# 📱 반응형 디자인 및 검색엔진 스크립트 #}
+<script src="{% static 'dashboard/js/search_engine.js' %}"></script>
+
 {% endblock %}

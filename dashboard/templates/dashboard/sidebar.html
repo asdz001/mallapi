@@ -25,6 +25,28 @@
           </a>
         </li>
 
+        {# 📁 회원 관리 - 하위 메뉴 있음 #}
+        <li class="nav-item has-treeview {% if '/dashboard/members/' in path %}menu-open{% endif %}">
+          <a href="#" class="nav-link {% if '/dashboard/members/' in path %}active{% endif %}">
+            <i class="nav-icon fas fa-users"></i>
+            <p>
+              {% trans "회원 관리" %}
+              <i class="right fas fa-angle-left"></i>
+            </p>
+          </a>
+          <ul class="nav nav-treeview">
+            <li class="nav-item">
+              <a href="{% url 'dashboard:member_list' %}" class="nav-link {% if path == '/dashboard/members/' %}active{% endif %}">
+                <i class="far fa-circle nav-icon"></i>
+                <p>{% trans "회원 목록" %}</p>
+              </a>
+            </li>
+          </ul>
+
+        </li>
+
+
+
         {# 📁 상품 관리 - 하위 메뉴 있음 #}
         <li class="nav-item has-treeview {% if '/dashboard/products/' in path %}menu-open{% endif %}">
           <a href="#" class="nav-link {% if '/dashboard/products/' in path %}active{% endif %}">
@@ -44,7 +66,7 @@
           </ul>
           <ul class="nav nav-treeview">
             <li class="nav-item">
-              <a href="#" class="nav-link {% if path == '/dashboard/products/#' %}active{% endif %}">
+              <a href="{% url 'dashboard:product_add' %}" class="nav-link {% if path == '/dashboard/products/add' %}active{% endif %}">
                 <i class="far fa-circle nav-icon"></i>
                 <p>{% trans "상품 등록" %}</p>
               </a>

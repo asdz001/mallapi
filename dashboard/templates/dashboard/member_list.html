@@ -1,0 +1,233 @@
+{% extends "dashboard/base_admin.html" %}
+{% load i18n %}
+{% load table_filters %}
+{% load static %}
+
+{% block title %}회원 목록{% endblock %}
+
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'dashboard/css/base_dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'dashboard/css/member_list.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="content-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1>👥 회원 리스트</h1>
+        <div>
+            <!-- 엑셀 다운로드 버튼 (향후 구현) -->
+            <button class="btn btn-sm btn-success" disabled>
+                <i class="fas fa-file-excel"></i> 엑셀 다운로드
+            </button>
+        </div>
+    </div>
+</section>
+
+<section class="content">
+    <!-- 🔍 검색 필터 카드 -->
+    <div class="card mb-3">
+        <div class="card-header py-2">
+            <h6 class="mb-0" style="font-size: 14px;">
+                <i class="fas fa-search"></i> {% trans "검색 필터" %}
+            </h6>
+        </div>
+        <div class="card-body">
+            <form method="get" id="search-form">
+                
+                {# 📋 첫 번째 줄: 기본 검색 #}
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="form-inline">
+                            <label class="mr-3" style="font-size: 13px;"><strong>{% trans "검색" %}</strong></label>
+                            <select name="search_field" id="search_field" class="form-control form-control-sm mr-3" style="width: 120px; font-size: 13px;">
+                                {% for field_value, field_label in search_fields %}
+                                    <option value="{{ field_value }}" {% if search_field == field_value %}selected{% endif %}>
+                                        {{ field_label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <input type="text" 
+                                   name="search_value" 
+                                   id="search_value"
+                                   value="{{ search_value }}" 
+                                   class="form-control form-control-sm mr-3" 
+                                   style="width: 300px; font-size: 13px;"
+                                   placeholder="{% trans '검색어를 입력하세요' %}">
+                        </div>
+                    </div>
+                </div>
+
+                {# 📋 두 번째 줄: 회원유형 + 상태 + 가입일 #}
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="form-inline">
+                            <label class="mr-3" style="font-size: 13px;"><strong>{% trans "회원유형" %}</strong></label>
+                            <select name="user_type" id="user_type" class="form-control form-control-sm" style="width: 120px; font-size: 13px;">
+                                {% for value, label in user_type_choices %}
+                                    <option value="{{ value }}" {% if user_type == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-inline">
+                            <label class="mr-3" style="font-size: 13px;"><strong>{% trans "상태" %}</strong></label>
+                            <select name="status" id="status" class="form-control form-control-sm" style="width: 100px; font-size: 13px;">
+                                {% for value, label in status_choices %}
+                                    <option value="{{ value }}" {% if status == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-inline">
+                            <label class="mr-3" style="font-size: 13px;"><strong>{% trans "가입일" %}</strong></label>
+                            <input type="date" 
+                                   name="start_date" 
+                                   id="start_date"
+                                   value="{{ start_date }}" 
+                                   class="form-control form-control-sm mr-2" 
+                                   style="width: 140px; font-size: 13px;">
+                            <span class="mr-2" style="font-size: 13px;">~</span>
+                            <input type="date" 
+                                   name="end_date" 
+                                   id="end_date"
+                                   value="{{ end_date }}" 
+                                   class="form-control form-control-sm" 
+                                   style="width: 140px; font-size: 13px;">
+                        </div>
+                    </div>
+                </div>
+
+                {# 🎯 검색 버튼 영역 #}
+                <div class="row">
+                    <div class="col-md-12 text-center">
+                        <button type="submit" class="btn btn-primary mr-3" style="font-size: 13px; padding: 8px 16px;">
+                            <i class="fas fa-search"></i> {% trans "검색" %}
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="reset-search" style="font-size: 13px; padding: 8px 16px;">
+                            <i class="fas fa-undo"></i> {% trans "초기화" %}
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <!-- 📊 표시 설정 및 페이지네이션 (공통 컴포넌트 사용) -->
+    {% include 'common/pagination_info.html' with items=members sort_choices=sort_choices %}
+
+    <!-- 📋 회원 목록 테이블 -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered dashboard-table" id="member-list-table">
+                    
+                    {# 📋 테이블 헤더 #}
+                    <thead class="thead-dark text-center">
+                        <tr>
+                            <!-- 체크박스 컬럼 -->
+                            <th style="width: 40px;">
+                                <input type="checkbox" id="select-all">
+                            </th>
+                            <!-- 동적 컬럼 생성 -->
+                            {% for col in columns %}
+                            <th class="{{ col|get_column_class }}">{{ col.header }}</th>
+                            {% endfor %}
+                            <!-- 보기/수정 컬럼 -->
+                            <th style="width: 120px;" class="text-center">관리</th>
+                            <!-- 삭제 컬럼 (분리) -->
+                            <th style="width: 80px;" class="text-center">삭제</th>
+                        </tr>
+                    </thead>
+                    
+                    {# 📊 테이블 본문 #}
+                    <tbody>
+                        {% for member in members %}
+                        <tr data-member-id="{{ member.id }}">
+                            <!-- 체크박스 -->
+                            <td class="text-center">
+                                <input type="checkbox" name="member_ids" value="{{ member.id }}">
+                            </td>
+                            
+                            <!-- 동적 데이터 출력 -->
+                            {% for col in columns %}
+                            <td class="{{ col|get_column_class }}">
+                                {% with field_value=member|get_field_value:col %}
+                                    {% if col.truncate %}
+                                        {{ field_value|truncate_smart:col }}
+                                    {% else %}
+                                        {{ field_value }}
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                            {% endfor %}
+                            
+                            <!-- 보기/수정 버튼 -->
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-primary btn-view-member " 
+                                        data-member-id="{{ member.id }}" title="상세보기" data-toggle="tooltip">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-warning btn-edit-member " 
+                                        data-member-id="{{ member.id }}" title="수정" data-toggle="tooltip">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </td>
+
+                                                       
+                            <!-- 삭제 버튼 (별도 컬럼) -->
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-danger btn-delete-member" 
+                                        data-member-id="{{ member.id }}" title="삭제" data-toggle="tooltip">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <!-- 데이터가 없을 때 -->
+                        <tr>
+                            <td colspan="{{ columns|length|add:3 }}" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="fas fa-users fa-2x mb-3"></i>
+                                    <p>등록된 회원이 없습니다.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    
+                </table>
+            </div>
+
+            <!-- 하단 벌크 액션 바 -->
+            {% if members %}
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="bulk-delete" disabled>
+                        <i class="fas fa-trash"></i> 선택 삭제
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="bulk-deactivate" disabled>
+                        <i class="fas fa-ban"></i> 선택 비활성화
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 📊 표시 설정 및 페이지네이션 (공통 컴포넌트 사용) -->
+    {% include 'common/pagination.html' with items=members sort_choices=sort_choices %}
+
+</section>
+
+<!-- JavaScript 로드 -->
+<script src="{% static 'dashboard/js/search_engine.js' %}"></script>
+<script src="{% static 'dashboard/js/member_list.js' %}"></script>
+
+{% endblock %}

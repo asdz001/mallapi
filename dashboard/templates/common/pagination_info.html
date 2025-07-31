@@ -1,0 +1,112 @@
+{% comment %}
+<!-- 
+========================================
+📁 파일 위치: dashboard/templates/common/pagination.html
+🎯 목적: 공통 페이지네이션 컴포넌트
+📅 버전: 1.0
+🔄 재사용: 모든 목록 페이지에서 사용 가능
+========================================
+
+사용법:
+{% include 'common/pagination.html' with items=products %}
+{% include 'common/pagination.html' with items=members %}
+{% include 'common/pagination.html' with items=orders %}
+
+필수 변수:
+- items: 페이지네이션된 객체 (Django Paginator 결과)
+
+선택 변수:
+- per_page_options: 페이지당 표시 옵션 리스트 (기본값 사용 가능)
+- sort_choices: 정렬 옵션 리스트 (선택사항)
+-->
+{% endcomment %}
+
+{% load i18n %}
+
+<!-- 📊 표시 설정 및 정렬 -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <span class="text-muted" style="font-size: 13px;">
+                    {% if items.has_other_pages %}
+                        {{ items.start_index }}-{{ items.end_index }} / 총 {{ items.paginator.count }}개
+                    {% else %}
+                        총 {{ items.paginator.count }}개
+                    {% endif %}
+                </span>
+            </div>
+            <div class="col-md-6">
+                <div class="form-inline justify-content-end">
+                    
+                    <!-- 정렬 옵션 (sort_choices가 있을 때만 표시) -->
+                    {% if sort_choices %}
+                    <label class="mr-2" style="font-size: 13px;"><strong>{% trans "정렬" %}</strong></label>
+                    <select name="sort" id="sort" class="form-control form-control-sm mr-3" 
+                            style="width: 150px; font-size: 13px;" onchange="changeSort(this.value)">
+                        {% for value, label in sort_choices %}
+                            <option value="{{ value }}" {% if sort_by == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    {% endif %}
+                    
+                    <!-- 페이지당 표시 개수 -->
+                    <label class="mr-2" style="font-size: 13px;"><strong>{% trans "표지설정" %}</strong></label>
+                    <select name="per_page" id="per_page" class="form-control form-control-sm" onchange="changePerPage(this.value)">
+                            style="width: 100px; font-size: 13px;">
+                        {% if per_page_options %}
+                            {% for count in per_page_options %}
+                                <option value="{{ count }}" {% if per_page == count %}selected{% endif %}>
+                                    {{ count }}개씩
+                                </option>
+                            {% endfor %}
+                        {% else %}
+                            <!-- 기본 옵션들 -->
+                            <option value="10" {% if per_page == 10 %}selected{% endif %}>10개씩</option>
+                            <option value="25" {% if per_page == 25 %}selected{% endif %}>25개씩</option>
+                            <option value="50" {% if per_page == 50 %}selected{% endif %}>50개씩</option>
+                            <option value="100" {% if per_page == 100 %}selected{% endif %}>100개씩</option>
+                        {% endif %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- JavaScript 함수 (search_engine.js와 연동) -->
+<script>
+// 정렬 변경 함수 (search_engine.js에서 처리되지 않는 경우)
+if (typeof changeSort !== 'function') {
+    function changeSort(sortValue) {
+        const currentUrl = new URL(window.location);
+        currentUrl.searchParams.set('sort', sortValue);
+        currentUrl.searchParams.delete('page'); // 페이지는 1로 리셋
+        window.location.href = currentUrl.toString();
+    }
+}
+
+// 페이지당 표시 개수 변경 함수 (search_engine.js에서 처리되지 않는 경우)
+if (typeof changePerPage !== 'function') {
+    function changePerPage(value) {
+        const currentUrl = new URL(window.location);
+        currentUrl.searchParams.set('per_page', value);
+        currentUrl.searchParams.delete('page'); // 페이지는 1로 리셋
+        window.location.href = currentUrl.toString();
+    }
+}
+
+// search_engine.js가 로드되지 않은 경우를 위한 대체 이벤트
+$(document).ready(function() {
+    // search_engine.js가 이미 처리하지 않은 경우에만 실행
+    if (!window.SearchEngine) {
+        $('#per_page').on('change', function() {
+            changePerPage(this.value);
+        });
+    }
+});
+</script>

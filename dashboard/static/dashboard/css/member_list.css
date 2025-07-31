@@ -1,0 +1,351 @@
+/* 
+ * ========================================
+ * 📁 파일 위치: dashboard/static/dashboard/css/member_list.css
+ * 🎯 목적: 회원 목록 페이지 전용 스타일
+ * 📅 버전: 1.0
+ * 🔄 의존성: base_dashboard.css, AdminLTE, Bootstrap (로컬)
+ * ========================================
+ */
+
+/* 🎨 회원 목록 테이블 기본 스타일 */
+#member-list-table th {
+    font-size: 13px;
+    font-weight: 600;
+    vertical-align: middle;
+    background-color: #343a40;
+    color: white;
+    border-color: #454d55;
+}
+
+#member-list-table td {
+    font-size: 13px;
+    vertical-align: middle;
+    padding: 8px 6px;
+}
+
+/* =========================================
+   🎯 관리 버튼 스타일 (배경색 있는 버튼)
+   ========================================= */
+
+/* 보기 버튼 (파란색) */
+.btn-view-member {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+    min-width: 36px;
+    padding: 1px 1px;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+.btn-view-member:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+/* 수정 버튼 (노란색) */
+.btn-edit-member {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+    min-width: 36px;
+    padding: 1px 1px;
+    margin-left: 4px;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+.btn-edit-member:hover {
+    background-color: #e0a800;
+    border-color: #d39e00;
+    color: #212529;
+    box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
+}
+
+/* 삭제 버튼 (빨간색) */
+.btn-delete-member {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+    min-width: 36px;
+    padding: 1px 1px;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+.btn-delete-member:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+    color: white;
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+}
+
+/* 버튼 로딩 상태 */
+.btn-view-member:disabled,
+.btn-edit-member:disabled,
+.btn-delete-member:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* =========================================
+   🎯 체크박스 및 선택 기능 스타일
+   ========================================= */
+
+/* 체크박스 스타일 개선 */
+input[type="checkbox"] {
+    transform: scale(1.2);
+    margin: 0;
+    cursor: pointer;
+}
+
+/* 전체 선택 체크박스 */
+#select-all {
+    transform: scale(1.3);
+    accent-color: #6f42c1; /* 보라색 테마 적용 */
+}
+
+/* 선택된 행 하이라이트 */
+tr.selected {
+    background-color: #e3f2fd !important;
+    border-left: 3px solid #2196f3;
+}
+
+/* =========================================
+   🎯 벌크 액션 버튼 스타일
+   ========================================= */
+
+/* 벌크 액션 버튼 기본 상태 */
+#bulk-delete,
+#bulk-deactivate {
+    transition: all 0.3s ease;
+    font-size: 13px;
+    padding: 0.375rem 0.75rem;
+}
+
+/* 벌크 삭제 버튼 활성화 시 */
+#bulk-delete:not(:disabled) {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+}
+
+#bulk-delete:not(:disabled):hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+/* 벌크 비활성화 버튼 활성화 시 */
+#bulk-deactivate:not(:disabled) {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+}
+
+#bulk-deactivate:not(:disabled):hover {
+    background-color: #e0a800;
+    border-color: #d39e00;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+}
+
+/* =========================================
+   🎯 배지 및 상태 표시 스타일
+   ========================================= */
+
+/* 배지 기본 스타일 */
+.badge {
+    font-size: 0.75rem;
+    padding: 0.25em 0.6em;
+    border-radius: 0.25rem;
+}
+
+/* 활성/비활성 상태 배지 */
+.badge-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+/* 회원유형 배지 */
+.badge-info {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.badge-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+/* =========================================
+   🎯 검색 필터 영역 스타일
+   ========================================= */
+
+/* 검색 필터 카드 헤더 */
+.card-header h6 {
+    color: #495057;
+    font-weight: 600;
+}
+
+/* 검색 폼 라벨 */
+.form-inline label {
+    color: #495057;
+    font-weight: 600;
+    margin-right: 0.5rem;
+}
+
+/* 검색 버튼 */
+.btn-primary {
+    background-color: #6f42c1;
+    border-color: #6f42c1;
+}
+
+.btn-primary:hover {
+    background-color: #5936a6;
+    border-color: #5936a6;
+}
+
+/* 초기화 버튼 */
+.btn-outline-secondary:hover {
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+/* =========================================
+   🎯 유틸리티 클래스
+   ========================================= */
+
+/* Bootstrap의 me-1 클래스가 없는 경우 대체 */
+.me-1 {
+    margin-right: 0.25rem !important;
+}
+
+.me-2 {
+    margin-right: 0.5rem !important;
+}
+
+/* 텍스트 말줄임 */
+.text-truncate-member {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 툴팁 스타일 개선 */
+.tooltip .tooltip-inner {
+    background-color: #333;
+    color: #fff;
+    font-size: 12px;
+    max-width: 200px;
+}
+
+/* =========================================
+   🎯 반응형 디자인 (모바일 대응)
+   ========================================= */
+
+/* 태블릿 (768px 이하) */
+@media (max-width: 768px) {
+    #member-list-table {
+        font-size: 12px;
+    }
+    
+    #member-list-table th,
+    #member-list-table td {
+        padding: 4px 3px;
+    }
+    
+    .btn-view-member, 
+    .btn-edit-member, 
+    .btn-delete-member {
+        min-width: 32px;
+        padding: 0.1rem 0.4rem;
+        font-size: 11px;
+    }
+    
+    .btn-edit-member {
+        margin-left: 2px;
+    }
+    
+    /* 검색 필터를 세로로 배치 */
+    .form-inline {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .form-inline .form-control,
+    .form-inline .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+        margin-right: 0 !important;
+    }
+}
+
+/* 모바일 (576px 이하) */
+@media (max-width: 576px) {
+    #member-list-table {
+        font-size: 11px;
+        min-width: 800px; /* 가로 스크롤 허용 */
+    }
+    
+    #member-list-table th {
+        font-size: 11px;
+        padding: 3px 2px;
+    }
+    
+    .btn-view-member, 
+    .btn-edit-member, 
+    .btn-delete-member {
+        min-width: 28px;
+        padding: 0.15rem 0.3rem;
+        font-size: 10px;
+    }
+    
+    /* 벌크 액션 버튼 크기 조정 */
+    #bulk-delete,
+    #bulk-deactivate {
+        font-size: 11px;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    /* 체크박스 크기 조정 */
+    input[type="checkbox"] {
+        transform: scale(1.1);
+    }
+}
+
+/* =========================================
+   🎯 인쇄 스타일 (선택사항)
+   ========================================= */
+
+@media print {
+    /* 인쇄 시 버튼 숨김 */
+    .btn-view-member,
+    .btn-edit-member,
+    .btn-delete-member,
+    #bulk-delete,
+    #bulk-deactivate,
+    input[type="checkbox"] {
+        display: none !important;
+    }
+    
+    /* 인쇄 시 테이블 최적화 */
+    #member-list-table {
+        font-size: 10px;
+    }
+    
+    #member-list-table th,
+    #member-list-table td {
+        padding: 2px 4px;
+        border: 1px solid #000;
+    }
+}

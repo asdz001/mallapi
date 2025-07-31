@@ -1,0 +1,120 @@
+{% comment %}
+<!-- 
+========================================
+📁 파일 위치: dashboard/templates/common/pagination.html
+🎯 목적: 공통 페이지네이션 컴포넌트
+📅 버전: 1.0
+🔄 재사용: 모든 목록 페이지에서 사용 가능
+========================================
+
+사용법:
+{% include 'common/pagination.html' with items=products %}
+{% include 'common/pagination.html' with items=members %}
+{% include 'common/pagination.html' with items=orders %}
+
+필수 변수:
+- items: 페이지네이션된 객체 (Django Paginator 결과)
+
+선택 변수:
+- per_page_options: 페이지당 표시 옵션 리스트 (기본값 사용 가능)
+- sort_choices: 정렬 옵션 리스트 (선택사항)
+-->
+{% endcomment %}
+
+{% load i18n %}
+
+
+<!-- 📄 페이지네이션 버튼 (항상 표시) -->
+<div class="d-flex justify-content-center mt-4">
+    <ul class="pagination pagination-sm">
+        
+        <!-- 이전 페이지 버튼 -->
+        {% if items.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?{{ request.GET.urlencode }}&page={{ items.previous_page_number }}" 
+                   title="이전 페이지">«</a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">«</span>
+            </li>
+        {% endif %}
+
+        <!-- 페이지 번호들 (최대 10개까지 표시) -->
+        {% for num in items.paginator.page_range %}
+            {% if items.number == num %}
+                <!-- 현재 페이지 -->
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+            {% elif num > items.number|add:'-5' and num < items.number|add:'5' %}
+                <!-- 현재 페이지 ±5 범위 내 페이지들 (최대 10개) -->
+                <li class="page-item">
+                    <a class="page-link" href="?{{ request.GET.urlencode }}&page={{ num }}">{{ num }}</a>
+                </li>
+            {% elif num == 1 and items.number > 6 %}
+                <!-- 첫 페이지 표시 -->
+                <li class="page-item">
+                    <a class="page-link" href="?{{ request.GET.urlencode }}&page={{ num }}">{{ num }}</a>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+            {% elif num == items.paginator.num_pages and items.number < items.paginator.num_pages|add:'-5' %}
+                <!-- 마지막 페이지 표시 -->
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?{{ request.GET.urlencode }}&page={{ num }}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+
+        <!-- 다음 페이지 버튼 -->
+        {% if items.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?{{ request.GET.urlencode }}&page={{ items.next_page_number }}" 
+                   title="다음 페이지">»</a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">»</span>
+            </li>
+        {% endif %}
+        
+    </ul>
+</div>
+
+<!-- JavaScript 함수 (search_engine.js와 연동) -->
+<script>
+// 정렬 변경 함수 (search_engine.js에서 처리되지 않는 경우)
+if (typeof changeSort !== 'function') {
+    function changeSort(sortValue) {
+        const currentUrl = new URL(window.location);
+        currentUrl.searchParams.set('sort', sortValue);
+        currentUrl.searchParams.delete('page'); // 페이지는 1로 리셋
+        window.location.href = currentUrl.toString();
+    }
+}
+
+// 페이지당 표시 개수 변경 함수 (search_engine.js에서 처리되지 않는 경우)
+if (typeof changePerPage !== 'function') {
+    function changePerPage(value) {
+        const currentUrl = new URL(window.location);
+        currentUrl.searchParams.set('per_page', value);
+        currentUrl.searchParams.delete('page'); // 페이지는 1로 리셋
+        window.location.href = currentUrl.toString();
+    }
+}
+
+// search_engine.js가 로드되지 않은 경우를 위한 대체 이벤트
+$(document).ready(function() {
+    // search_engine.js가 이미 처리하지 않은 경우에만 실행
+    if (!window.SearchEngine) {
+        $('#per_page').on('change', function() {
+            changePerPage(this.value);
+        });
+    }
+});
+</script>
