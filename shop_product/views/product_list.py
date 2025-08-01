@@ -97,7 +97,7 @@ PRODUCT_TABLE_COLUMNS = [
     {
         'field': 'external_product_id',        # 모델의 필드명
         'header': _('상품ID'),                 # 테이블 헤더에 표시될 이름 (다국어 지원)
-        'width': '120px',                      # 컬럼 너비
+        'width': '80px',                      # 컬럼 너비
         'truncate': 15,                        # 15자 이상이면 ...으로 자름
         'align': 'center',                     # 텍스트 정렬
         'type': 'text'                         # 데이터 타입
@@ -164,42 +164,52 @@ PRODUCT_TABLE_COLUMNS = [
         'type': 'text'
     },
     {
+        'field': 'price_retail',
+        'header': _('소비자가(€)'),
+        'width': '110px',
+        'align': 'center',
+        'type': 'currency'
+    },
+    {
         'field': 'price_org',
         'header': _('COST'),
         'width': '100px',
-        'align': 'right',                      # 숫자는 오른쪽 정렬
+        'align': 'center',                      # 숫자는 오른쪽 정렬
         'type': 'currency'                     # 통화 형식으로 표시
     },
     {
         'field': 'markup',
-        'header': _('마크업'),
-        'width': '80px',
-        'align': 'right',
+        'header': _('MARKUP'),
+        'width': '90px',
+        'align': 'center',
         'type': 'decimal',
         'default': '-'                         # 값이 없을 때 표시할 기본값
     },
     {
         'field': 'price_supply',
-        'header': _('공급가'),
+        'header': _('공급가(€)'),
         'width': '100px',
-        'align': 'right',
+        'align': 'center',
         'type': 'currency',
         'format': '0'                          # 소수점 없이 표시
     },
     {
-        'field': 'price_retail',
+        'field': 'retail_price_krw',
         'header': _('소비자가'),
         'width': '100px',
-        'align': 'right',
-        'type': 'currency'
+        'align': 'center',
+        'type': 'currency',
+        'default': '-',
+        'format': '0' 
     },
     {
         'field': 'calculated_price_krw',
-        'header': _('원화가'),
+        'header': _('판매가'),
         'width': '100px',
-        'align': 'right',
+        'align': 'center',
         'type': 'currency',
-        'default': '-'
+        'default': '-',
+        'format': '0' 
     },
     {
         'field': 'total_stock',

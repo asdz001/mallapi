@@ -36,7 +36,8 @@
           </a>
           <ul class="nav nav-treeview">
             <li class="nav-item">
-              <a href="{% url 'dashboard:member_list' %}" class="nav-link {% if path == '/dashboard/members/' %}active{% endif %}">
+              <a href="{% url 'dashboard:member_list' %}"
+                class="nav-link {% if path == '/dashboard/members/' %}active{% endif %}">
                 <i class="far fa-circle nav-icon"></i>
                 <p>{% trans "회원 목록" %}</p>
               </a>
@@ -47,7 +48,6 @@
 
 
 
-        {# 📁 상품 관리 - 하위 메뉴 있음 #}
         <li class="nav-item has-treeview {% if '/dashboard/products/' in path %}menu-open{% endif %}">
           <a href="#" class="nav-link {% if '/dashboard/products/' in path %}active{% endif %}">
             <i class="nav-icon fas fa-box"></i>
@@ -56,23 +56,76 @@
               <i class="right fas fa-angle-left"></i>
             </p>
           </a>
+
+          <!-- ✅ 모든 하위 메뉴를 하나의 <ul>로 묶음 -->
           <ul class="nav nav-treeview">
+            <!-- 상품 목록 -->
             <li class="nav-item">
-              <a href="{% url 'dashboard:product_list' %}" class="nav-link {% if path == '/dashboard/products/' %}active{% endif %}">
+              <a href="{% url 'dashboard:product_list' %}"
+                class="nav-link {% if path == '/dashboard/products/' %}active{% endif %}">
                 <i class="far fa-circle nav-icon"></i>
                 <p>{% trans "상품 목록" %}</p>
               </a>
             </li>
-          </ul>
-          <ul class="nav nav-treeview">
+
+            <!-- 상품 등록 -->
             <li class="nav-item">
-              <a href="{% url 'dashboard:product_add' %}" class="nav-link {% if path == '/dashboard/products/add' %}active{% endif %}">
+              <a href="{% url 'dashboard:product_add' %}"
+                class="nav-link {% if path == '/dashboard/products/add' %}active{% endif %}">
                 <i class="far fa-circle nav-icon"></i>
                 <p>{% trans "상품 등록" %}</p>
               </a>
             </li>
+
+            <!-- 분류관리 (중간 메뉴) -->
+            <li
+              class="nav-item has-treeview {% if '/dashboard/products/classification/' in path %}menu-open{% endif %}">
+              <a href="#" class="nav-link {% if '/dashboard/products/classification/' in path %}active{% endif %}">
+                <i class="far fa-circle nav-icon"></i>
+                <p>{% trans "분류관리" %}<i class="right fas fa-angle-left"></i></p>
+              </a>
+
+              <!-- 거래처 등 하위 메뉴 -->
+              <ul class="nav nav-treeview ml-3">
+                <li class="nav-item">
+                  <a href="{% url 'dashboard:supplier_list' %}"
+                    class="nav-link {% if path == '/dashboard/products/classification/supplier' %}active{% endif %}">
+                    <i class="far fa-dot-circle nav-icon"></i>
+                    <p>{% trans "거래처" %}</p>
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a href="{% url 'dashboard:category_list' %}"
+                    class="nav-link {% if path == '/dashboard/products/classification/category' %}active{% endif %}">
+                    <i class="far fa-dot-circle nav-icon"></i>
+                    <p>{% trans "카테고리" %}</p>
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a href="{% url 'dashboard:origin_list' %}"
+                    class="nav-link {% if path == '/dashboard/products/classification/origin' %}active{% endif %}">
+                    <i class="far fa-dot-circle nav-icon"></i>
+                    <p>{% trans "원산지" %}</p>
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a href="{% url 'dashboard:brand_list' %}"
+                    class="nav-link {% if path == '/dashboard/products/classification/brand' %}active{% endif %}">
+                    <i class="far fa-dot-circle nav-icon"></i>
+                    <p>{% trans "브랜드" %}</p>
+                  </a>
+                </li>
+              </ul>
+            </li>
           </ul>
         </li>
+
+
+
+
+
+
+
 
         {# 🛒 주문 관리 - 하위 메뉴 있음 #}
         <li class="nav-item has-treeview {% if '/dashboard/orders/' in path %}menu-open{% endif %}">

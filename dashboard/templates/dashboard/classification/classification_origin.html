@@ -1,0 +1,32 @@
+{% extends "dashboard/base_admin.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>원산지 관리</h3>
+    <a href="#" class="btn btn-primary">+ 원산지 추가</a>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>국가</th>
+            <th>국가 코드</th>
+            <th>정렬순서</th>
+            <th>관리</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="5" class="text-center">등록된 원산지가 없습니다.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

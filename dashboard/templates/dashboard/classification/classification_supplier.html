@@ -1,0 +1,33 @@
+{% extends "dashboard/base_admin.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>거래처 관리</h3>
+    <a href="#" class="btn btn-primary">+ 거래처 추가</a>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>거래처명</th>
+            <th>코드</th>
+            <th>국가</th>
+            <th>생성일</th>
+            <th>관리</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="6" class="text-center">등록된 거래처가 없습니다.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

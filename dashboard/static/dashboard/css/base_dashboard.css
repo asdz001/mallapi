@@ -272,11 +272,47 @@ h1, h2, h3 {
 }
 
 
-/* ✅ 하위 메뉴: 선택된 항목 표시 (보라색 배경, 흰색 텍스트) */
-.main-sidebar .nav-treeview .nav-link.active {
-    background-color: #9374ce !important;
+/* ✅ 중간 메뉴 (예: 분류관리) - 연보라 강조 */
+.main-sidebar .nav-treeview > .nav-item > .nav-link.active {
+    background-color: #b189fa !important;
     color: #fff !important;
 }
+
+/* ✅ 아이콘도 강조 */
+.main-sidebar .nav-treeview > .nav-item > .nav-link.active i {
+    color: #fff !important;
+}
+
+
+
+/* ✅ 하위의 하위 메뉴 (예: 거래처/카테고리) - 더 연한 보라 or 흰 글자 강조 */
+.main-sidebar .nav-treeview .nav-treeview .nav-link.active {
+    background-color: #9a7fe4 !important;
+    color: #fff !important;
+}
+
+
+/* ✅ 하위의 하위 메뉴 디자인 압축 */
+.main-sidebar .nav-treeview .nav-treeview .nav-link {
+    display: block;
+    width: 100%;                   /* ✅ 부모 안에서만 채움 */
+    box-sizing: border-box;        /* ✅ padding 포함한 크기 계산 */
+    font-size: 15px;
+    padding: 6px 10px 6px 28px;
+    border-radius: 4px;
+    overflow: hidden;              /* ✅ 넘치는 내용 숨김 */
+    white-space: nowrap;           /* ✅ 줄바꿈 방지 */
+    text-overflow: ellipsis;       /* ✅ 말줄임 처리 (옵션) */
+    margin-right: 0 !important;    /* ✅ 침범 방지 */
+}
+
+/* ✅ 아이콘도 축소 */
+.main-sidebar .nav-treeview .nav-treeview .nav-link i {
+    font-size: 0.85rem;
+    margin-right: 6px;
+}
+
+
 
 /* =========================================
    🆕 카페24 스타일 검색엔진 CSS
