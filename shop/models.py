@@ -4,7 +4,7 @@ from shop.services.price_calculator import apply_price_to_product
 from dictionary.models import BrandAlias
 from shop.utils.markup_util import get_markup_from_product
 from decimal import Decimal
-from shop.services.price_calculator import calculate_final_price
+from shop.services.price_calculator import calculate_final_price, calculate_retail_price, calculate_option_final_price
 from django.utils.translation import gettext_lazy as _  # 이미 있음
 from django.contrib.auth.models import User
 
@@ -94,6 +94,9 @@ class Product(models.Model):
     discount_rate = models.DecimalField(_("할인율 (%)"), max_digits=5, decimal_places=2, null=True, blank=True)
     price_retail = models.DecimalField(max_digits=12, decimal_places=2, verbose_name=_("소비자가"), default=0)
     calculated_price_krw = models.DecimalField(_("원화가"), max_digits=12, decimal_places=0, null=True, blank=True)
+    manual_price_krw = models.DecimalField(_("수동 원화가"),max_digits=12,decimal_places=0,null=True,blank=True,help_text="특정 리테일러용 수동 입력 가격 (자동 계산 무시하고 이 값 사용)")
+    manual_retail_price_krw = models.DecimalField(_("소비자가 수동입력"),max_digits=12,decimal_places=0,null=True, blank=True,help_text="특정 리테일러의 소비자가 수동 입력 시 사용")
+    retail_price_krw = models.DecimalField(_("자동 계산된 소비자가"),max_digits=12,decimal_places=0,null=True, blank=True,help_text="자동 계산된 소비자가 (COST * 환율 * 1.22)")
     material = models.CharField(max_length=255, verbose_name=_("소재"), blank=True, null=True)
     description = models.TextField(blank=True, null=True, verbose_name="설명")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("최초 등록일"))
@@ -106,26 +109,19 @@ class Product(models.Model):
     ]
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', verbose_name=_("상태"))
 
-    #공급가 계산
-    @property
-    def price_supply(self):
-        if not self.price_org:
-            return None
-        markup = get_markup_from_product(self) or 1
-        return self.price_org * Decimal(str(markup))
     
-    # 마크업 저장 로직
-    def save(self, *args, **kwargs):
-        self.markup = get_markup_from_product(self) or 1.0
-        super().save(*args, **kwargs)
 
-
-    #원화 계산
+    #마크업 및 원화 계산
     def save(self, *args, **kwargs):
         # ✅ 마크업 계산 및 저장
         self.markup = get_markup_from_product(self) or 1.0
         self.calculated_price_krw = calculate_final_price(self)
+        self.retail_price_krw = calculate_retail_price(self)
+
+
         super().save(*args, **kwargs)
+
+
 
     #상품명
     def __str__(self):
@@ -155,6 +151,8 @@ class ProductOption(models.Model):
     product = models.ForeignKey('shop.Product', on_delete=models.CASCADE, related_name='options')
     option_name = models.CharField(max_length=100, verbose_name=_("옵션명"))
     stock = models.IntegerField(default=0, verbose_name=_("재고 수량"))
+    manual_price_krw = models.DecimalField(_("수동 입력 판매가"),max_digits=12,decimal_places=0,null=True, blank=True,help_text="옵션 원화가 수동 입력 (자동계산 제외)")
+    price_krw = models.DecimalField(_("자동 계산 판매가"),max_digits=12,decimal_places=0,null=True, blank=True,help_text="옵션 자동 계산 원화가")
     price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name=_("옵션 COST"), null=True, blank=True)  # ✅ 추가
     option_url = models.URLField(verbose_name=_("옵션 링크"), null=True, blank=True)  # ✅ 추가
 
@@ -177,13 +175,18 @@ class ProductOption(models.Model):
     
     #옵션별 가격 - 마크업 포함
     def get_calculated_supply(self):
-        from shop.utils.markup_util import get_markup_from_product
-        from decimal import Decimal
-
         if self.price is not None:
             markup = get_markup_from_product(self.product) or 1
             return self.price * Decimal(str(markup))
         return self.product.price_supply or 0
+    
+    # ProductOption 클래스에 추가 필요
+    def save(self, *args, **kwargs):
+        # 옵션 가격 자동 계산
+        self.price_krw = calculate_option_final_price(self)
+        super().save(*args, **kwargs)
+
+
 
 #장바구니(주문하기)
 class Cart(models.Model):

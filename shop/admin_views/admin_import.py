@@ -160,7 +160,6 @@ def import_product_excel(request):
                         external_product_id=row_data["external_product_id"],
                         defaults={
                             "brand_name": row_data.get("brand_name"),
-                            "raw_brand_name": row_data.get("raw_brand_name"),
                             "product_name": row_data.get("product_name"),                            
                             "gender": row_data.get("gender"),
                             "category1": row_data.get("category1"),
@@ -177,8 +176,9 @@ def import_product_excel(request):
                             "price_org": row_data.get("price_org") or 0,
                             "discount_rate": row_data.get("discount_rate") or 0,
                             "price_retail": row_data.get("price_retail") or 0,
+                            "manual_retail_price_krw": row_data.get("manual_retail_price_krw") or 0,                        
                             "markup" : row_data.get("markup") or 0,
-                            "calculated_price_krw": row_data.get("calculated_price_krw") or 0,
+                            "manual_price_krw": row_data.get("manual_price_krw") or 0,
                             "description": row_data.get("description"),
                             "status": row_data.get("status") or "active",
                         }
@@ -198,6 +198,7 @@ def import_product_excel(request):
                         external_option_id=row_data["external_option_id"],
                         defaults={
                             "product": product_obj,
+                            "manual_price_krw": row_data.get("manual_price_krw") or 0,
                             "option_name": str(row_data.get("option_name") or "").strip().upper(),
                             "stock": row_data.get("stock") or 0,
                             "price": row_data.get("price") or 0,

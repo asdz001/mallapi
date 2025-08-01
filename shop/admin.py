@@ -158,7 +158,7 @@ class RawProductAdmin(admin.ModelAdmin):
 class ProductOptionInline(admin.TabularInline):
     model = ProductOption
     extra = 1
-    fields = ('external_option_id', 'option_name', 'stock', 'price','calculated_supply','option_url' )
+    fields = ('external_option_id', 'option_name', 'stock', 'price','calculated_supply','manual_price_krw','price_krw','option_url' )
     readonly_fields = ('calculated_supply',)
 
     def calculated_supply(self, obj):
@@ -174,7 +174,7 @@ class ProductAdmin(admin.ModelAdmin):
     list_display = (
         'retailer', 'brand_name', 'image_tag', 'product_name', 
         'gender', 'category1', 'category2', 'season', 'sku', 'color', 
-        'origin_display', 'price_retail', 'discount_rate', 'price_org', 
+        'origin_display', 'price_retail', 'discount_rate', 'price_org',
         'formatted_price_supply', 'markup_display', 'formatted_price_krw', 
         'option_summary', 'material', 'status', 'created_at_short', 'updated_at_short',
         'cart_button'  # ✅ 맨 마지막으로 이동
