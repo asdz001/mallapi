@@ -1,3 +1,4 @@
+# mallapi/settings.py
 """
 Django settings for mallapi project.
 
@@ -54,6 +55,10 @@ INSTALLED_APPS = [
     'dashboard',  # ✅ 쇼핑몰 대시보드 앱 추가
     'members', # ✅ 쇼핑몰 회원 관리 앱 추가
     'shop_product', # 쇼핑몰 상품 관련 앱 추가
+    'promotion', # 쇼핑몰 프로모션 앱 추가
+    'mall_settings', # 쇼핑몰 설정 앱 추가
+    'ckeditor', # CKEditor 앱 추가
+    'ckeditor_uploader', # CKEditor 업로더 앱 추가
     'django.contrib.humanize',
 
     'shop.apps.ShopConfig',
@@ -73,6 +78,17 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+
+CKEDITOR_UPLOAD_PATH = "uploads/"
+CKEDITOR_CONFIGS = {
+    'default': {
+        'toolbar': 'Full',
+        'height': 400,
+        'width': '100%',
+    },
+}
+
 
 ROOT_URLCONF = 'mallapi.urls'
 
@@ -178,8 +194,10 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+
 # 미디어 파일 설정
 MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # 업로드용
 
 
 # 운영환경용 미디어 파일 저장 방식

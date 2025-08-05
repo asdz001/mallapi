@@ -1,0 +1,76 @@
+/* 🎯 site_settings.html 전용 CSS */
+
+.site-settings-form .card-body {
+  max-width: 700px;
+  margin: 0 auto;
+  background-color: #fff;
+  padding: 10px;
+  border-radius: 4px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+}
+
+.site-settings-form .form-group label {
+  font-weight: 700;
+  color: #333;
+  font-size: 14px;
+  margin-bottom: 0.5rem;
+  display: inline-block;
+}
+
+.site-settings-form .form-group textarea,
+.site-settings-form .form-group .ckeditor {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 10px;
+  background: #fafafa;
+  min-height: 250px;
+}
+
+.site-settings-form .card-footer.text-right {
+  max-width: 700px;
+  margin: 0 auto;
+  padding-top: 20px;
+}
+
+.site-settings-form .btn-primary {
+  background-color: #6f42c1;
+  border-color: #6f42c1;
+  color: white;
+}
+
+.site-settings-form .btn-primary:hover {
+  background-color: #5936a6;
+  border-color: #5936a6;
+}
+
+
+
+
+/* ✅ 저장 버튼 하단 고정 바 영역 */
+.site-settings-sticky-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 150%;
+  background-color: #ffffffee;  /* 약간 투명한 흰 배경 */
+  border-top: 1px solid #dee2e6;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: center;
+  z-index: 100;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+}
+
+/* ✅ 버튼 스타일 (보라색, 둥글게) */
+.site-settings-sticky-footer .btn-primary {
+  background-color: #6f42c1;
+  border: none;
+  padding: 10px 20px;
+  font-size: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.site-settings-sticky-footer .btn-primary:hover {
+  background-color: #5936a6;
+}

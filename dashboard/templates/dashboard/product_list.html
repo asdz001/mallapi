@@ -4,6 +4,7 @@
 
 {% block extrahead %}
 <link rel="stylesheet" href="{% static 'dashboard/css/base_dashboard.css' %}">
+<script src="{% static 'dashboard/js/simple_stock_hover.js' %}" defer></script>
 {% endblock %}
 
 {% block title %}{% trans "상품 목록" %}{% endblock %}
@@ -419,8 +420,9 @@
             {% for product in products %}
             <tr>
               {% for column in table_columns %}
-                <td class="{{ column|get_column_class }}"
-                    {% if column.width %}style="width: {{ column.width }};"{% endif %}>
+                <td class="{{ column|get_column_class }}{% if column.field == 'total_stock' %} stock-cell{% endif %}"
+                    {% if column.width %}style="width: {{ column.width }};"{% endif %}
+                    {% if column.field == 'total_stock' %}data-options="{{ product.options_json }}" title="옵션재고"{% endif %}>
                   
                   {# 🔧 필드 값을 가져와서 설정에 따라 포맷팅 #}
                   {% with field_value=product|get_field_value:column %}

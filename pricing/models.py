@@ -9,6 +9,12 @@ class Retailer(models.Model):
     name = models.CharField(max_length=100, verbose_name="업체명")  # 사람이 보는 이름
     code = models.CharField(max_length=50, unique=True, verbose_name="업체코드")  # 매칭용 키 (예: RATTI, GAUDENZI)
 
+    # 🆕 대시보드 선택사항 필드들 추가
+    address = models.CharField(max_length=200, null=True, blank=True, verbose_name="회사주소")
+    phone = models.CharField(max_length=20, null=True, blank=True, verbose_name="연락처")
+    business_number = models.CharField(max_length=15, null=True, blank=True, verbose_name="사업자번호")
+    email = models.EmailField(null=True, blank=True, verbose_name="이메일")
+
     order_api_name = models.CharField(max_length=100, blank=True, null=True, verbose_name="주문용 리테일러명")
     last_fetch_started_at = models.DateTimeField(null=True, blank=True, verbose_name="수집 시작 시간")
     last_fetch_finished_at = models.DateTimeField(null=True, blank=True, verbose_name="수집 완료 시간")
@@ -24,10 +30,18 @@ class Retailer(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.code})"
+    
+    @property
+    def current_product_count(self):
+        from shop.models import Product #순환방지 참조
+        return Product.objects.filter(retailer=self.code).count()
 
     class Meta:
         verbose_name = "거래처"
         verbose_name_plural = "1. 거래처"
+
+
+        
 
 
 

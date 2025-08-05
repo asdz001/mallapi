@@ -1,3 +1,4 @@
+# mallapi/urls.py
 
 from django.contrib import admin
 from django.urls import path, include  # ★ include를 추가합니다.

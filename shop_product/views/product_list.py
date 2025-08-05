@@ -7,6 +7,7 @@ from django.db.models import Q
 from django.utils.translation import gettext_lazy as _  # 다국어 지원을 위한 import
 from datetime import datetime, timedelta  # 🆕 날짜 처리를 위한 import
 from django.utils import timezone  # 🆕 시간대 처리
+import json
 
 # ========================================
 # 🔧 검색 엔진 설정 (새로 추가)
@@ -494,6 +495,23 @@ def product_list(request):
     # 📝 페이징 처리
     paginator = Paginator(products_qs, per_page)
     products = paginator.get_page(page)
+
+    # 🆕 각 상품의 옵션 데이터를 JSON으로 준비
+    for product in products:
+        # 상품별 옵션 데이터 수집 (재고 내림차순 정렬)
+        options_data = []
+        for option in product.options.all().order_by('-stock', 'option_name'):
+            options_data.append({
+                'name': option.option_name,
+                'stock': option.stock,
+                # 옵션 가격이 있다면 추가 (선택사항)
+                'price_krw': str(option.price_krw) if option.price_krw else None
+            })
+        
+        # JSON 문자열로 변환하여 상품 객체에 추가
+        product.options_json = json.dumps(options_data, ensure_ascii=False)
+        
+            
     
     # 📝 페이지당 표시 개수 옵션
     per_page_options = [20, 100, 500, 1000]

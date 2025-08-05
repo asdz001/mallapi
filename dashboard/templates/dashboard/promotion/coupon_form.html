@@ -1,0 +1,10 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block content %}
+<h2>🎫 쿠폰 등록</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-success">등록</button>
+</form>
+{% endblock %}

@@ -13,8 +13,12 @@
     <link rel="stylesheet" href="{% static 'dashboard/css/adminlte.css' %}">
     <!-- Font Awesome - 아이콘 폰트 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- CKEditor -->
+    <link rel="stylesheet" href="{% static 'dashboard/css/ckeditor/contents.css' %}">
+
     <!-- 커스텀 CSS는 항상 마지막에! -->
     <link rel="stylesheet" href="{% static 'dashboard/css/base_dashboard.css' %}">
+
 
     {# ✅ 커스텀 CSS 삽입을 위한 블록 추가 #}
     {% block extrahead %}
@@ -26,16 +30,23 @@
 
   {% include "dashboard/sidebar.html" %}
 
+  <!-- ✅ Scripts를 content 블록 전에 로드 -->
+  <script src="{% static 'dashboard/js/jquery.js' %}"></script>
+  <script src="{% static 'dashboard/js/bootstrap.bundle.js' %}"></script>
+  <script src="{% static 'dashboard/js/adminlte.js' %}"></script>
+  <script src="{% static 'dashboard/js/ckeditor/ckeditor.js' %}"></script>
+  <script src="{% static 'dashboard/js/ckeditor/styles.js' %}"></script>
+
   <div class="content-wrapper p-4">
     {% block content %}
     {% endblock %}
   </div>
 
+  <!-- ✅ 추가 스크립트용 블록 (content 블록 이후) -->
+  {% block extra_scripts %}
+  {% endblock %}
+
 </div>
 
-<!-- Scripts -->
-<script src="{% static 'dashboard/js/jquery.js' %}"></script>
-<script src="{% static 'dashboard/js/bootstrap.bundle.js' %}"></script>
-<script src="{% static 'dashboard/js/adminlte.js' %}"></script>
 </body>
 </html>

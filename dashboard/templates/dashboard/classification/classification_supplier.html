@@ -1,33 +1,531 @@
 {% extends "dashboard/base_admin.html" %}
 {% load static %}
+{% load table_filters %}
 
 {% block content %}
 <div class="container-fluid mt-4">
+  
+  <!-- 📌 페이지 헤더 -->
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>거래처 관리</h3>
-    <a href="#" class="btn btn-primary">+ 거래처 추가</a>
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#supplierModal">
+      <i class="fas fa-plus"></i> 거래처 추가
+    </button>
   </div>
 
-  <div class="card">
+  <!-- 🔍 검색 필터 -->
+  <div class="card mb-3">
+    <div class="card-header py-2">
+      <h6 class="mb-0" style="font-size: 14px;">
+        <i class="fas fa-search"></i> 검색 필터
+      </h6>
+    </div>
     <div class="card-body">
-      <table class="table table-striped">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>거래처명</th>
-            <th>코드</th>
-            <th>국가</th>
-            <th>생성일</th>
-            <th>관리</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td colspan="6" class="text-center">등록된 거래처가 없습니다.</td>
-          </tr>
-        </tbody>
-      </table>
+      <form method="get" id="search-form">
+        
+        <!-- 기본 검색 -->
+        <div class="row mb-3">
+          <div class="col-md-12">
+            <div class="form-inline">
+              <label class="mr-3" style="font-size: 13px;"><strong>검색</strong></label>
+              <select name="search_field" id="search_field" class="form-control form-control-sm mr-3" style="width: 150px; font-size: 13px;">
+                {% for field_value, field_label in search_fields %}
+                  <option value="{{ field_value }}" {% if search_field == field_value %}selected{% endif %}>
+                    {{ field_label }}
+                  </option>
+                {% endfor %}
+              </select>
+              <input type="text" 
+                     name="search_value" 
+                     id="search_value"
+                     value="{{ search_value }}" 
+                     class="form-control form-control-sm mr-3" 
+                     style="width: 300px; font-size: 13px;"
+                     placeholder="검색어를 입력하세요">
+            </div>
+          </div>
+        </div>
+
+        <!-- 검색 버튼 영역 -->
+        <div class="row">
+          <div class="col-md-12 text-center">
+            <button type="submit" class="btn btn-primary mr-3" style="font-size: 13px; padding: 8px 16px;">
+              <i class="fas fa-search"></i> 검색
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="reset-search" style="font-size: 13px; padding: 8px 16px;">
+              <i class="fas fa-undo"></i> 초기화
+            </button>
+          </div>
+        </div>
+
+      </form>
     </div>
   </div>
+
+  <!-- 📊 표시 설정 및 페이지네이션 정보 -->
+  {% include 'common/pagination_info.html' with items=suppliers sort_choices=sort_choices %}
+
+  <!-- 📋 거래처 목록 테이블 -->
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-striped table-bordered dashboard-table" id="supplier-list-table">
+          
+          <!-- 📋 테이블 헤더 -->
+          <thead class="thead-dark text-center">
+            <tr>
+              {% for column in table_columns %}
+                <th class="{{ column|get_column_class }}" 
+                    {% if column.width %}style="width: {{ column.width }};"{% endif %}>
+                  {{ column.header }}
+                </th>
+              {% endfor %}
+              <!-- 관리 버튼 컬럼 (고정) -->
+              <th style="width: 120px;" class="text-center">관리</th>
+              <!-- 삭제 버튼 컬럼 (고정) -->
+              <th style="width: 80px;" class="text-center">삭제</th>
+            </tr>
+          </thead>
+          
+          <!-- 📊 테이블 본문 -->
+          <tbody>
+            {% for supplier in suppliers %}
+            <tr data-supplier-id="{{ supplier.id }}">
+              {% for column in table_columns %}
+                <td class="{{ column|get_column_class }}"
+                    {% if column.width %}style="width: {{ column.width }};"{% endif %}>
+                  
+                  {# 🔧 필드 값을 가져와서 설정에 따라 포맷팅 #}
+                  {% with field_value=supplier|get_field_value:column %}
+                    {% if column.type == 'badge' %}
+                      {# Badge 타입 (업체코드용) #}
+                      <span class="badge badge-primary badge-large">
+                        {{ field_value }}
+                      </span>
+                    {% elif column.truncate %}
+                      {# 자르기가 필요한 경우 truncate_smart 필터 적용 #}
+                      {{ field_value|truncate_smart:column }}
+                    {% else %}
+                      {# 기본 출력 #}
+                      {{ field_value|default:column.default|default:"-" }}
+                    {% endif %}
+                  {% endwith %}
+                  
+                </td>
+              {% endfor %}
+              
+              <!-- 관리 버튼 컬럼 (고정) -->
+              <td class="text-center">
+                <button type="button" class="btn btn-sm btn-primary btn-view-supplier " 
+                        data-supplier-id="{{ supplier.id }}" title="상세보기" data-toggle="tooltip">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-warning btn-edit-supplier " 
+                        data-supplier-id="{{ supplier.id }}" title="수정" data-toggle="tooltip">
+                  <i class="fas fa-edit"></i>
+                </button>
+              </td>
+              
+              <!-- 삭제 버튼 컬럼 (고정) -->
+              <td class="text-center">
+                <button type="button" class="btn btn-sm btn-danger btn-delete-supplier" 
+                        data-supplier-id="{{ supplier.id }}" title="삭제" data-toggle="tooltip">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </td>
+            </tr>
+            {% empty %}
+            <!-- 데이터가 없을 때 -->
+            <tr>
+              <td colspan="{{ table_columns|length|add:2 }}" class="text-center py-4">
+                <div class="text-muted">
+                  <i class="fas fa-building fa-2x mb-3"></i>
+                  <p>등록된 거래처가 없습니다.</p>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 📊 하단 페이지네이션 -->
+  {% include 'common/pagination.html' with items=suppliers %}
+
+  <!-- 🚀 거래처 등록/수정 모달창 -->
+  <div class="modal fade" id="supplierModal" tabindex="-1" role="dialog" aria-labelledby="supplierModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="supplierModalLabel">거래처 등록</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close" id="closeModalBtn">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="supplierForm">
+            {% csrf_token %}
+            <input type="hidden" id="supplier_id" name="supplier_id">
+            
+            <!-- 필수 정보 -->
+            <h6 class="text-primary mb-3"><i class="fas fa-asterisk"></i> 필수 정보</h6>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="supplier_name">업체명 <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="supplier_name" name="name" required>
+                  <small class="form-text text-muted">거래처의 실제 업체명을 입력하세요.</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="supplier_code">업체코드 <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="supplier_code" name="code" required>
+                  <small class="form-text text-muted">영문 대문자로 입력 (예: RATTI, GAUDENZI)</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- 선택 정보 -->
+            <h6 class="text-secondary mb-3 mt-4"><i class="fas fa-plus-circle"></i> 선택 정보</h6>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="supplier_address">회사주소</label>
+                  <input type="text" class="form-control" id="supplier_address" name="address">
+                  <small class="form-text text-muted">본사 또는 주요 사업장 주소</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="supplier_phone">연락처</label>
+                  <input type="tel" class="form-control" id="supplier_phone" name="phone">
+                  <small class="form-text text-muted">대표 전화번호 (예: 02-1234-5678)</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="supplier_business_number">사업자번호</label>
+                  <input type="text" class="form-control" id="supplier_business_number" name="business_number" 
+                         pattern="[0-9]{3}-[0-9]{2}-[0-9]{5}" placeholder="123-45-67890">
+                  <small class="form-text text-muted">10자리 사업자등록번호 (하이픈 포함)</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="supplier_email">이메일</label>
+                  <input type="email" class="form-control" id="supplier_email" name="email">
+                  <small class="form-text text-muted">담당자 또는 대표 이메일</small>
+                </div>
+              </div>
+            </div>
+
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal" id="cancelModalBtn">취소</button>
+          <button type="button" class="btn btn-primary" id="saveSupplierBtn">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔍 거래처 상세보기 모달창 -->
+  <div class="modal fade" id="supplierDetailModal" tabindex="-1" role="dialog" aria-labelledby="supplierDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="supplierDetailModalLabel">
+            <i class="fas fa-building text-primary"></i> 거래처 상세보기
+          </h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close" id="closeDetailModalXBtn">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          
+          <!-- 📋 필수 정보 -->
+          <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+              <h6 class="mb-0"><i class="fas fa-asterisk"></i> 필수 정보</h6>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="font-weight-bold">업체명:</label>
+                    <p class="form-control-plaintext" id="detail_name">-</p>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="font-weight-bold">업체코드:</label>
+                    <p class="form-control-plaintext" id="detail_code">
+                      <span class="badge badge-primary badge-lg">-</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 📋 선택 정보 -->
+          <div class="card">
+            <div class="card-header bg-secondary text-white">
+              <h6 class="mb-0"><i class="fas fa-plus-circle"></i> 선택 정보</h6>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="font-weight-bold">회사주소:</label>
+                    <p class="form-control-plaintext" id="detail_address">미입력</p>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="font-weight-bold">연락처:</label>
+                    <p class="form-control-plaintext" id="detail_phone">미입력</p>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="font-weight-bold">사업자번호:</label>
+                    <p class="form-control-plaintext" id="detail_business_number">미입력</p>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="font-weight-bold">이메일:</label>
+                    <p class="form-control-plaintext" id="detail_email">미입력</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal" id="closeDetailModalBtn">닫기</button>
+          <button type="button" class="btn btn-warning" id="editFromDetailBtn">
+            <i class="fas fa-edit"></i> 수정
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
+
+<!-- JavaScript -->
+<script>
+$(document).ready(function() {
+    console.log('스크립트 로드됨'); // 디버깅용
+    
+    // 🔧 CSRF 토큰 전역 설정
+    const csrfToken = $('[name=csrfmiddlewaretoken]').val();
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!this.crossDomain && !/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                xhr.setRequestHeader("X-CSRFToken", csrfToken);
+            }
+        }
+    });
+    
+    // 🔧 툴팁 초기화
+    $('[data-toggle="tooltip"]').tooltip();
+    
+    // 🔧 검색 초기화 버튼
+    $('#reset-search').click(function() {
+        $('#search_field').val('name');
+        $('#search_value').val('');
+        $('#search-form').submit();
+    });
+    
+    // 🔧 거래처 등록/수정 모달창 관리
+    let isEditMode = false;
+    let currentSupplierId = null;
+    
+    // 🔧 모달창 닫기 이벤트 처리 (1. 취소/X 버튼 문제 해결)
+    function closeSupplierModal() {
+        $('#supplierModal').modal('hide');
+        $('#supplierForm')[0].reset();
+        isEditMode = false;
+        currentSupplierId = null;
+    }
+    
+    // 취소 버튼, X 버튼 이벤트
+    $('#cancelModalBtn, #closeModalBtn').click(function() {
+        closeSupplierModal();
+    });
+    
+    // 모달창 숨김 이벤트 (ESC 키 등)
+    $('#supplierModal').on('hidden.bs.modal', function () {
+        $('#supplierForm')[0].reset();
+        isEditMode = false;
+        currentSupplierId = null;
+    });
+    
+    // 신규 등록 버튼 클릭
+    $('[data-target="#supplierModal"]').click(function() {
+        console.log('거래처 추가 버튼 클릭됨'); // 디버깅용
+        isEditMode = false;
+        currentSupplierId = null;
+        $('#supplierModalLabel').text('거래처 등록');
+        $('#supplierForm')[0].reset();
+        $('#supplier_id').val('');
+        $('#supplierModal').modal('show');
+    });
+    
+    // 수정 버튼 클릭
+    $(document).on('click', '.btn-edit-supplier', function() {
+        isEditMode = true;
+        currentSupplierId = $(this).data('supplier-id');
+        $('#supplierModalLabel').text('거래처 수정');
+        
+        // 거래처 정보 조회
+        $.get(`{% url 'dashboard:supplier_detail' 0 %}`.replace('0', currentSupplierId))
+            .done(function(response) {
+                if (response.success) {
+                    const data = response.data;
+                    $('#supplier_id').val(data.id);
+                    $('#supplier_name').val(data.name);
+                    $('#supplier_code').val(data.code);
+                    $('#supplier_address').val(data.address);
+                    $('#supplier_phone').val(data.phone);
+                    $('#supplier_business_number').val(data.business_number);
+                    $('#supplier_email').val(data.email);
+                    $('#supplierModal').modal('show');
+                } else {
+                    alert('거래처 정보를 불러오는데 실패했습니다: ' + response.message);
+                }
+            })
+            .fail(function() {
+                alert('서버 오류가 발생했습니다.');
+            });
+    });
+    
+    // 저장 버튼 클릭
+    $('#saveSupplierBtn').click(function() {
+        console.log('저장 버튼 클릭됨'); // 디버깅용
+        
+        const formData = $('#supplierForm').serialize();
+        const url = isEditMode ? 
+            `{% url 'dashboard:supplier_update' 0 %}`.replace('0', currentSupplierId) :
+            '{% url "dashboard:supplier_create" %}';
+        
+        console.log('전송 URL:', url); // 디버깅용
+        console.log('전송 데이터:', formData); // 디버깅용
+        
+        $.post(url, formData)
+            .done(function(response) {
+                console.log('응답:', response); // 디버깅용
+                if (response.success) {
+                    alert(response.message);
+                    closeSupplierModal();
+                    location.reload(); // 페이지 새로고침
+                } else {
+                    alert('저장 실패: ' + response.message);
+                }
+            })
+            .fail(function(xhr, status, error) {
+                console.error('AJAX 오류:', xhr.responseText); // 디버깅용
+                alert('서버 오류가 발생했습니다: ' + error);
+            });
+    });
+    
+    // 🔍 상세보기 버튼 클릭 (2. 상세보기 팝업창 구현)
+    $(document).on('click', '.btn-view-supplier', function() {
+        const supplierId = $(this).data('supplier-id');
+        console.log('상세보기 버튼 클릭:', supplierId); // 디버깅용
+        
+        // 거래처 정보 조회
+        $.get(`{% url 'dashboard:supplier_detail' 0 %}`.replace('0', supplierId))
+            .done(function(response) {
+                if (response.success) {
+                    const data = response.data;
+
+                    
+                    
+                    // 상세 정보 모달에 데이터 설정
+                    $('#detail_name').text(data.name || '-');
+                    $('#detail_code').html(`<span class="badge badge-primary badge-lg">${data.code || '-'}</span>`);
+                    $('#detail_address').text(data.address || '미입력');
+                    $('#detail_phone').text(data.phone || '미입력');
+                    $('#detail_business_number').text(data.business_number || '미입력');
+                    $('#detail_email').text(data.email || '미입력');
+                    
+                    // 상세보기 모달 표시
+                    $('#supplierDetailModal').modal('show');
+                    
+                    // 상세보기에서 수정 버튼 클릭 시 수정 모달로 전환
+                    $('#editFromDetailBtn').off('click').on('click', function() {
+                        $('#supplierDetailModal').modal('hide');
+                        
+                        // 수정 모달 데이터 설정
+                        isEditMode = true;
+                        currentSupplierId = supplierId;
+                        $('#supplierModalLabel').text('거래처 수정');
+                        $('#supplier_id').val(data.id);
+                        $('#supplier_name').val(data.name);
+                        $('#supplier_code').val(data.code);
+                        $('#supplier_address').val(data.address);
+                        $('#supplier_phone').val(data.phone);
+                        $('#supplier_business_number').val(data.business_number);
+                        $('#supplier_email').val(data.email);
+                        
+                        $('#supplierModal').modal('show');
+                    });
+                    
+                } else {
+                    alert('거래처 정보를 불러오는데 실패했습니다: ' + response.message);
+                }
+            })
+            .fail(function() {
+                alert('서버 오류가 발생했습니다.');
+            });
+    });
+    
+    // 🗑️ 삭제 버튼 클릭 (3. 삭제버튼 CSRF 오류 해결)
+    $(document).on('click', '.btn-delete-supplier', function() {
+        const supplierId = $(this).data('supplier-id');
+        const supplierName = $(this).closest('tr').find('td:nth-child(2)').text().trim();
+        
+        if (confirm(`거래처 "${supplierName}"을(를) 정말 삭제하시겠습니까?\n\n삭제된 데이터는 복구할 수 없습니다.`)) {
+            console.log('삭제 요청:', supplierId); // 디버깅용
+            
+            $.ajax({
+                url: `{% url 'dashboard:supplier_delete' 0 %}`.replace('0', supplierId),
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                success: function(response) {
+                    console.log('삭제 응답:', response); // 디버깅용
+                    if (response.success) {
+                        alert(response.message);
+                        location.reload(); // 페이지 새로고침
+                    } else {
+                        alert('삭제 실패: ' + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('삭제 AJAX 오류:', xhr.responseText); // 디버깅용
+                    alert('서버 오류가 발생했습니다: ' + error);
+                }
+            });
+        }
+    });
+    
+});
+</script>
+
 {% endblock %}

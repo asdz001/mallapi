@@ -1,0 +1,29 @@
+{% extends "dashboard/base_admin.html" %}
+
+{% block content %}
+<h2>🎫 쿠폰 목록</h2>
+<a href="{% url 'coupon_create' %}" class="btn btn-primary mb-3">+ 쿠폰 생성</a>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>코드</th><th>이름</th><th>타입</th><th>값</th><th>기간</th><th>최소금액</th><th>사용가능</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for coupon in coupons %}
+        <tr>
+            <td>{{ coupon.code }}</td>
+            <td>{{ coupon.name }}</td>
+            <td>{{ coupon.get_discount_type_display }}</td>
+            <td>{{ coupon.discount_value }}</td>
+            <td>{{ coupon.valid_from }} ~ {{ coupon.valid_to }}</td>
+            <td>{{ coupon.min_order_amount }}</td>
+            <td>{{ coupon.is_active }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center">쿠폰 없음</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

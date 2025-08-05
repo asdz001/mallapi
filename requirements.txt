@@ -16,3 +16,4 @@ psutil
 zeep
 selenium
 beautifulsoup4
+ckeditor

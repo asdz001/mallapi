@@ -312,6 +312,33 @@ h1, h2, h3 {
     margin-right: 6px;
 }
 
+/* =========================================
+   🆕 거래처 관리 페이지용 추가 스타일
+   ========================================= */
+
+/* ✅ 업체코드용 큰 Badge 스타일 */
+.badge-large {
+  font-size: 14px !important;
+  padding: 6px 12px !important;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+/* ✅ 거래처 테이블 전용 스타일 */
+.supplier-table .badge-primary {
+  background-color: #6f42c1;
+  color: #fff;
+}
+
+/* ✅ 거래처 관리 버튼 간격 */
+.supplier-table .btn-sm {
+  margin-right: 3px;
+}
+
+.supplier-table .btn-sm:last-child {
+  margin-right: 0;
+}
+
 
 
 /* =========================================
@@ -399,3 +426,4 @@ h1, h2, h3 {
     padding-top: 0.25rem;
   }
 }
+

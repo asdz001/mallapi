@@ -1,0 +1,54 @@
+{% extends "dashboard/base_admin.html" %}
+{% load static %}
+
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'dashboard/css/site_settings.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="content">
+  <div class="container-fluid">
+    <h3 class="mb-4">🛠 쇼핑몰 기본 설정</h3>
+
+    <form method="post" enctype="multipart/form-data" class="site-settings-form">
+      {% csrf_token %}
+      {{ form.media }}
+
+      <div class="card">
+        <div class="card-body">
+          {% for field in form.visible_fields %}
+            <div class="form-group">
+              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}
+              <small class="form-text text-muted">{{ field.help_text }}</small>
+              {% endif %}
+              {% for error in field.errors %}
+              <div class="text-danger small">{{ error }}</div>
+              {% endfor %}
+
+              {# ✅ 1. 로고 이미지 미리보기 표시 #}
+              {% if field.name == "logo" and site_settings.logo %}
+                <div class="mt-2">
+                  <img src="{{ site_settings.logo.url }}" alt="쇼핑몰 로고" style="max-height: 80px; border:1px solid #ccc; padding: 5px;">
+                </div>
+              {% endif %}
+
+              {# ✅ 2. 사업자등록증 이미지 미리보기 표시 #}
+              {% if field.name == "business_license_image" and site_settings.business_license_image %}
+                <div class="mt-2">
+                  <img src="{{ site_settings.business_license_image.url }}" alt="사업자등록증 이미지" style="max-width: 300px; border:1px solid #ccc;">
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+
+        <div class="site-settings-sticky-footer">
+          <button type="submit" class="btn btn-primary">💾 저장</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}
