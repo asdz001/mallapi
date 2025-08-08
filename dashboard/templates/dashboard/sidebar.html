@@ -89,28 +89,28 @@
               <ul class="nav nav-treeview ml-3">
                 <li class="nav-item">
                   <a href="{% url 'dashboard:supplier_list' %}"
-                    class="nav-link {% if path == '/dashboard/products/classification/supplier' %}active{% endif %}">
+                    class="nav-link {% if '/dashboard/products/classification/supplier/' in path %}active{% endif %}">
                     <i class="far fa-dot-circle nav-icon"></i>
                     <p>{% trans "거래처" %}</p>
                   </a>
                 </li>
                 <li class="nav-item">
                   <a href="{% url 'dashboard:category_list' %}"
-                    class="nav-link {% if path == '/dashboard/products/classification/category' %}active{% endif %}">
+                    class="nav-link {% if '/dashboard/products/classification/category/' in path %}active{% endif %}">
                     <i class="far fa-dot-circle nav-icon"></i>
                     <p>{% trans "카테고리" %}</p>
                   </a>
                 </li>
                 <li class="nav-item">
                   <a href="{% url 'dashboard:origin_list' %}"
-                    class="nav-link {% if path == '/dashboard/products/classification/origin' %}active{% endif %}">
+                    class="nav-link {% if '/dashboard/products/classification/origin/' in path %}active{% endif %}">
                     <i class="far fa-dot-circle nav-icon"></i>
                     <p>{% trans "원산지" %}</p>
                   </a>
                 </li>
                 <li class="nav-item">
                   <a href="{% url 'dashboard:brand_list' %}"
-                    class="nav-link {% if path == '/dashboard/products/classification/brand' %}active{% endif %}">
+                    class="nav-link {% if '/dashboard/products/classification/brand/' in path %}active{% endif %}">
                     <i class="far fa-dot-circle nav-icon"></i>
                     <p>{% trans "브랜드" %}</p>
                   </a>

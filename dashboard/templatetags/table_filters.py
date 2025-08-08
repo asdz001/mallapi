@@ -1,157 +1,282 @@
-# ========================================
-# 📁 파일 위치: shop/templatetags/table_filters.py
-# 🎯 목적: 테이블에서 사용할 커스텀 필터들
-# ========================================
+# dashboard/templatetags/table_filters.py
+# 기존 파일에 품절상태 처리 기능 추가
 
 from django import template
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
-from decimal import Decimal
+import re
 
-# Django 템플릿 필터를 등록하기 위한 설정
 register = template.Library()
 
 @register.filter
-def get_field_value(obj, field_config):
-    """
-    🎯 목적: 객체에서 설정에 따라 필드값을 가져오는 필터
-    
-    📝 사용법: {{ product|get_field_value:column }}
-    
-    ⚙️ 처리 과정:
-    1. 필드 타입에 따라 다른 방식으로 값을 가져옴
-    2. 포맷팅 규칙 적용
-    3. 기본값 처리
-    """
-    field_name = field_config['field']
-    field_type = field_config.get('type', 'text')
-    default_value = field_config.get('default', '-')
-    
-    try:
-        # 🔧 커스텀 필드 처리 (특별한 로직이 필요한 경우)
-        if field_name == 'category_combined':
-            # 카테고리1과 카테고리2를 결합해서 표시
-            cat1 = getattr(obj, 'category1', '') or ''
-            cat2 = getattr(obj, 'category2', '') or ''
-            if cat1 and cat2:
-                value = f"{cat1} / {cat2}"
-            elif cat1:
-                value = cat1
-            else:
-                value = default_value
-        else:
-            # 🔧 일반 필드 값 가져오기
-            value = getattr(obj, field_name, None)
-        
-        # 🔧 값이 없을 때 기본값 사용
-        if value is None or value == '':
-            return default_value
-        
-        # 🔧 필드 타입별 포맷팅 처리
-        if field_type == 'choice':
-            # 선택지 필드 (예: status)
-            display_method = f"get_{field_name}_display"
-            if hasattr(obj, display_method):
-                return getattr(obj, display_method)()
-            return value
-            
-        elif field_type == 'currency':
-            # 통화 필드 (가격 등)
-            if isinstance(value, (int, float, Decimal)):
-                format_option = field_config.get('format', '2')
-                if format_option == '0':
-                    return f"{value:,.0f}"  # 소수점 없이
-                else:
-                    return f"{value:,.2f}"  # 소수점 2자리
-            return str(value)
-            
-        elif field_type == 'date':
-            # 날짜 필드
-            date_format = field_config.get('format', 'Y-m-d')
-            if hasattr(value, 'strftime'):
-                return value.strftime('%Y-%m-%d' if date_format == 'Y-m-d' else date_format)
-            return str(value)
-            
-        elif field_type == 'image':
-            # 이미지 필드
-            if value:
-                return mark_safe(f'<img src="{value}" width="60" height="60" class="img-thumbnail">')
-            return default_value
-            
-        elif field_type == 'number':
-            # 숫자 필드
-            if isinstance(value, (int, float)):
-                return f"{value:,}"  # 천단위 콤마
-            return str(value)
-            
-        else:
-            # 텍스트 필드 (기본)
-            return str(value)
-            
-    except Exception as e:
-        # 오류 발생 시 기본값 반환
-        return default_value
-
-@register.filter
-def truncate_smart(value, config):
-    """
-    🎯 목적: 텍스트를 스마트하게 자르는 필터
-    
-    📝 사용법: {{ text|truncate_smart:column_config }}
-    
-    ⚙️ 처리 과정:
-    1. 설정에서 truncate 길이 확인
-    2. 길이가 초과하면 ...으로 자름
-    3. multiline 설정 확인하여 CSS 클래스 적용
-    """
-    if not value:
-        return value
-    
-    truncate_length = config.get('truncate')
-    is_multiline = config.get('multiline', False)
-    
-    # 자르기 길이가 설정되어 있고, 텍스트가 그보다 길면 자르기
-    if truncate_length and len(str(value)) > truncate_length:
-        truncated = str(value)[:truncate_length] + '...'
-        
-        # 여러 줄 허용인 경우 특별한 CSS 클래스 적용
-        if is_multiline:
-            return mark_safe(f'<span class="multiline-text" title="{value}">{truncated}</span>')
-        else:
-            return mark_safe(f'<span class="text-truncate-custom" title="{value}">{truncated}</span>')
-    
-    # 자르지 않는 경우
-    if is_multiline:
-        return mark_safe(f'<span class="multiline-text">{value}</span>')
-    
-    return value
-
-@register.filter
-def get_column_class(config):
-    """
-    🎯 목적: 컬럼 설정에 따라 CSS 클래스를 생성하는 필터
-    
-    📝 사용법: {{ column_config|get_column_class }}
-    
-    🎨 생성되는 CSS 클래스들:
-    - text-center, text-left, text-right (정렬)
-    - col-fixed-width (고정 너비)
-    - truncate-col (자르기가 필요한 컬럼)
-    """
+def get_column_class(column):
+    """컬럼 설정에 따른 CSS 클래스 반환"""
     classes = []
     
-    # 정렬 클래스
-    align = config.get('align', 'left')
-    if align == 'center':
-        classes.append('text-center')
-    elif align == 'right':
+    # 정렬 설정
+    if column.get('align'):
+        if column['align'] == 'center':
+            classes.append('text-center')
+        elif column['align'] == 'right':
+            classes.append('text-right')
+        elif column['align'] == 'left':
+            classes.append('text-left')
+    
+    # 타입별 클래스
+    if column.get('type') == 'currency':
         classes.append('text-right')
-    
-    # 고정 너비 클래스
-    if config.get('width'):
-        classes.append('col-fixed-width')
-    
-    # 자르기 클래스
-    if config.get('truncate'):
-        classes.append('truncate-col')
+    elif column.get('type') == 'number':
+        classes.append('text-right')
+    elif column.get('type') == 'date':
+        classes.append('text-center')
     
     return ' '.join(classes)
+
+
+@register.filter
+def get_field_value(obj, column):
+    """객체에서 필드 값을 가져오고 포맷팅"""
+    field_name = column['field']
+    field_type = column.get('type', 'text')
+    default_value = column.get('default', '-')
+    
+    try:
+        # 🆕 계산된 필드 처리 (품절상태)
+        if field_name == 'sold_out_status':
+            # annotate로 추가된 필드이므로 직접 접근
+            if hasattr(obj, 'sold_out_status'):
+                return obj.sold_out_status
+            else:
+                # 백업 로직: 직접 계산
+                if hasattr(obj, 'status') and obj.status == 'sold_out':
+                    return 'sold_out'
+                elif hasattr(obj, 'total_stock') and obj.total_stock == 0:
+                    return 'sold_out'
+                else:
+                    return 'available'
+        
+        # 🆕 옵션 재고 합계 처리
+        elif field_name == 'options_total_stock':
+            if hasattr(obj, 'total_stock'):
+                return obj.total_stock
+            else:
+                # 백업: 옵션 재고 직접 계산
+                try:
+                    total = sum(option.stock for option in obj.options.all())
+                    return total
+                except:
+                    return 0
+        
+        # 🆕 커스텀 필드 처리
+        elif field_name == 'category_combined':
+            category1 = getattr(obj, 'category1', '') or ''
+            category2 = getattr(obj, 'category2', '') or ''
+            if category1 and category2:
+                return f"{category1} > {category2}"
+            elif category1:
+                return category1
+            elif category2:
+                return category2
+            else:
+                return default_value
+        
+        # 일반 필드 처리
+        else:
+            # 점표기법 지원 (예: 'user.username')
+            if '.' in field_name:
+                value = obj
+                for attr in field_name.split('.'):
+                    value = getattr(value, attr, None)
+                    if value is None:
+                        break
+            else:
+                value = getattr(obj, field_name, None)
+        
+        # None 값 처리
+        if value is None:
+            return default_value
+        
+        # 타입별 포맷팅
+        return format_field_value(value, field_type, column)
+        
+    except (AttributeError, TypeError):
+        return default_value
+
+
+def format_field_value(value, field_type, column):
+    """필드 타입에 따른 값 포맷팅"""
+    
+    if field_type == 'currency':
+        try:
+            # 통화 포맷팅
+            format_option = column.get('format', '2')
+            if format_option == '0':
+                return f"{float(value):,.0f}"
+            else:
+                return f"{float(value):,.2f}"
+        except (ValueError, TypeError):
+            return column.get('default', '-')
+    
+    elif field_type == 'number':
+        try:
+            return f"{int(value):,}"
+        except (ValueError, TypeError):
+            return column.get('default', '0')
+    
+    elif field_type == 'decimal':
+        try:
+            return f"{float(value):.2f}"
+        except (ValueError, TypeError):
+            return column.get('default', '-')
+    
+    elif field_type == 'date':
+        try:
+            if hasattr(value, 'strftime'):
+                date_format = column.get('format', 'Y-m-d')
+                # Django 스타일 날짜 포맷을 Python 스타일로 변환
+                python_format = date_format.replace('Y', '%Y').replace('m', '%m').replace('d', '%d').replace('H', '%H').replace('i', '%M')
+                return value.strftime(python_format)
+            else:
+                return str(value)
+        except (ValueError, AttributeError):
+            return column.get('default', '-')
+    
+    elif field_type == 'choice':
+        # Django 모델의 get_FOO_display() 메서드 활용
+        try:
+            if hasattr(value, '_state'):  # Django 모델 객체인 경우
+                display_method = f"get_{column['field']}_display"
+                if hasattr(value, display_method):
+                    return getattr(value, display_method)()
+            return str(value)
+        except:
+            return str(value)
+    
+    elif field_type == 'image':
+        # 이미지 썸네일 생성
+        if value:
+            return format_html(
+                '<img src="{}" class="img-thumbnail" style="max-width: 50px; max-height: 50px;" onerror="this.src=\'/static/images/no-image.png\'">',
+                value
+            )
+        else:
+            return format_html('<span class="text-muted">이미지없음</span>')
+    
+    elif field_type == 'sold_out_badge':
+        # 🆕 품절상태 배지 처리
+        if value == 'sold_out':
+            return format_html('<span class="badge badge-danger">품절됨</span>')
+        else:
+            return format_html('<span class="badge badge-success">판매중</span>')
+    
+    elif field_type == 'fta_badge':
+        # FTA 적용 배지 (원산지 관리에서 사용)
+        if value:
+            return format_html('<span class="badge badge-success">적용</span>')
+        else:
+            return format_html('<span class="badge badge-secondary">미적용</span>')
+    
+    elif field_type == 'count_badge':
+        # 개수 배지
+        try:
+            count = int(value)
+            if count > 0:
+                return format_html('<span class="badge badge-info">{}</span>', count)
+            else:
+                return format_html('<span class="badge badge-light">0</span>')
+        except (ValueError, TypeError):
+            return format_html('<span class="badge badge-light">0</span>')
+    
+    elif field_type == 'code_text':
+        # 코드 스타일 텍스트
+        return format_html('<code>{}</code>', value)
+    
+    else:
+        # 기본 텍스트 처리
+        return str(value) if value is not None else column.get('default', '-')
+
+
+@register.filter
+def truncate_smart(value, column):
+    """스마트 텍스트 자르기 (multiline 지원)"""
+    if not value:
+        return column.get('default', '-')
+    
+    value_str = str(value)
+    truncate_length = column.get('truncate')
+    is_multiline = column.get('multiline', False)
+    
+    if not truncate_length:
+        return value_str
+    
+    if len(value_str) <= truncate_length:
+        return value_str
+    
+    # 자르기 처리
+    truncated = value_str[:truncate_length]
+    
+    if is_multiline:
+        # 멀티라인인 경우 CSS 클래스 추가
+        return format_html(
+            '<span class="multiline-text" title="{}">{}&hellip;</span>',
+            value_str,
+            truncated
+        )
+    else:
+        # 한 줄인 경우
+        return format_html(
+            '<span class="text-truncate-custom" title="{}">{}&hellip;</span>',
+            value_str,
+            truncated
+        )
+
+
+@register.filter
+def format_status_badge(status):
+    """상품 상태를 배지로 표시"""
+    status_config = {
+        'draft': {'label': '미등록', 'class': 'secondary'},
+        'published': {'label': '등록', 'class': 'primary'},
+        'sold_out': {'label': '품절됨', 'class': 'danger'},
+        'discontinued': {'label': '단종', 'class': 'dark'},
+    }
+    
+    config = status_config.get(status, {'label': status, 'class': 'light'})
+    
+    return format_html(
+        '<span class="badge badge-{}">{}</span>',
+        config['class'],
+        config['label']
+    )
+
+
+@register.filter
+def format_stock_status(stock):
+    """재고 상태를 색상으로 표시"""
+    try:
+        stock_num = int(stock)
+        if stock_num == 0:
+            return format_html('<span class="text-danger font-weight-bold">{}</span>', stock)
+        elif stock_num <= 5:
+            return format_html('<span class="text-warning font-weight-bold">{}</span>', stock)
+        else:
+            return format_html('<span class="text-success">{}</span>', stock)
+    except (ValueError, TypeError):
+        return str(stock)
+
+
+@register.simple_tag
+def get_sort_icon(current_sort, field_name):
+    """정렬 아이콘 표시"""
+    if current_sort == field_name:
+        return format_html('<i class="fas fa-sort-up text-primary"></i>')
+    elif current_sort == f'-{field_name}':
+        return format_html('<i class="fas fa-sort-down text-primary"></i>')
+    else:
+        return format_html('<i class="fas fa-sort text-muted"></i>')
+
+
+@register.filter
+def add_class(field, css_class):
+    """폼 필드에 CSS 클래스 추가"""
+    return field.as_widget(attrs={'class': css_class})

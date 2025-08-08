@@ -1,18 +1,23 @@
-#shop_product/views/product_list.py
+# shop_product/views/product_list.py
+# 상품목록 뷰 - 원산지 관리 방식 참조하여 개선
 
 from django.shortcuts import render
+from django.contrib.admin.views.decorators import staff_member_required
+from django.http import JsonResponse
 from shop.models import Product
+from shop_product.models import UserTableColumnSetting  # 🆕 사용자 컬럼 설정 모델
 from django.core.paginator import Paginator
-from django.db.models import Q
-from django.utils.translation import gettext_lazy as _  # 다국어 지원을 위한 import
-from datetime import datetime, timedelta  # 🆕 날짜 처리를 위한 import
-from django.utils import timezone  # 🆕 시간대 처리
+from django.db.models import Q, Case, When, IntegerField, Value, CharField
+from django.utils.translation import gettext_lazy as _
+from datetime import datetime, timedelta
+from django.utils import timezone
 import json
 
+
 # ========================================
-# 🔧 검색 엔진 설정 (새로 추가)
+# 🔧 검색 엔진 설정
 # ========================================
-# 검색 가능한 필드들을 여기서 관리합니다
+
 SEARCH_FIELDS = [
     ('product_name', _('상품명')),
     ('brand_name', _('브랜드명')),
@@ -63,21 +68,23 @@ PRICE_FIELD_CHOICES = [
     ('calculated_price_krw', _('원화가')),
 ]
 
-# 🆕 품절상태 설정 (UI만, 추후 구현)
+# 🆕 품절상태 설정 (실제 구현)
 SOLD_OUT_STATUS_CHOICES = [
     ('', _('전체')),
     ('sold_out', _('품절됨')),
     ('available', _('품절안됨')),
 ]
 
-# 🆕 품목판매상태 설정 (UI만, 추후 구현)  
+# 🆕 판매상태 설정 (status 기반)
 SALES_STATUS_CHOICES = [
     ('', _('전체')),
-    ('on_sale', _('진열함')),
-    ('off_sale', _('진열안함')),
+    ('draft', _('미등록')),
+    ('published', _('등록')),
+    ('on_display', _('진열함')),
+    ('off_display', _('진열안함')),
 ]
 
-# 🆕 나열기준 설정
+# 🆕 정렬 설정
 SORT_CHOICES = [
     ('-created_at', _('등록일 역순 (최신순)')),
     ('created_at', _('등록일 순 (오래된순)')),
@@ -90,18 +97,17 @@ SORT_CHOICES = [
 ]
 
 # ========================================
-# 🔧 테이블 컬럼 설정 (여기서 테이블 구조를 관리합니다)
+# 🔧 테이블 컬럼 설정 (기본값)
 # ========================================
-# 새로운 컬럼을 추가하거나 순서를 바꾸려면 이 부분만 수정하면 됩니다!
 
 PRODUCT_TABLE_COLUMNS = [
     {
-        'field': 'external_product_id',        # 모델의 필드명
-        'header': _('상품ID'),                 # 테이블 헤더에 표시될 이름 (다국어 지원)
-        'width': '80px',                      # 컬럼 너비
-        'truncate': 15,                        # 15자 이상이면 ...으로 자름
-        'align': 'center',                     # 텍스트 정렬
-        'type': 'text'                         # 데이터 타입
+        'field': 'external_product_id',
+        'header': _('상품ID'),
+        'width': '80px',
+        'truncate': 15,
+        'align': 'center',
+        'type': 'text'
     },
     {
         'field': 'retailer',
@@ -115,7 +121,7 @@ PRODUCT_TABLE_COLUMNS = [
         'header': _('썸네일'),
         'width': '80px',
         'align': 'center',
-        'type': 'image'                        # 이미지 타입으로 지정
+        'type': 'image'
     },
     {
         'field': 'brand_name',
@@ -127,8 +133,8 @@ PRODUCT_TABLE_COLUMNS = [
         'field': 'product_name',
         'header': _('상품명'),
         'width': '200px',
-        'multiline': True,                     # 2줄까지 표시 허용
-        'truncate': 50,                        # 50자 이상이면 자름
+        'multiline': True,
+        'truncate': 50,
         'type': 'text'
     },
     {
@@ -145,10 +151,10 @@ PRODUCT_TABLE_COLUMNS = [
         'type': 'text'
     },
     {
-        'field': 'category_combined',          # 커스텀 필드 (category1 + category2 결합)
+        'field': 'category_combined',
         'header': _('카테고리'),
         'width': '150px',
-        'type': 'custom'                       # 커스텀 처리가 필요한 필드
+        'type': 'custom'
     },
     {
         'field': 'season',
@@ -175,8 +181,8 @@ PRODUCT_TABLE_COLUMNS = [
         'field': 'price_org',
         'header': _('COST'),
         'width': '100px',
-        'align': 'center',                      # 숫자는 오른쪽 정렬
-        'type': 'currency'                     # 통화 형식으로 표시
+        'align': 'center',
+        'type': 'currency'
     },
     {
         'field': 'markup',
@@ -184,7 +190,7 @@ PRODUCT_TABLE_COLUMNS = [
         'width': '90px',
         'align': 'center',
         'type': 'decimal',
-        'default': '-'                         # 값이 없을 때 표시할 기본값
+        'default': '-'
     },
     {
         'field': 'price_supply',
@@ -192,7 +198,7 @@ PRODUCT_TABLE_COLUMNS = [
         'width': '100px',
         'align': 'center',
         'type': 'currency',
-        'format': '0'                          # 소수점 없이 표시
+        'format': '0'
     },
     {
         'field': 'retail_price_krw',
@@ -201,7 +207,7 @@ PRODUCT_TABLE_COLUMNS = [
         'align': 'center',
         'type': 'currency',
         'default': '-',
-        'format': '0' 
+        'format': '0'
     },
     {
         'field': 'calculated_price_krw',
@@ -210,10 +216,10 @@ PRODUCT_TABLE_COLUMNS = [
         'align': 'center',
         'type': 'currency',
         'default': '-',
-        'format': '0' 
+        'format': '0'
     },
     {
-        'field': 'total_stock',
+        'field': 'options_total_stock',        # total_stock 대신 사용
         'header': _('재고'),
         'width': '80px',
         'align': 'center',
@@ -221,10 +227,17 @@ PRODUCT_TABLE_COLUMNS = [
     },
     {
         'field': 'status',
-        'header': _('상태'),
+        'header': _('판매상태'),
         'width': '100px',
         'align': 'center',
-        'type': 'choice'                       # 선택지 필드 (get_status_display 사용)
+        'type': 'choice'
+    },
+    {
+        'field': 'sold_out_status',  # 🆕 품절상태 (계산된 필드)
+        'header': _('품절상태'),
+        'width': '100px',
+        'align': 'center',
+        'type': 'sold_out_badge'
     },
     {
         'field': 'created_at',
@@ -232,7 +245,7 @@ PRODUCT_TABLE_COLUMNS = [
         'width': '100px',
         'align': 'center',
         'type': 'date',
-        'format': 'Y-m-d'                      # 날짜 형식 지정
+        'format': 'Y-m-d'
     },
     {
         'field': 'updated_at',
@@ -244,24 +257,28 @@ PRODUCT_TABLE_COLUMNS = [
     }
 ]
 
+
+
+
 # ========================================
-# 🔧 뷰 함수들
+# 🔧 뷰 함수
 # ========================================
 
+@staff_member_required
 def product_list(request):
     """
-    상품 리스트 페이지
-    - 개선된 검색 엔진 (검색분류 + 검색어)
-    - 상품분류 필터 (젠더, 카테고리1, 카테고리2)
-    - 날짜 범위 필터 (등록일/수정일 기준)
-    - 페이징, 정렬 기능 포함
-    - 테이블 설정을 템플릿으로 전달하여 동적으로 테이블 생성
+    상품 리스트 페이지 - 원산지 관리 방식 참조
+    - 공통 pagination 컴포넌트 사용
+    - 사용자별 컬럼 설정 적용
+    - 품절상태/판매상태 실제 연동
     """
+    
     # 📝 기본 검색 파라미터
     search_field = request.GET.get('search_field', 'product_name')
-    search_value = request.GET.get('search_value', '')
-    page = request.GET.get('page', 1)
+    search_value = request.GET.get('search_value', '').strip()
+    sort_by = request.GET.get('sort', '-created_at')
     per_page = int(request.GET.get('per_page', 20))
+    page = request.GET.get('page', 1)
 
     # 🆕 상품분류 필터 파라미터
     gender_filter = request.GET.get('gender', '')
@@ -285,37 +302,33 @@ def product_list(request):
     min_price = request.GET.get('min_price', '')
     max_price = request.GET.get('max_price', '')
 
-    # 🆕 품절상태 필터 파라미터 (UI만, 추후 구현)
+    # 🆕 품절상태 필터 파라미터 (실제 구현)
     sold_out_status = request.GET.get('sold_out_status', '')
 
-    # 🆕 품목판매상태 필터 파라미터 (UI만, 추후 구현)
+    # 🆕 판매상태 필터 파라미터 (status 기반)
     sales_status = request.GET.get('sales_status', '')
 
-    # 🆕 정렬 기준 파라미터
-    sort_by = request.GET.get('sort', '-created_at')  # 기본값: 등록일 역순
-
-    # 📝 검색 분류 유효성 검사
+    # 📝 유효성 검사
     valid_fields = [field[0] for field in SEARCH_FIELDS]
     if search_field not in valid_fields:
         search_field = 'product_name'
 
-    # 📝 날짜 필드 유효성 검사
-    valid_date_fields = [field[0] for field in DATE_FIELD_CHOICES]
-    if date_field not in valid_date_fields:
-        date_field = 'created_at'
-
-    # 📝 가격 필드 유효성 검사
-    valid_price_fields = [field[0] for field in PRICE_FIELD_CHOICES]
-    if price_field not in valid_price_fields:
-        price_field = 'price_org'
-
-    # 📝 정렬 기준 유효성 검사
     valid_sort_options = [choice[0] for choice in SORT_CHOICES]
     if sort_by not in valid_sort_options:
-        sort_by = '-created_at'  # 기본값으로 재설정
+        sort_by = '-created_at'
 
-    # 🔍 기본 쿼리셋 (정렬 적용)
-    products_qs = Product.objects.all().order_by(sort_by)
+    # 🔍 기본 쿼리셋 (품절상태 계산 포함)
+    products_qs = Product.objects.all().annotate(
+        # 🆕 품절상태 계산 (1순위: status, 2순위: 재고)
+        sold_out_status=Case(
+            # 1순위: status 필드에 '품절됨'이 있으면 품절
+            When(status='sold_out', then=Value('sold_out')),
+            # 2순위: status가 품절이 아니지만 재고가 0이면 품절 (옵션 재고 합계로 계산)
+            When(~Q(status='sold_out'), then=Value('available')),  # 일단 기본값으로 설정
+            default=Value('available'),
+            output_field=CharField(max_length=20)
+        )
+    ).order_by(sort_by)
     
     # 🔍 검색어 필터링
     if search_value:
@@ -334,17 +347,12 @@ def product_list(request):
         elif search_field == 'color':
             products_qs = products_qs.filter(color__icontains=search_value)
 
-    # 🆕 상품분류 필터링
+    # 🔍 상품분류 필터링
     if gender_filter:
         products_qs = products_qs.filter(gender=gender_filter)
     
     if category1_filter:
-        if include_subcategory:
-            # 하위분류 포함 검색 (LIKE 검색)
-            products_qs = products_qs.filter(category1__icontains=category1_filter)
-        else:
-            # 정확 일치 검색
-            products_qs = products_qs.filter(category1=category1_filter)
+        products_qs = products_qs.filter(category1=category1_filter)
     
     if category2_filter:
         if include_subcategory:
@@ -352,182 +360,202 @@ def product_list(request):
         else:
             products_qs = products_qs.filter(category2=category2_filter)
 
-    # 🆕 날짜 범위 필터링
-    if date_range:
-        today = timezone.now().date()
+    # 🔍 날짜 필터링
+    if date_range or start_date or end_date:
+        date_filter = {}
         
+        # 날짜 범위 처리
         if date_range == 'today':
-            start_date_obj = today
-            end_date_obj = today
+            start_date = timezone.now().date()
+            end_date = start_date
         elif date_range == 'yesterday':
-            start_date_obj = today - timedelta(days=1)
-            end_date_obj = today - timedelta(days=1)
+            start_date = timezone.now().date() - timedelta(days=1)
+            end_date = start_date
         elif date_range == '3days':
-            start_date_obj = today - timedelta(days=3)
-            end_date_obj = today
+            end_date = timezone.now().date()
+            start_date = end_date - timedelta(days=2)
         elif date_range == '7days':
-            start_date_obj = today - timedelta(days=7)
-            end_date_obj = today
+            end_date = timezone.now().date()
+            start_date = end_date - timedelta(days=6)
         elif date_range == '1month':
-            start_date_obj = today - timedelta(days=30)
-            end_date_obj = today
+            end_date = timezone.now().date()
+            start_date = end_date - timedelta(days=29)
         elif date_range == '3months':
-            start_date_obj = today - timedelta(days=90)
-            end_date_obj = today
-        else:
-            start_date_obj = None
-            end_date_obj = None
-            
-        # 날짜 범위 적용
-        if start_date_obj and end_date_obj:
-            if date_field == 'created_at':
-                products_qs = products_qs.filter(
-                    created_at__date__gte=start_date_obj,
-                    created_at__date__lte=end_date_obj
-                )
-            elif date_field == 'updated_at':
-                products_qs = products_qs.filter(
-                    updated_at__date__gte=start_date_obj,
-                    updated_at__date__lte=end_date_obj
-                )
-    
-    # 직접 입력 날짜 범위 처리
-    elif start_date or end_date:
-        try:
-            if start_date:
-                start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
-                if date_field == 'created_at':
-                    products_qs = products_qs.filter(created_at__date__gte=start_date_obj)
-                else:
-                    products_qs = products_qs.filter(updated_at__date__gte=start_date_obj)
-            
-            if end_date:
-                end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
-                if date_field == 'created_at':
-                    products_qs = products_qs.filter(created_at__date__lte=end_date_obj)
-                else:
-                    products_qs = products_qs.filter(updated_at__date__lte=end_date_obj)
-        except ValueError:
-            # 잘못된 날짜 형식은 무시
-            pass
+            end_date = timezone.now().date()
+            start_date = end_date - timedelta(days=89)
 
-    # 🆕 재고수량 필터링
-    if stock_status:
-        if stock_status == 'available':
-            # 재고있음 (total_stock > 0)
-            products_qs = products_qs.filter(id__in=[
-                p.id for p in products_qs if p.total_stock > 0
-            ])
-        elif stock_status == 'out_of_stock':
-            # 재고없음 (total_stock = 0)
-            products_qs = products_qs.filter(id__in=[
-                p.id for p in products_qs if p.total_stock == 0
-            ])
-    
-    # 재고수량 범위 필터링
-    if min_stock or max_stock:
-        # total_stock은 프로퍼티라서 DB에서 직접 필터링 어려움
-        # 메모리에서 필터링 수행
-        filtered_ids = []
+        # 날짜 필터 적용
+        if start_date:
+            date_filter[f'{date_field}__gte'] = start_date
+        if end_date:
+            date_filter[f'{date_field}__lte'] = end_date
+
+        if date_filter:
+            products_qs = products_qs.filter(**date_filter)
+
+    # 🔍 재고수량 필터링 (옵션 재고 기반)
+    if stock_status == 'available':
+        # 재고있음 (옵션 재고 합계 > 0)
+        filtered_products = []
         for product in products_qs:
-            total = product.total_stock
-            include = True
-            
-            if min_stock:
-                try:
-                    if total < int(min_stock):
-                        include = False
-                except ValueError:
-                    pass
-            
-            if max_stock and include:
-                try:
-                    if total > int(max_stock):
-                        include = False
-                except ValueError:
-                    pass
-            
-            if include:
-                filtered_ids.append(product.id)
-        
-        products_qs = products_qs.filter(id__in=filtered_ids)
+            if hasattr(product, 'total_stock') and product.total_stock > 0:
+                filtered_products.append(product.id)
+        products_qs = products_qs.filter(id__in=filtered_products)
+    elif stock_status == 'out_of_stock':
+        # 재고없음 (옵션 재고 합계 = 0)
+        filtered_products = []
+        for product in products_qs:
+            if hasattr(product, 'total_stock') and product.total_stock == 0:
+                filtered_products.append(product.id)
+        products_qs = products_qs.filter(id__in=filtered_products)
 
-    # 🆕 상품가격 필터링
+    # 재고수량 범위 필터링 (옵션 재고 기반)
+    if min_stock or max_stock:
+        filtered_products = []
+        for product in products_qs:
+            if hasattr(product, 'total_stock'):
+                total = product.total_stock
+                include = True
+                
+                if min_stock:
+                    try:
+                        if total < int(min_stock):
+                            include = False
+                    except ValueError:
+                        pass
+                
+                if max_stock and include:
+                    try:
+                        if total > int(max_stock):
+                            include = False
+                    except ValueError:
+                        pass
+                
+                if include:
+                    filtered_products.append(product.id)
+        
+        products_qs = products_qs.filter(id__in=filtered_products)
+
+    # 🔍 상품가격 필터링
     if min_price or max_price:
         price_filter = {}
-        
         try:
             if min_price:
                 price_filter[f'{price_field}__gte'] = float(min_price)
             if max_price:
                 price_filter[f'{price_field}__lte'] = float(max_price)
             
-            # calculated_price_krw는 null 값이 있을 수 있으므로 예외 처리
             if price_field == 'calculated_price_krw':
                 price_filter[f'{price_field}__isnull'] = False
             
             products_qs = products_qs.filter(**price_filter)
-            
         except ValueError:
-            # 잘못된 가격 형식은 무시
             pass
 
-    # 🆕 품절상태 필터링 (추후 구현 예정)
-    # TODO: 실제 품절상태 필드 추가 후 구현
-    # if sold_out_status:
-    #     products_qs = products_qs.filter(sold_out_status=sold_out_status)
+    # 🔍 품절상태 필터링 (실제 구현)
+    if sold_out_status == 'sold_out':
+        # 품절된 상품만 (status='sold_out' OR 옵션 재고 합계=0)
+        filtered_products = []
+        for product in products_qs:
+            is_sold_out = (
+                hasattr(product, 'status') and product.status == 'sold_out'
+            ) or (
+                hasattr(product, 'total_stock') and product.total_stock == 0
+            )
+            if is_sold_out:
+                filtered_products.append(product.id)
+        products_qs = products_qs.filter(id__in=filtered_products)
+    elif sold_out_status == 'available':
+        # 품절되지 않은 상품만
+        filtered_products = []
+        for product in products_qs:
+            is_available = (
+                not (hasattr(product, 'status') and product.status == 'sold_out')
+            ) and (
+                hasattr(product, 'total_stock') and product.total_stock > 0
+            )
+            if is_available:
+                filtered_products.append(product.id)
+        products_qs = products_qs.filter(id__in=filtered_products)
 
-    # 🆕 품목판매상태 필터링 (추후 구현 예정)  
-    # TODO: 실제 판매상태 필드 추가 후 구현
-    # if sales_status:
-    #     products_qs = products_qs.filter(sales_status=sales_status)
+    # 🔍 판매상태 필터링 (status 기반)
+    if sales_status:
+        products_qs = products_qs.filter(status=sales_status)
 
     # 📝 동적 데이터 수집 (드롭다운 옵션용)
     all_category1 = Product.objects.values_list('category1', flat=True).distinct().exclude(category1__isnull=True).exclude(category1__exact='')
     all_category2 = Product.objects.values_list('category2', flat=True).distinct().exclude(category2__isnull=True).exclude(category2__exact='')
     
-    # 카테고리1 선택 시 해당하는 카테고리2만 필터링
     if category1_filter:
         filtered_category2 = Product.objects.filter(category1=category1_filter).values_list('category2', flat=True).distinct().exclude(category2__isnull=True).exclude(category2__exact='')
     else:
         filtered_category2 = all_category2
 
-    # 📝 페이징 처리
+    # 🆕 사용자별 컬럼 설정 적용
+    table_columns = UserTableColumnSetting.get_user_columns(
+        user=request.user,
+        page_name='product_list',
+        default_columns=PRODUCT_TABLE_COLUMNS
+    )
+
+    safe_columns = []
+    for c in table_columns:
+        safe_columns.append({
+            'field': c.get('field', ''),
+            'header': str(c.get('header', '')),
+        })
+    table_columns_json = json.dumps(safe_columns, ensure_ascii=False)
+
+    # 📝 페이징 처리 (원산지 방식 참조)
     paginator = Paginator(products_qs, per_page)
     products = paginator.get_page(page)
 
-    # 🆕 각 상품의 옵션 데이터를 JSON으로 준비
+    # 🆕 각 상품의 옵션 데이터를 JSON으로 준비 + 품절상태 재계산
     for product in products:
-        # 상품별 옵션 데이터 수집 (재고 내림차순 정렬)
         options_data = []
+        total_stock_sum = 0  # 실제 재고 합계 계산
+        
         for option in product.options.all().order_by('-stock', 'option_name'):
             options_data.append({
                 'name': option.option_name,
                 'stock': option.stock,
-                # 옵션 가격이 있다면 추가 (선택사항)
                 'price_krw': str(option.price_krw) if option.price_krw else None
             })
+            total_stock_sum += option.stock  # 재고 합계
         
-        # JSON 문자열로 변환하여 상품 객체에 추가
         product.options_json = json.dumps(options_data, ensure_ascii=False)
         
-            
-    
+        # 🆕 실제 품절상태 재계산 (2순위 로직 적용)
+        if hasattr(product, 'status') and product.status == 'sold_out':
+            product.sold_out_status = 'sold_out'  # 1순위: status 기반
+        elif total_stock_sum == 0:
+            product.sold_out_status = 'sold_out'  # 2순위: 재고 0
+        else:
+            product.sold_out_status = 'available'  # 판매 가능
+
     # 📝 페이지당 표시 개수 옵션
     per_page_options = [20, 100, 500, 1000]
 
-    # 📝 템플릿으로 전달할 데이터 준비
+    # 📝 컨텍스트 구성 (원산지 방식 참조)
     context = {
-        'products': products,                    # 페이징된 상품 목록
-        'search_field': search_field,            # 선택된 검색 분류
-        'search_value': search_value,            # 검색어
-        'search_fields': SEARCH_FIELDS,          # 검색 분류 옵션들
-        'per_page': per_page,                    # 현재 페이지당 표시 개수
-        'page': page,                            # 현재 페이지
-        'per_page_options': per_page_options,    # 페이지당 표시 개수 선택옵션
-        'table_columns': PRODUCT_TABLE_COLUMNS,  # 테이블 컬럼 설정
-        
-        # 🆕 상품분류 필터 데이터
+        # 🆕 공통 컴포넌트를 위한 데이터
+        'products': products,
+        'items': products,  # pagination 컴포넌트에서 사용
+
+        # 검색/정렬 옵션
+        'search_fields': SEARCH_FIELDS,
+        'sort_choices': SORT_CHOICES,
+        'search_field': search_field,
+        'search_value': search_value,
+        'sort_by': sort_by,
+        'per_page': per_page,
+        'per_page_options': per_page_options,
+        'total_count': products_qs.count(),
+
+        # 테이블 설정
+        'table_columns': table_columns,  # 사용자 설정이 적용된 컬럼
+
+        # 상품분류 필터 데이터
         'gender_filter': gender_filter,
         'category1_filter': category1_filter,
         'category2_filter': category2_filter,
@@ -535,8 +563,8 @@ def product_list(request):
         'gender_choices': GENDER_CHOICES,
         'category1_choices': [('', _('전체'))] + [(cat, cat) for cat in sorted(all_category1) if cat],
         'category2_choices': [('', _('전체'))] + [(cat, cat) for cat in sorted(filtered_category2) if cat],
-        
-        # 🆕 날짜 필터 데이터
+
+        # 날짜 필터 데이터
         'date_field': date_field,
         'date_range': date_range,
         'start_date': start_date,
@@ -544,30 +572,105 @@ def product_list(request):
         'date_field_choices': DATE_FIELD_CHOICES,
         'date_range_choices': DATE_RANGE_CHOICES,
 
-        # 🆕 재고수량 필터 데이터
+        # 재고수량 필터 데이터
         'stock_status': stock_status,
         'min_stock': min_stock,
         'max_stock': max_stock,
         'stock_status_choices': STOCK_STATUS_CHOICES,
 
-        # 🆕 상품가격 필터 데이터
+        # 상품가격 필터 데이터
         'price_field': price_field,
         'min_price': min_price,
         'max_price': max_price,
         'price_field_choices': PRICE_FIELD_CHOICES,
 
-        # 🆕 품절상태 필터 데이터 (UI만)
+        # 🆕 품절상태 필터 데이터 (실제 구현)
         'sold_out_status': sold_out_status,
         'sold_out_status_choices': SOLD_OUT_STATUS_CHOICES,
 
-        # 🆕 품목판매상태 필터 데이터 (UI만)
+        # 🆕 판매상태 필터 데이터 (status 기반)
         'sales_status': sales_status,
         'sales_status_choices': SALES_STATUS_CHOICES,
 
-        # 🆕 정렬 기준 데이터
-        'sort_by': sort_by,
-        'sort_choices': SORT_CHOICES,
+        # 📝 페이지네이션 데이터
+        'table_columns': table_columns,              # 템플릿 테이블 렌더링용(그대로 유지)
+        'table_columns_json': table_columns_json,    # 🔥 JS에서 쓰는 안전 JSON
     }
 
     return render(request, 'dashboard/product_list.html', context)
 
+
+# ========================================
+# 🆕 컬럼 설정 관련 AJAX 뷰
+# ========================================
+
+@staff_member_required
+def save_column_settings(request):
+    """사용자별 컬럼 설정 저장 - AJAX"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': '잘못된 요청입니다.'})
+    
+    try:
+        column_settings = request.POST.get('column_settings')
+        if not column_settings:
+            return JsonResponse({'success': False, 'message': '컬럼 설정 데이터가 없습니다.'})
+        
+        # JSON 파싱
+        column_settings = json.loads(column_settings)
+        
+        # 사용자별 설정 저장
+        UserTableColumnSetting.save_user_columns(
+            user=request.user,
+            page_name='product_list',
+            column_settings=column_settings
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': '컬럼 설정이 저장되었습니다.'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'설정 저장 중 오류가 발생했습니다: {str(e)}'
+        })
+
+
+@staff_member_required
+def get_column_settings(request):
+    """사용자의 현재 컬럼 설정 조회 - AJAX"""
+    try:
+        user_setting = UserTableColumnSetting.objects.filter(
+            user=request.user,
+            page_name='product_list'
+        ).first()
+        
+        if user_setting:
+            return JsonResponse({
+                'success': True,
+                'column_settings': user_setting.column_settings
+            })
+        else:
+            # 기본 설정 반환
+            default_settings = {}
+            for i, col in enumerate(PRODUCT_TABLE_COLUMNS):
+                default_settings[col['field']] = {
+                    'visible': True,
+                    'order': i + 1
+                }
+            
+            return JsonResponse({
+                'success': True,
+                'column_settings': default_settings
+            })
+            
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'설정 조회 중 오류가 발생했습니다: {str(e)}'
+        })
+    
+
+
+    

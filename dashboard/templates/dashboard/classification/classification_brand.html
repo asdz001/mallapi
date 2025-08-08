@@ -1,32 +1,432 @@
 {% extends "dashboard/base_admin.html" %}
 {% load static %}
+{% load table_filters %}
 
 {% block content %}
 <div class="container-fluid mt-4">
+  
+  <!-- 📌 페이지 헤더 -->
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>브랜드 관리</h3>
-    <a href="#" class="btn btn-primary">+ 브랜드 추가</a>
+    <div>
+      <h3><i class="fas fa-tags text-primary"></i> 브랜드 관리</h3>
+      <small class="text-muted">
+        표준 브랜드 {{ total_brands }}개 
+        (활성 {{ active_brands }}개) | 
+        별칭 매핑 {{ total_aliases }}개
+      </small>
+    </div>
+    <div>
+      <button type="button" class="btn btn-success" data-toggle="modal" data-target="#brandModal">
+        <i class="fas fa-plus"></i> 표준 브랜드 추가
+      </button>
+    </div>
   </div>
 
-  <div class="card">
+  <!-- 🔍 검색 필터 -->
+  <div class="card mb-3">
+    <div class="card-header py-2">
+      <h6 class="mb-0" style="font-size: 14px;">
+        <i class="fas fa-search"></i> 검색 필터
+      </h6>
+    </div>
     <div class="card-body">
-      <table class="table table-striped">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>브랜드명</th>
-            <th>영문명</th>
-            <th>국가</th>
-            <th>관리</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td colspan="5" class="text-center">등록된 브랜드가 없습니다.</td>
-          </tr>
-        </tbody>
-      </table>
+      <form method="get" id="search-form">
+        
+        <!-- 기본 검색 -->
+        <div class="row mb-3">
+          <div class="col-md-12">
+            <div class="form-inline">
+              <label class="mr-3" style="font-size: 13px;"><strong>검색</strong></label>
+              <select name="search_field" id="search_field" class="form-control form-control-sm mr-3" style="width: 150px; font-size: 13px;">
+                {% for field_value, field_label in search_fields %}
+                  <option value="{{ field_value }}" {% if search_field == field_value %}selected{% endif %}>
+                    {{ field_label }}
+                  </option>
+                {% endfor %}
+              </select>
+              <input type="text" 
+                     name="search_value" 
+                     id="search_value"
+                     value="{{ search_value }}" 
+                     class="form-control form-control-sm mr-3" 
+                     style="width: 300px; font-size: 13px;"
+                     placeholder="검색어를 입력하세요">
+            </div>
+          </div>
+        </div>
+
+        <!-- 검색 버튼 영역 -->
+        <div class="row">
+          <div class="col-md-12 text-center">
+            <button type="submit" class="btn btn-primary mr-3" style="font-size: 13px; padding: 8px 16px;">
+              <i class="fas fa-search"></i> 검색
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="reset-search" style="font-size: 13px; padding: 8px 16px;">
+              <i class="fas fa-undo"></i> 초기화
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- 📊 표시 설정 및 페이지네이션 정보 -->
+  {% include 'common/pagination_info.html' with items=brands sort_choices=sort_choices %}
+
+  <!-- 📊 표준 브랜드 목록 테이블 -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header">
+      <h5 class="card-title mb-0">
+        <i class="fas fa-tags"></i> 표준 브랜드 목록
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-striped table-bordered dashboard-table" id="brand-list-table">
+          
+          <!-- 📋 테이블 헤더 -->
+          <thead class="thead-dark text-center">
+            <tr>
+              {% for column in brand_table_columns %}
+                <th class="{{ column|get_column_class }}" 
+                    {% if column.width %}style="width: {{ column.width }};"{% endif %}>
+                  {{ column.header }}
+                </th>
+              {% endfor %}
+              <!-- 관리 버튼 컬럼 (고정) -->
+              <th style="width: 120px;" class="text-center">관리</th>
+              <!-- 삭제 버튼 컬럼 (고정) -->
+              <th style="width: 80px;" class="text-center">삭제</th>
+            </tr>
+          </thead>
+          
+          <!-- 📊 테이블 본문 -->
+          <tbody>
+            {% for brand in brands %}
+            <tr data-brand-id="{{ brand.id }}">
+              {% for column in brand_table_columns %}
+                <td class="{{ column|get_column_class }}"
+                    {% if column.width %}style="width: {{ column.width }};"{% endif %}>
+                  
+                  {# 🔧 필드 값을 가져와서 설정에 따라 포맷팅 #}
+                  {% with field_value=brand|get_field_value:column %}
+                    {% if column.type == 'count_badge' %}
+                      {# Count Badge 타입 #}
+                      {% if column.field == 'alias_count' %}
+                        <span class="badge badge-info" style="font-size: 13px;">{{ brand.alias_count|default:0 }}</span>
+                      {% elif column.field == 'product_count' %}
+                        <span class="badge badge-primary" style="font-size: 13px;">{{ brand.product_count|default:0 }}</span>
+                      {% else %}
+                        <span class="badge badge-secondary" style="font-size: 13px;">{{ field_value|default:column.default }}</span>
+                      {% endif %}
+                    {% elif column.type == 'active_badge' %}
+                      {# 🆕 활성화 상태 Badge 타입 #}
+                      {% if brand.is_active %}
+                        <span class="badge badge-success" style="font-size: 13px;">활성화</span>
+                      {% else %}
+                        <span class="badge badge-secondary" style="font-size: 13px;">비활성화</span>
+                      {% endif %}
+                    {% else %}
+                      {# 기본 텍스트 타입 #}
+                      {{ field_value|default:column.default }}
+                    {% endif %}
+                  {% endwith %}
+                  
+                </td>
+              {% endfor %}
+              
+              <!-- 관리 버튼 컬럼 (고정) -->
+              <td class="text-center">
+                <!-- 🎛️ 활성화/비활성화 토글 버튼 (🆕 추가) -->
+                {% if brand.is_active %}
+                  <button type="button" class="btn btn-sm btn-success btn-toggle-brand" 
+                          data-brand-id="{{ brand.id }}" 
+                          data-current-status="active"
+                          title="비활성화" data-toggle="tooltip">
+                    <i class="fas fa-toggle-on"></i>
+                  </button>
+                {% else %}
+                  <button type="button" class="btn btn-sm btn-secondary btn-toggle-brand" 
+                          data-brand-id="{{ brand.id }}" 
+                          data-current-status="inactive"
+                          title="활성화" data-toggle="tooltip">
+                    <i class="fas fa-toggle-off"></i>
+                  </button>
+                {% endif %}
+                
+                <button type="button" class="btn btn-sm btn-primary btn-view-brand ml-1" 
+                        data-brand-id="{{ brand.id }}" title="상세보기" data-toggle="tooltip">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-warning btn-edit-brand ml-1" 
+                        data-brand-id="{{ brand.id }}" title="수정" data-toggle="tooltip">
+                  <i class="fas fa-edit"></i>
+                </button>
+              </td>
+              
+              <!-- 삭제 버튼 컬럼 (고정) -->
+              <td class="text-center">
+                <button type="button" class="btn btn-sm btn-danger btn-delete-brand" 
+                        data-brand-id="{{ brand.id }}" 
+                        data-brand-name="{{ brand.name }}" title="삭제" data-toggle="tooltip">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </td>
+              
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="{{ brand_table_columns|length|add:2 }}" class="text-center py-4">
+                <div class="text-muted">
+                  <i class="fas fa-tags fa-2x mb-3"></i>
+                  <p>등록된 브랜드가 없습니다.</p>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 📄 페이지네이션 -->
+  {% include 'common/pagination.html' with items=brands %}
+
+  <!-- 🔗 최근 별칭 목록 (추가 정보) -->
+  {% if recent_aliases %}
+  <div class="card shadow-sm">
+    <div class="card-header">
+      <h5 class="card-title mb-0">
+        <i class="fas fa-history"></i> 최근 등록된 별칭 (최근 10개)
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-sm table-hover">
+          <thead class="thead-light">
+            <tr>
+              {% for column in alias_table_columns %}
+                <th class="{{ column|get_column_class }}" 
+                    {% if column.width %}style="width: {{ column.width }};"{% endif %}>
+                  {{ column.header }}
+                </th>
+              {% endfor %}
+              <th style="width: 80px;" class="text-center">삭제</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for alias in recent_aliases %}
+            <tr>
+              {% for column in alias_table_columns %}
+                <td class="{{ column|get_column_class }}">
+                  {% if column.field == 'alias' %}
+                    <code style="font-size: 13px;">{{ alias.alias }}</code>
+                  {% elif column.field == 'brand_name' %}
+                    {{ alias.brand.name }}
+                  {% endif %}
+                </td>
+              {% endfor %}
+              
+              <!-- 삭제 버튼 -->
+              <td class="text-center">
+                <button type="button" 
+                        class="btn btn-sm btn-danger btn-delete-alias" 
+                        data-alias-id="{{ alias.id }}"
+                        data-alias-name="{{ alias.alias }}"
+                        title="별칭 삭제" data-toggle="tooltip">
+                  <i class="fas fa-times"></i>
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- 🔧 브랜드 등록/수정 모달 -->
+<div class="modal fade" id="brandModal" tabindex="-1" role="dialog" aria-labelledby="brandModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="brandModalLabel">표준 브랜드 등록</h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" id="closeBrandModalXBtn">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="brandForm">
+          {% csrf_token %}
+          <input type="hidden" id="brand_id" name="brand_id" value="">
+          
+          <!-- 📝 기본 정보 -->
+          <div class="card mb-3">
+            <div class="card-header bg-light">
+              <h6 class="mb-0"><i class="fas fa-info-circle"></i> 기본 정보</h6>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label for="brand_name" class="font-weight-bold">표준 브랜드명 <span class="text-danger">*</span></label>
+                <input type="text" 
+                       class="form-control" 
+                       id="brand_name" 
+                       name="name" 
+                       placeholder="예: NIKE, Adidas, Gucci 등"
+                       required>
+                <small class="form-text text-muted">
+                  상품에서 통일적으로 사용할 표준 브랜드명을 입력하세요.
+                </small>
+              </div>
+            </div>
+          </div>
+
+          <!-- 🔗 별칭 관리 -->
+          <div class="card">
+            <div class="card-header bg-light">
+              <h6 class="mb-0"><i class="fas fa-link"></i> 별칭 관리</h6>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="font-weight-bold">치환 브랜드명 (별칭)</label>
+                <div class="input-group">
+                  <input type="text" 
+                         class="form-control" 
+                         id="new_alias" 
+                         placeholder="예: 나이키, NIKE KOREA, nike 등">
+                  <div class="input-group-append">
+                    <button type="button" class="btn btn-outline-primary" id="addAliasBtn">
+                      <i class="fas fa-plus"></i> 추가
+                    </button>
+                  </div>
+                </div>
+                <small class="form-text text-muted">
+                  실제 상품 데이터에서 사용되는 다양한 브랜드명을 별칭으로 등록하면, 모두 표준 브랜드명으로 통일됩니다.
+                </small>
+              </div>
+              
+              <!-- 별칭 목록 표시 영역 -->
+              <div class="form-group">
+                <label class="font-weight-bold">등록된 별칭:</label>
+                <div id="aliasDisplay" class="border rounded p-2" style="min-height: 50px; background-color: #f8f9fa;">
+                  <small class="text-muted">별칭이 등록되면 여기에 표시됩니다.</small>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal" id="cancelBrandModalBtn">취소</button>
+        <button type="button" class="btn btn-primary" id="saveBrandBtn">저장</button>
+      </div>
     </div>
   </div>
 </div>
+
+<!-- 🔍 브랜드 상세보기 모달 -->
+<div class="modal fade" id="brandDetailModal" tabindex="-1" role="dialog" aria-labelledby="brandDetailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title" id="brandDetailModalLabel">
+          <i class="fas fa-info-circle"></i> 브랜드 상세 정보
+        </h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" id="closeDetailModalXBtn">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- 📋 기본 정보 -->
+        <div class="card mb-3">
+          <div class="card-header bg-primary text-white">
+            <h6 class="mb-0"><i class="fas fa-tag"></i> 기본 정보</h6>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-12">
+                <div class="form-group">
+                  <label class="font-weight-bold">표준 브랜드명:</label>
+                  <p class="form-control-plaintext" id="detail_brand_name">-</p>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="font-weight-bold">활성 상태:</label>
+                  <p class="form-control-plaintext" id="detail_brand_status">-</p>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="font-weight-bold">등록번호:</label>
+                  <p class="form-control-plaintext" id="detail_brand_id">-</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 📋 관련 정보 -->
+        <div class="card">
+          <div class="card-header bg-secondary text-white">
+            <h6 class="mb-0"><i class="fas fa-link"></i> 관련 정보</h6>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="font-weight-bold">별칭 개수:</label>
+                  <p class="form-control-plaintext" id="detail_alias_count">-</p>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="font-weight-bold">연결 상품수:</label>
+                  <p class="form-control-plaintext" id="detail_product_count">-</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 연결된 별칭 목록 -->
+            <div class="form-group">
+              <label class="font-weight-bold">연결된 별칭:</label>
+              <div id="detail_alias_list" class="border rounded p-2" style="min-height: 50px; background-color: #f8f9fa;">
+                <small class="text-muted">별칭 정보를 불러오는 중...</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal" id="closeDetailModalBtn">닫기</button>
+        <button type="button" class="btn btn-primary btn-edit-from-detail" id="editFromDetailBtn">수정</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'dashboard/js/search_engine.js' %}"></script>
+<script src="{% static 'dashboard/js/brand_management.js' %}"></script>
+<script>
+// 🔍 검색엔진 초기화
+$(document).ready(function() {
+    SearchEngine.init({
+        enableCategoryFilter: false,
+        enableDateFilter: false
+    });
+});
+</script>
 {% endblock %}

@@ -52,7 +52,7 @@ def fetch_latti_raw_products_optimized(limit=None):
                 price = Decimal(item.get("SELLOUT", "0"))
                 discount_raw = item.get("DISCOUNT", "0")
                 discount = Decimal(discount_raw) if discount_raw.strip() else Decimal("0")
-                price_org = price * (Decimal("1") - discount / 100)
+                price_org = (price * (Decimal("1") - discount / 100)) / Decimal("1.22") # VAT 22%제외
             except:
                 price_org = Decimal("0")
 

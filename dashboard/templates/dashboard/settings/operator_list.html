@@ -1,43 +1,96 @@
-{% extends 'dashboard/base_admin.html' %}
+{% extends "dashboard/base_admin.html" %}
+{% load static %}
+{% load operator_extras %}
+
 
 {% block content %}
-<section class="content">
-  <div class="container-fluid">
-    <h3 class="mb-4">👤 운영자 목록</h3>
+{% include 'dashboard/settings/operator_form_modal.html' %}
+<div class="container-fluid mt-4">
 
-    <table class="table table-striped table-bordered">
-      <thead>
-        <tr>
-          <th>아이디</th>
-          <th>이름</th>
-          <th>접근 거래처</th>
-          <th>알림 설정</th>
-          <th>관리</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for user in users %}
-        <tr>
-          <td>{{ user.username }}</td>
-          <td>{{ user.get_full_name }}</td>
-          <td>
-            {% for r in user.operatorprofile.allowed_retailers.all %}
-              <span class="badge badge-info">{{ r.name }}</span>
-            {% empty %}
-              <span class="text-muted">없음</span>
-            {% endfor %}
-          </td>
-          <td>
-            {% if user.operatorprofile.receive_order_alerts %}📦 주문{% endif %}
-            {% if user.operatorprofile.receive_stock_alerts %} / 📦 재고{% endif %}
-          </td>
-          <td>
-            <a href="#" class="btn btn-sm btn-secondary">수정</a>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <!-- 📌 페이지 헤더 -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>운영자 관리</h3>
+    <button type="button" class="btn btn-primary" id="addOperatorBtn">
+      <i class="fas fa-plus"></i> 운영자 추가
+    </button>
   </div>
-</section>
+
+  <!-- 📋 운영자 목록 테이블 -->
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-striped table-bordered dashboard-table" id="operator-list-table">
+          
+          <!-- 📋 테이블 헤더 -->
+          <thead class="thead-dark text-center">
+            <tr>
+              {% for column in table_columns %}
+                <th class="text-{{ column.align }}" style="width: {{ column.width }};">
+                  {{ column.header }}
+                </th>
+              {% endfor %}
+              <th style="width: 100px;" class="text-center">관리</th>
+              <th style="width: 80px;" class="text-center">삭제</th>
+            </tr>
+          </thead>
+          
+          <!-- 📊 테이블 본문 -->
+          <tbody>
+            {% for operator in operators %}
+              <tr data-operator-id="{{ operator.id }}">
+                {% for column in table_columns %}
+                  <td class="text-{{ column.align }}" style="width: {{ column.width }};">
+                    {% with field_value=operator|get_item:column.field %}
+                      {% if column.field == 'allowed_retailers' %}
+                        {% if field_value %}
+                          {% for r in field_value %}
+                            <span class="badge badge-info">{{ r }}</span>
+                          {% endfor %}
+                        {% else %}
+                          <span class="text-muted">{{ column.default }}</span>
+                        {% endif %}
+                      {% else %}
+                        {{ field_value|default:column.default }}
+                      {% endif %}
+                    {% endwith %}
+                  </td>
+                {% endfor %}
+
+                <!-- 관리 버튼 -->
+                <td class="text-center">
+                  <button type="button" class="btn btn-sm btn-warning btn-edit-operator"
+                          data-operator-id="{{ operator.id }}" title="수정">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                </td>
+
+                <!-- 삭제 버튼 -->
+                <td class="text-center">
+                  <button type="button" class="btn btn-sm btn-danger btn-delete-operator"
+                          data-operator-id="{{ operator.id }}" title="삭제">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="{{ table_columns|length|add:2 }}" class="text-center py-4">
+                  <div class="text-muted">
+                    <i class="fas fa-user-shield fa-2x mb-3"></i>
+                    <p>등록된 운영자가 없습니다.</p>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
+{% block extra_scripts %}
+  <script src="{% static 'dashboard/js/operator.js' %}"></script>
 {% endblock %}

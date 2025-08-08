@@ -1,0 +1,102 @@
+<!-- 📦 운영자 등록/수정 모달 -->
+<div class="modal fade" id="operatorModal" tabindex="-1" role="dialog" aria-labelledby="operatorModalLabel"
+  aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <form id="operatorForm" method="post">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="operatorModalLabel">운영자 추가</h5>
+          <button type="button" class="close" onclick="$('#operatorModal').modal('hide');" aria-label="닫기">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <input type="hidden" name="id" id="operatorId">
+
+          <!-- 🧑 아이디 -->
+          <div class="form-group">
+            <label for="username">아이디 <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="username" name="username" required>
+          </div>
+
+
+          <!-- 🔐 비밀번호 변경 버튼 (수정 모드에서만 JS로 노출) -->
+          <div class="form-group d-none" id="passwordToggleBtnWrapper">
+            <label>비밀번호</label><br>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="togglePasswordFields">
+              🔒 비밀번호 변경
+            </button>
+          </div>
+
+          <!-- 🔐 비밀번호 입력 필드 (기본 숨김) -->
+          <div id="passwordFields" style="display: none;">
+            <div class="form-group">
+              <label for="password">새 비밀번호</label>
+              <div class="input-group">
+                <input type="password" name="password" class="form-control" id="password" placeholder="비밀번호를 입력하세요">
+                <button class="btn btn-outline-secondary toggle-password" type="button"
+                  data-target="#password">🔒</button>
+              </div>
+            </div>
+
+
+
+            <div class="form-group">
+              <label for="confirm_password">비밀번호 확인</label>
+              <div class="input-group">
+                <input type="password" class="form-control" id="confirm_password" placeholder="비밀번호를 다시 입력하세요">
+                <button class="btn btn-outline-secondary toggle-password" type="button"
+                  data-target="#confirm_password">🔒</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 🧾 이름 -->
+          <div class="form-group">
+            <label for="operatorName">이름</label>
+            <input type="text" class="form-control" id="operatorName" name="first_name">
+          </div>
+
+          <!-- 📞 연락처 -->
+          <div class="form-group">
+            <label for="operatorPhone">연락처</label>
+            <input type="text" class="form-control" id="operatorPhone" name="contact_number">
+          </div>
+
+          <!-- 📧 이메일 -->
+          <div class="form-group">
+            <label for="operatorEmail">이메일 <span class="text-danger">*</span></label>
+            <input type="email" class="form-control" id="operatorEmail" name="email" required>
+          </div>
+
+          <!-- 👥 권한 그룹 (보류 - UI만 존재) -->
+          <div class="form-group">
+            <label for="groups">권한 그룹</label>
+            <select class="form-control" id="groups" name="groups">
+              {% for group in group_choices %}
+              <option value="{{ group.id }}">{{ group.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- 🏬 거래처 권한 (보류 - UI만 존재) -->
+          <div class="form-group">
+            <label for="retailers">접근 가능한 거래처</label>
+            <select multiple class="form-control" id="retailers" name="allowed_retailers">
+              {% for retailer in retailer_choices %}
+              <option value="{{ retailer.id }}">{{ retailer.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="$('#operatorModal').modal('hide');">취소</button>
+          <button type="submit" class="btn btn-primary">저장</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

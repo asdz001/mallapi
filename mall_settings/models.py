@@ -1,6 +1,11 @@
+# mall_settings/models.py
+
+
 from django.db import models
 from ckeditor.fields import RichTextField
 from django.contrib.auth.models import User
+
+
 
 
 # 쇼핑몰 설정
@@ -31,16 +36,25 @@ class SiteSetting(models.Model):
         return self.site_name
 
 
-# 운영자 관리
+
+
+
+
+# 운영자 프로필 모델
 class OperatorProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    
-    # 운영자별 거래처 제한 (ManyToManyField로 연결)
+
+    # 거래처 권한 설정 (ManyToManyField)
     allowed_retailers = models.ManyToManyField('pricing.Retailer', blank=True)
 
-    # 알림 설정 (추후 확장 가능)
+    # 알림 설정
     receive_order_alerts = models.BooleanField(default=True)
     receive_stock_alerts = models.BooleanField(default=False)
 
+    # ✅ 연락처 필드 추가
+    contact_number = models.CharField("연락처", max_length=20, blank=True)
+
     def __str__(self):
         return f"{self.user.username} 운영자 프로필"
+
+

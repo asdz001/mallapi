@@ -1,3 +1,4 @@
+# dictionary/models.py
 from django.db import models
 
 
@@ -5,6 +6,7 @@ from django.db import models
 #브랜드매핑
 class Brand(models.Model):
     name = models.CharField(max_length=100, unique=True, verbose_name="표준 브랜드명")
+    is_active = models.BooleanField(default=True, verbose_name="서비스 노출")  # 🆕 추가
 
     def __str__(self):
         return self.name
