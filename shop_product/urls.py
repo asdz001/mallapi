@@ -13,6 +13,9 @@ urlpatterns = [
     path('column-settings/save/', product_list.save_column_settings, name='save_column_settings'),
     path('column-settings/get/', product_list.get_column_settings, name='get_column_settings'),
 
+
+    
+
     
 # 🔧 거래처 관리 URL 패턴
     path('classification/supplier/', supplier.supplier_list, name='supplier_list'),

@@ -1,13 +1,14 @@
 # shop_product/views/brand.py
-# 🏷️ 브랜드 관리 전용 Views
+# 🏷️ 브랜드 관리 전용 Views - 캐싱 없는 최종 최적화 버전
 
 from django.shortcuts import render, get_object_or_404
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse
 from django.core.paginator import Paginator
-from django.db.models import Count, Case, When
+from django.db.models import Count, Q
 from dictionary.models import Brand, BrandAlias
-from shop.models import Product  # 상품 수 계산용
+from shop.models import Product
+import time
 
 # 🔧 테이블 컬럼 설정 (표준 브랜드용)
 BRAND_TABLE_COLUMNS = [
@@ -32,7 +33,7 @@ BRAND_TABLE_COLUMNS = [
         'header': '서비스 노출',
         'width': '100px',
         'align': 'center',
-        'type': 'active_badge',  # 🆕 활성화 상태 표시
+        'type': 'active_badge',
         'default': '-'
     },
     {
@@ -60,7 +61,7 @@ ALIAS_TABLE_COLUMNS = [
         'header': '치환 브랜드명',
         'width': '200px',
         'align': 'left',
-        'type': 'code_text',  # 커스텀 타입 (code 스타일)
+        'type': 'code_text',
         'default': '-'
     },
     {
@@ -94,15 +95,114 @@ SORT_CHOICES = [
     ('-is_active', '서비스 노출 상태 역순'),
 ]
 
-# 🔹 브랜드 목록 페이지
+# 🚀 **핵심 최적화 1**: 페이지별 브랜드만 실시간 계산
+def calculate_page_brands_product_count(brands_queryset):
+    """
+    🔥 페이지별 실시간 계산 (캐싱 없음)
+    - 현재 페이지의 브랜드들만 상품수 계산 (최대 25개)
+    - 실시간 데이터 보장
+    - 별칭 매핑을 메모리에서 처리하여 속도 최적화
+    """
+    if not brands_queryset:
+        return []
+    
+    start_time = time.time()
+    
+    try:
+        # 🎯 1단계: 현재 페이지 브랜드명 목록 추출
+        brand_names = [brand.name for brand in brands_queryset]
+        
+        # 🎯 2단계: 해당 브랜드들의 별칭 정보를 한 번에 가져오기
+        alias_mapping = {}
+        aliases_qs = BrandAlias.objects.filter(
+            brand__name__in=brand_names
+        ).select_related('brand')
+        
+        for alias in aliases_qs:
+            brand_name = alias.brand.name
+            if brand_name not in alias_mapping:
+                alias_mapping[brand_name] = []
+            alias_mapping[brand_name].append(alias.alias)
+        
+        # 🎯 3단계: 각 브랜드별 상품수 계산 (배치 처리)
+        for brand in brands_queryset:
+            # 검색할 브랜드명 목록 구성 (표준명 + 별칭들)
+            search_names = [brand.name]
+            if brand.name in alias_mapping:
+                search_names.extend(alias_mapping[brand.name])
+            
+            # 한 번의 IN 쿼리로 해당 브랜드 상품수 계산
+            brand.product_count = Product.objects.filter(
+                brand_name__in=search_names
+            ).count()
+        
+        execution_time = time.time() - start_time
+        print(f"✅ 페이지별 브랜드 상품수 계산 완료: {len(brands_queryset)}개 브랜드, {execution_time:.3f}초")
+        
+        return brands_queryset
+        
+    except Exception as e:
+        print(f"🚨 브랜드 상품수 계산 오류: {e}")
+        # 오류 발생 시 상품수를 0으로 설정
+        for brand in brands_queryset:
+            brand.product_count = 0
+        return brands_queryset
+
+# 🚀 **핵심 최적화 2**: 집계 쿼리로 전체 브랜드 상품수 (상품수 정렬용)
+def get_all_brands_product_count_for_sorting():
+    """
+    🔥 정렬용 전체 브랜드 상품수 계산
+    - 상품수 정렬이 필요할 때만 실행
+    - 집계 쿼리 + 메모리 연산으로 최적화
+    """
+    start_time = time.time()
+    
+    try:
+        # 🎯 1단계: 모든 브랜드명별 상품수를 한 번에 집계
+        brand_counts_raw = (
+            Product.objects
+            .exclude(brand_name__isnull=True)
+            .exclude(brand_name__exact='')
+            .values('brand_name')
+            .annotate(count=Count('id'))
+        )
+        
+        # 🎯 2단계: 별칭 매핑 정보 가져오기
+        alias_to_standard = {}
+        for alias in BrandAlias.objects.select_related('brand'):
+            alias_to_standard[alias.alias] = alias.brand.name
+        
+        # 🎯 3단계: 표준 브랜드별로 상품수 합계 (메모리 연산)
+        standard_brand_counts = {}
+        
+        for item in brand_counts_raw:
+            brand_name = item['brand_name']
+            count = item['count']
+            
+            # 별칭인지 확인하여 표준 브랜드명으로 변환
+            standard_name = alias_to_standard.get(brand_name, brand_name)
+            
+            # 표준 브랜드별로 누적
+            standard_brand_counts[standard_name] = standard_brand_counts.get(standard_name, 0) + count
+        
+        execution_time = time.time() - start_time
+        print(f"✅ 전체 브랜드 상품수 집계 완료: {execution_time:.3f}초")
+        
+        return standard_brand_counts
+        
+    except Exception as e:
+        print(f"🚨 전체 브랜드 상품수 계산 오류: {e}")
+        return {}
+
+# 🔹 브랜드 목록 페이지 - 최종 최적화 버전
 @staff_member_required
 def brand_list(request):
-    """브랜드 관리 메인 페이지 - 표준 브랜드 + 별칭 목록"""
+    """브랜드 관리 메인 페이지 - 실시간 데이터 보장 + 최적화"""
     
     # 📝 검색 파라미터
     search_field = request.GET.get('search_field', 'name')
     search_value = request.GET.get('search_value', '').strip()
-    sort_by = request.GET.get('sort', '-id')  # 기본값: ID 역순
+    sort_by = request.GET.get('sort', '-id')
     per_page = int(request.GET.get('per_page', 25))
     page = request.GET.get('page', 1)
     
@@ -116,47 +216,51 @@ def brand_list(request):
         if search_field == 'name':
             brands_queryset = brands_queryset.filter(name__icontains=search_value)
         elif search_field == 'alias':
-            # 별칭에서 검색하여 해당하는 표준 브랜드 ID 목록 가져오기
             alias_brand_ids = BrandAlias.objects.filter(
                 alias__icontains=search_value
             ).values_list('brand_id', flat=True)
             brands_queryset = brands_queryset.filter(id__in=alias_brand_ids)
     
-    # 📊 정렬 적용
-    valid_sort_fields = [choice[0] for choice in SORT_CHOICES]
-    if sort_by in valid_sort_fields:
-        brands_queryset = brands_queryset.order_by(sort_by)
-    else:
-        brands_queryset = brands_queryset.order_by('-id')  # 기본 정렬: ID 역순
+    # 📊 상품수 정렬 여부 확인
+    is_product_count_sort = 'product_count' in sort_by
     
-    # 📊 각 브랜드별 상품 수 계산 (추가)
-    brands_with_count = []
-    for brand in brands_queryset:
-        product_count = calculate_brand_product_count(brand.name)
-        brand.product_count = product_count
-        brands_with_count.append(brand)
-    
-    # 상품수 정렬 처리 (product_count 기준)
-    if sort_by == 'product_count':
-        brands_with_count.sort(key=lambda x: x.product_count)
-    elif sort_by == '-product_count':
-        brands_with_count.sort(key=lambda x: x.product_count, reverse=True)
-    
-    # 정렬된 결과로 queryset 업데이트
-    if sort_by in ['product_count', '-product_count']:
-        brand_ids = [brand.id for brand in brands_with_count]
-        brands_queryset = Brand.objects.filter(id__in=brand_ids).annotate(alias_count=Count('aliases'))
-        # ID 순서 보존
-        preserved = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(brand_ids)])
-        brands_queryset = brands_queryset.order_by(preserved)
+    if is_product_count_sort:
+        # 🚀 상품수 정렬이 필요한 경우: 전체 브랜드 상품수 계산
+        print("🔄 상품수 정렬 모드: 전체 브랜드 상품수 계산 중...")
         
-        # 상품수 다시 설정
+        all_brand_counts = get_all_brands_product_count_for_sorting()
+        
+        # 각 브랜드에 상품수 정보 추가
         for brand in brands_queryset:
-            brand.product_count = next(b.product_count for b in brands_with_count if b.id == brand.id)
-    
-    # 📄 페이지네이션 (표준 브랜드)
-    paginator = Paginator(brands_queryset, per_page)
-    brands = paginator.get_page(page)
+            brand.product_count = all_brand_counts.get(brand.name, 0)
+        
+        # 상품수로 정렬
+        if sort_by == 'product_count':
+            brands_queryset = sorted(brands_queryset, key=lambda x: x.product_count)
+        elif sort_by == '-product_count':
+            brands_queryset = sorted(brands_queryset, key=lambda x: x.product_count, reverse=True)
+        
+        # 페이지네이션 적용
+        paginator = Paginator(brands_queryset, per_page)
+        brands = paginator.get_page(page)
+        
+    else:
+        # 🚀 일반 정렬인 경우: 페이지별 최적화
+        print("🔄 일반 정렬 모드: 페이지별 브랜드 상품수 계산")
+        
+        # 일반 정렬 적용
+        valid_sort_fields = [choice[0] for choice in SORT_CHOICES if 'product_count' not in choice[0]]
+        if sort_by in valid_sort_fields:
+            brands_queryset = brands_queryset.order_by(sort_by)
+        else:
+            brands_queryset = brands_queryset.order_by('-id')
+        
+        # 페이지네이션 먼저 적용
+        paginator = Paginator(brands_queryset, per_page)
+        brands = paginator.get_page(page)
+        
+        # 현재 페이지의 브랜드들만 상품수 계산 (실시간)
+        brands.object_list = calculate_page_brands_product_count(brands.object_list)
     
     # 🔗 최근 별칭 목록 (최근 10개)
     recent_aliases = BrandAlias.objects.select_related('brand').order_by('-id')[:10]
@@ -164,22 +268,15 @@ def brand_list(request):
     # 📊 통계 정보
     total_brands = Brand.objects.count()
     total_aliases = BrandAlias.objects.count()
-    active_brands = brands_queryset.filter(aliases__isnull=False).distinct().count()  # 별칭이 있는 브랜드
+    active_brands = Brand.objects.filter(is_active=True).count()
     
     # 📋 컨텍스트 구성
     context = {
-        # 페이징된 데이터
         'brands': brands,
-        'items': brands,  # pagination 컴포넌트에서 사용
-        
-        # 기타 데이터
+        'items': brands,
         'recent_aliases': recent_aliases,
-        
-        # 테이블 구조
         'brand_table_columns': BRAND_TABLE_COLUMNS,
         'alias_table_columns': ALIAS_TABLE_COLUMNS,
-        
-        # 검색/정렬 옵션
         'search_fields': SEARCH_FIELDS,
         'sort_choices': SORT_CHOICES,
         'search_field': search_field,
@@ -187,9 +284,7 @@ def brand_list(request):
         'sort_by': sort_by,
         'per_page': per_page,
         'per_page_options': [10, 25, 50, 100],
-        'total_count': brands_queryset.count(),
-        
-        # 통계
+        'total_count': paginator.count,
         'total_brands': total_brands,
         'total_aliases': total_aliases,
         'active_brands': active_brands,
@@ -197,60 +292,55 @@ def brand_list(request):
     
     return render(request, 'dashboard/classification/classification_brand.html', context)
 
-def calculate_brand_product_count(brand_name):
-    """브랜드별 상품 수 계산 (직접 매치 + 별칭 매치)"""
+# 🔹 개별 브랜드 상품수 계산 (상세보기/수정용)
+def calculate_single_brand_product_count(brand_name):
+    """개별 브랜드의 실시간 상품수 계산"""
     try:
-        total_count = 0
+        # 해당 브랜드의 별칭들 가져오기
+        aliases = list(BrandAlias.objects.filter(
+            brand__name=brand_name
+        ).values_list('alias', flat=True))
         
-        # 직접 매치 (brand_name 필드와 일치)
-        direct_count = Product.objects.filter(brand_name=brand_name).count()
-        total_count += direct_count
+        # 검색할 브랜드명 목록 (표준명 + 별칭들)
+        search_names = [brand_name] + aliases
         
-        # 별칭으로 매치 (BrandAlias를 통해 연결된 브랜드명들)
-        brand_aliases = BrandAlias.objects.filter(brand__name=brand_name).values_list('alias', flat=True)
-        for alias in brand_aliases:
-            alias_count = Product.objects.filter(brand_name=alias).count()
-            total_count += alias_count
-        
-        return total_count
+        # IN 쿼리로 한 번에 계산
+        return Product.objects.filter(brand_name__in=search_names).count()
         
     except Exception as e:
-        print(f"브랜드 상품수 계산 오류: {e}")
+        print(f"🚨 개별 브랜드 상품수 계산 오류: {e}")
         return 0
 
 # 🔹 표준 브랜드 생성 (AJAX)
 @staff_member_required
 def brand_create(request):
-    """표준 브랜드 생성 - AJAX 처리 (별칭 포함)"""
+    """표준 브랜드 생성 - AJAX 처리"""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': '잘못된 요청입니다.'})
     
     try:
-        # 📝 필수 필드 검증
         name = request.POST.get('name', '').strip()
-        aliases = request.POST.getlist('aliases[]')  # 별칭 배열
+        aliases = request.POST.getlist('aliases[]')
         
         if not name:
             return JsonResponse({'success': False, 'message': '브랜드명은 필수입니다.'})
         
-        # 📝 중복 검사
         if Brand.objects.filter(name=name).exists():
             return JsonResponse({'success': False, 'message': f'브랜드 "{name}"은(는) 이미 존재합니다.'})
         
-        # 🆕 브랜드 생성 (기본값: 활성화)
+        # 브랜드 생성
         brand = Brand.objects.create(name=name, is_active=True)
         
-        # 🔗 별칭 생성 (있는 경우)
+        # 별칭 생성
         created_aliases = []
         for alias in aliases:
             alias = alias.strip()
             if alias:
-                # 별칭 중복 검사
                 if BrandAlias.objects.filter(alias=alias).exists():
                     brand.delete()  # 롤백
                     return JsonResponse({'success': False, 'message': f'별칭 "{alias}"는 이미 존재합니다.'})
                 
-                brand_alias = BrandAlias.objects.create(brand=brand, alias=alias)
+                BrandAlias.objects.create(brand=brand, alias=alias)
                 created_aliases.append(alias)
         
         return JsonResponse({
@@ -279,8 +369,8 @@ def brand_detail(request, brand_id):
         brand = get_object_or_404(Brand, id=brand_id)
         aliases = BrandAlias.objects.filter(brand=brand)
         
-        # 상품 수 계산
-        product_count = calculate_brand_product_count(brand.name)
+        # 실시간 상품수 계산
+        product_count = calculate_single_brand_product_count(brand.name)
         
         return JsonResponse({
             'success': True,
@@ -300,37 +390,32 @@ def brand_detail(request, brand_id):
 # 🔹 표준 브랜드 수정 (AJAX)
 @staff_member_required
 def brand_update(request, brand_id):
-    """표준 브랜드 수정 - AJAX 처리 (별칭 포함)"""
+    """표준 브랜드 수정 - AJAX 처리"""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': '잘못된 요청입니다.'})
     
     try:
         brand = get_object_or_404(Brand, id=brand_id)
-        
-        # 📝 필수 필드 검증
         name = request.POST.get('name', '').strip()
-        aliases = request.POST.getlist('aliases[]')  # 별칭 배열
+        aliases = request.POST.getlist('aliases[]')
         
         if not name:
             return JsonResponse({'success': False, 'message': '브랜드명은 필수입니다.'})
         
-        # 📝 중복 검사 (자기 자신 제외)
         if Brand.objects.filter(name=name).exclude(id=brand_id).exists():
             return JsonResponse({'success': False, 'message': f'브랜드 "{name}"은(는) 이미 존재합니다.'})
         
-        # 📝 브랜드명 수정
         old_name = brand.name
         brand.name = name
         brand.save()
         
-        # 🔗 기존 별칭 삭제 후 새로 생성
+        # 기존 별칭 삭제 후 새로 생성
         BrandAlias.objects.filter(brand=brand).delete()
         
         updated_aliases = []
         for alias in aliases:
             alias = alias.strip()
             if alias:
-                # 별칭 중복 검사 (다른 브랜드의 별칭과)
                 if BrandAlias.objects.filter(alias=alias).exists():
                     return JsonResponse({'success': False, 'message': f'별칭 "{alias}"는 이미 다른 브랜드에서 사용중입니다.'})
                 
@@ -363,15 +448,15 @@ def brand_delete(request, brand_id):
         brand = get_object_or_404(Brand, id=brand_id)
         brand_name = brand.name
         
-        # 🗑️ 관련 데이터 확인
-        product_count = calculate_brand_product_count(brand_name)
+        # 실시간 관련 상품 확인
+        product_count = calculate_single_brand_product_count(brand_name)
         if product_count > 0:
             return JsonResponse({
                 'success': False, 
-                'message': f'이 브랜드와 연결된 상품이 {product_count}개 있어 삭제할 수 없습니다. 먼저 연결된 상품을 정리해주세요.'
+                'message': f'이 브랜드와 연결된 상품이 {product_count}개 있어 삭제할 수 없습니다.'
             })
         
-        # 별칭 개수 확인
+        # 별칭 확인
         alias_count = BrandAlias.objects.filter(brand=brand).count()
         if alias_count > 0:
             return JsonResponse({
@@ -397,7 +482,6 @@ def alias_create(request):
         return JsonResponse({'success': False, 'message': '잘못된 요청입니다.'})
     
     try:
-        # 📝 필수 필드 검증
         alias = request.POST.get('alias', '').strip()
         standard_brand_id = request.POST.get('standard_brand_id')
         
@@ -407,14 +491,11 @@ def alias_create(request):
         if not standard_brand_id:
             return JsonResponse({'success': False, 'message': '표준 브랜드를 선택해주세요.'})
         
-        # 📝 중복 검사
         if BrandAlias.objects.filter(alias=alias).exists():
             return JsonResponse({'success': False, 'message': f'별칭 "{alias}"은(는) 이미 존재합니다.'})
         
-        # 📝 표준 브랜드 존재 확인
         standard_brand = get_object_or_404(Brand, id=standard_brand_id)
         
-        # 🆕 별칭 생성
         brand_alias = BrandAlias.objects.create(
             alias=alias,
             brand=standard_brand
@@ -455,7 +536,7 @@ def alias_delete(request, alias_id):
     except Exception as e:
         return JsonResponse({'success': False, 'message': f'삭제 중 오류가 발생했습니다: {str(e)}'})
 
-# 🔹 브랜드 활성화/비활성화 토글 (AJAX) - 🆕 추가
+# 🔹 브랜드 활성화/비활성화 토글 (AJAX)
 @staff_member_required
 def brand_toggle_active(request, brand_id):
     """브랜드 활성화/비활성화 토글 - AJAX 처리"""
@@ -465,7 +546,6 @@ def brand_toggle_active(request, brand_id):
     try:
         brand = get_object_or_404(Brand, id=brand_id)
         
-        # 상태 토글
         brand.is_active = not brand.is_active
         brand.save()
         
@@ -492,7 +572,7 @@ def get_brand_options(request):
         return JsonResponse({'success': False, 'message': '잘못된 요청입니다.'})
     
     try:
-        brands = Brand.objects.filter(is_active=True).order_by('name')  # 🆕 활성화된 브랜드만
+        brands = Brand.objects.filter(is_active=True).order_by('name')
         brand_list = [
             {
                 'id': brand.id,

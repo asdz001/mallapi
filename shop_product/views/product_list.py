@@ -1,18 +1,17 @@
 # shop_product/views/product_list.py
-# 상품목록 뷰 - 원산지 관리 방식 참조하여 개선
+# 상품목록 뷰 - 오류 수정 및 최적화 완료
 
 from django.shortcuts import render
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse
 from shop.models import Product
-from shop_product.models import UserTableColumnSetting  # 🆕 사용자 컬럼 설정 모델
 from django.core.paginator import Paginator
 from django.db.models import Q, Case, When, IntegerField, Value, CharField
 from django.utils.translation import gettext_lazy as _
 from datetime import datetime, timedelta
 from django.utils import timezone
+from django.utils.html import escape
 import json
-
 
 # ========================================
 # 🔧 검색 엔진 설정
@@ -68,20 +67,18 @@ PRICE_FIELD_CHOICES = [
     ('calculated_price_krw', _('원화가')),
 ]
 
-# 🆕 품절상태 설정 (실제 구현)
+# 🔧 품절상태 설정 (실제 models.py status와 일치)
 SOLD_OUT_STATUS_CHOICES = [
     ('', _('전체')),
-    ('sold_out', _('품절됨')),
+    ('soldout', _('품절됨')),    # ← models.py와 일치
     ('available', _('품절안됨')),
 ]
 
-# 🆕 판매상태 설정 (status 기반)
+# 🔧 판매상태 설정 (실제 구현)
 SALES_STATUS_CHOICES = [
     ('', _('전체')),
-    ('draft', _('미등록')),
-    ('published', _('등록')),
-    ('on_display', _('진열함')),
-    ('off_display', _('진열안함')),
+    ('displayed', _('진열함')),     # active + soldout
+    ('not_displayed', _('미진열')), # pending
 ]
 
 # 🆕 정렬 설정
@@ -97,7 +94,7 @@ SORT_CHOICES = [
 ]
 
 # ========================================
-# 🔧 테이블 컬럼 설정 (기본값)
+# 🔧 테이블 컬럼 설정 (기본값) - 나중에 UserTableColumnSetting으로 커스터마이즈 예정
 # ========================================
 
 PRODUCT_TABLE_COLUMNS = [
@@ -219,7 +216,7 @@ PRODUCT_TABLE_COLUMNS = [
         'format': '0'
     },
     {
-        'field': 'options_total_stock',        # total_stock 대신 사용
+        'field': 'total_stock',        # Product.total_stock @property 사용
         'header': _('재고'),
         'width': '80px',
         'align': 'center',
@@ -257,9 +254,6 @@ PRODUCT_TABLE_COLUMNS = [
     }
 ]
 
-
-
-
 # ========================================
 # 🔧 뷰 함수
 # ========================================
@@ -267,10 +261,10 @@ PRODUCT_TABLE_COLUMNS = [
 @staff_member_required
 def product_list(request):
     """
-    상품 리스트 페이지 - 원산지 관리 방식 참조
-    - 공통 pagination 컴포넌트 사용
-    - 사용자별 컬럼 설정 적용
-    - 품절상태/판매상태 실제 연동
+    상품 리스트 페이지 - 오류 수정 및 최적화 완료
+    - 품절상태/판매상태 실제 구현
+    - 쿼리 최적화 (prefetch_related)
+    - 재고 호버용 JSON 데이터 안전 처리
     """
     
     # 📝 기본 검색 파라미터
@@ -302,10 +296,10 @@ def product_list(request):
     min_price = request.GET.get('min_price', '')
     max_price = request.GET.get('max_price', '')
 
-    # 🆕 품절상태 필터 파라미터 (실제 구현)
+    # 🔧 품절상태 필터 파라미터 (실제 구현)
     sold_out_status = request.GET.get('sold_out_status', '')
 
-    # 🆕 판매상태 필터 파라미터 (status 기반)
+    # 🔧 판매상태 필터 파라미터 (실제 구현)
     sales_status = request.GET.get('sales_status', '')
 
     # 📝 유효성 검사
@@ -317,14 +311,11 @@ def product_list(request):
     if sort_by not in valid_sort_options:
         sort_by = '-created_at'
 
-    # 🔍 기본 쿼리셋 (품절상태 계산 포함)
-    products_qs = Product.objects.all().annotate(
-        # 🆕 품절상태 계산 (1순위: status, 2순위: 재고)
+    # 🔍 기본 쿼리셋 + 최적화 (prefetch_related)
+    products_qs = Product.objects.all().prefetch_related('options').annotate(
+        # 🆕 품절상태 계산 (1순위: status, 2순위: 실제 재고는 Python에서 처리)
         sold_out_status=Case(
-            # 1순위: status 필드에 '품절됨'이 있으면 품절
-            When(status='sold_out', then=Value('sold_out')),
-            # 2순위: status가 품절이 아니지만 재고가 0이면 품절 (옵션 재고 합계로 계산)
-            When(~Q(status='sold_out'), then=Value('available')),  # 일단 기본값으로 설정
+            When(status='soldout', then=Value('soldout')),
             default=Value('available'),
             output_field=CharField(max_length=20)
         )
@@ -393,49 +384,6 @@ def product_list(request):
         if date_filter:
             products_qs = products_qs.filter(**date_filter)
 
-    # 🔍 재고수량 필터링 (옵션 재고 기반)
-    if stock_status == 'available':
-        # 재고있음 (옵션 재고 합계 > 0)
-        filtered_products = []
-        for product in products_qs:
-            if hasattr(product, 'total_stock') and product.total_stock > 0:
-                filtered_products.append(product.id)
-        products_qs = products_qs.filter(id__in=filtered_products)
-    elif stock_status == 'out_of_stock':
-        # 재고없음 (옵션 재고 합계 = 0)
-        filtered_products = []
-        for product in products_qs:
-            if hasattr(product, 'total_stock') and product.total_stock == 0:
-                filtered_products.append(product.id)
-        products_qs = products_qs.filter(id__in=filtered_products)
-
-    # 재고수량 범위 필터링 (옵션 재고 기반)
-    if min_stock or max_stock:
-        filtered_products = []
-        for product in products_qs:
-            if hasattr(product, 'total_stock'):
-                total = product.total_stock
-                include = True
-                
-                if min_stock:
-                    try:
-                        if total < int(min_stock):
-                            include = False
-                    except ValueError:
-                        pass
-                
-                if max_stock and include:
-                    try:
-                        if total > int(max_stock):
-                            include = False
-                    except ValueError:
-                        pass
-                
-                if include:
-                    filtered_products.append(product.id)
-        
-        products_qs = products_qs.filter(id__in=filtered_products)
-
     # 🔍 상품가격 필터링
     if min_price or max_price:
         price_filter = {}
@@ -452,35 +400,13 @@ def product_list(request):
         except ValueError:
             pass
 
-    # 🔍 품절상태 필터링 (실제 구현)
-    if sold_out_status == 'sold_out':
-        # 품절된 상품만 (status='sold_out' OR 옵션 재고 합계=0)
-        filtered_products = []
-        for product in products_qs:
-            is_sold_out = (
-                hasattr(product, 'status') and product.status == 'sold_out'
-            ) or (
-                hasattr(product, 'total_stock') and product.total_stock == 0
-            )
-            if is_sold_out:
-                filtered_products.append(product.id)
-        products_qs = products_qs.filter(id__in=filtered_products)
-    elif sold_out_status == 'available':
-        # 품절되지 않은 상품만
-        filtered_products = []
-        for product in products_qs:
-            is_available = (
-                not (hasattr(product, 'status') and product.status == 'sold_out')
-            ) and (
-                hasattr(product, 'total_stock') and product.total_stock > 0
-            )
-            if is_available:
-                filtered_products.append(product.id)
-        products_qs = products_qs.filter(id__in=filtered_products)
-
-    # 🔍 판매상태 필터링 (status 기반)
-    if sales_status:
-        products_qs = products_qs.filter(status=sales_status)
+    # 🔧 판매상태 필터링 (실제 구현)
+    if sales_status == 'displayed':
+        # 진열함: active 또는 soldout (고객이 볼 수 있는 상품)
+        products_qs = products_qs.filter(status__in=['active', 'soldout'])
+    elif sales_status == 'not_displayed':
+        # 미진열: pending (고객이 못 보는 상품)
+        products_qs = products_qs.filter(status='pending')
 
     # 📝 동적 데이터 수집 (드롭다운 옵션용)
     all_category1 = Product.objects.values_list('category1', flat=True).distinct().exclude(category1__isnull=True).exclude(category1__exact='')
@@ -491,30 +417,16 @@ def product_list(request):
     else:
         filtered_category2 = all_category2
 
-    # 🆕 사용자별 컬럼 설정 적용
-    table_columns = UserTableColumnSetting.get_user_columns(
-        user=request.user,
-        page_name='product_list',
-        default_columns=PRODUCT_TABLE_COLUMNS
-    )
-
-    safe_columns = []
-    for c in table_columns:
-        safe_columns.append({
-            'field': c.get('field', ''),
-            'header': str(c.get('header', '')),
-        })
-    table_columns_json = json.dumps(safe_columns, ensure_ascii=False)
-
-    # 📝 페이징 처리 (원산지 방식 참조)
+    # 📝 페이징 처리
     paginator = Paginator(products_qs, per_page)
     products = paginator.get_page(page)
 
-    # 🆕 각 상품의 옵션 데이터를 JSON으로 준비 + 품절상태 재계산
+    # 🔧 각 상품의 옵션 데이터를 JSON으로 준비 + 품절상태 재계산
     for product in products:
         options_data = []
         total_stock_sum = 0  # 실제 재고 합계 계산
         
+        # prefetch_related로 이미 가져온 옵션들 사용 (DB 조회 없음)
         for option in product.options.all().order_by('-stock', 'option_name'):
             options_data.append({
                 'name': option.option_name,
@@ -523,22 +435,163 @@ def product_list(request):
             })
             total_stock_sum += option.stock  # 재고 합계
         
-        product.options_json = json.dumps(options_data, ensure_ascii=False)
+        # 🔧 HTML 안전한 JSON 생성 (escape 처리)
+        product.options_json = escape(json.dumps(options_data, ensure_ascii=False))
         
-        # 🆕 실제 품절상태 재계산 (2순위 로직 적용)
-        if hasattr(product, 'status') and product.status == 'sold_out':
-            product.sold_out_status = 'sold_out'  # 1순위: status 기반
+        # 🔧 실제 품절상태 재계산 (2순위 로직 적용)
+        if product.status == 'soldout':
+            product.sold_out_status = 'soldout'  # 1순위: status 기반
         elif total_stock_sum == 0:
-            product.sold_out_status = 'sold_out'  # 2순위: 재고 0
+            product.sold_out_status = 'soldout'  # 2순위: 재고 0
         else:
             product.sold_out_status = 'available'  # 판매 가능
+
+    # 🔧 품절상태 필터링 (실제 구현) - 페이징 후 처리
+    if sold_out_status:
+        filtered_products = []
+        for product in products:
+            if sold_out_status == 'soldout' and product.sold_out_status == 'soldout':
+                filtered_products.append(product)
+            elif sold_out_status == 'available' and product.sold_out_status == 'available':
+                filtered_products.append(product)
+        
+        # 필터링된 결과로 교체 (주의: 페이징이 맞지 않을 수 있음)
+        if sold_out_status:
+            # 전체 쿼리셋에서 다시 필터링 후 페이징
+            filtered_ids = []
+            for product in products_qs:
+                # 임시로 재고 계산
+                temp_total = sum(opt.stock for opt in product.options.all())
+                is_sold_out = (product.status == 'soldout') or (temp_total == 0)
+                
+                if sold_out_status == 'soldout' and is_sold_out:
+                    filtered_ids.append(product.id)
+                elif sold_out_status == 'available' and not is_sold_out:
+                    filtered_ids.append(product.id)
+            
+            products_qs = products_qs.filter(id__in=filtered_ids)
+            paginator = Paginator(products_qs, per_page)
+            products = paginator.get_page(page)
+            
+            # 다시 옵션 데이터 생성
+            for product in products:
+                options_data = []
+                total_stock_sum = 0
+                
+                for option in product.options.all().order_by('-stock', 'option_name'):
+                    options_data.append({
+                        'name': option.option_name,
+                        'stock': option.stock,
+                        'price_krw': str(option.price_krw) if option.price_krw else None
+                    })
+                    total_stock_sum += option.stock
+                
+                product.options_json = escape(json.dumps(options_data, ensure_ascii=False))
+                
+                if product.status == 'soldout':
+                    product.sold_out_status = 'soldout'
+                elif total_stock_sum == 0:
+                    product.sold_out_status = 'soldout'
+                else:
+                    product.sold_out_status = 'available'
+
+    # 🔍 재고수량 필터링 (Python에서 처리)
+    if stock_status or min_stock or max_stock:
+        filtered_ids = []
+        for product in products_qs:
+            total = sum(opt.stock for opt in product.options.all())
+            
+            include = True
+            
+            # 재고 상태 필터
+            if stock_status == 'available' and total <= 0:
+                include = False
+            elif stock_status == 'out_of_stock' and total > 0:
+                include = False
+            
+            # 재고 범위 필터
+            if min_stock and include:
+                try:
+                    if total < int(min_stock):
+                        include = False
+                except ValueError:
+                    pass
+            
+            if max_stock and include:
+                try:
+                    if total > int(max_stock):
+                        include = False
+                except ValueError:
+                    pass
+            
+            if include:
+                filtered_ids.append(product.id)
+        
+        if filtered_ids:
+            products_qs = products_qs.filter(id__in=filtered_ids)
+            paginator = Paginator(products_qs, per_page)
+            products = paginator.get_page(page)
+            
+            # 다시 옵션 데이터 생성
+            for product in products:
+                options_data = []
+                total_stock_sum = 0
+                
+                for option in product.options.all().order_by('-stock', 'option_name'):
+                    options_data.append({
+                        'name': option.option_name,
+                        'stock': option.stock,
+                        'price_krw': str(option.price_krw) if option.price_krw else None
+                    })
+                    total_stock_sum += option.stock
+                
+                product.options_json = escape(json.dumps(options_data, ensure_ascii=False))
+                
+                if product.status == 'soldout':
+                    product.sold_out_status = 'soldout'
+                elif total_stock_sum == 0:
+                    product.sold_out_status = 'soldout'
+                else:
+                    product.sold_out_status = 'available'
+
+    # 🆕 사용자별 컬럼 설정 적용
+    session_key = f'column_settings_product_list_{request.user.id}'
+    user_column_settings = request.session.get(session_key, {})
+    
+    # 사용자 설정에 따라 컬럼 필터링 및 정렬
+    if user_column_settings:
+        # 설정이 있는 경우 사용자 설정 적용
+        visible_columns = []
+        columns_with_order = []
+        
+        # 각 컬럼에 대해 설정 적용
+        for column in PRODUCT_TABLE_COLUMNS:
+            field = column['field']
+            setting = user_column_settings.get(field, {'visible': True, 'order': 999})
+            
+            if setting.get('visible', True):  # visible이 True인 컬럼만
+                column_with_order = column.copy()
+                column_with_order['_order'] = setting.get('order', 999)
+                columns_with_order.append(column_with_order)
+        
+        # order 순서대로 정렬
+        columns_with_order.sort(key=lambda x: x.get('_order', 999))
+        
+        # _order 키 제거
+        user_columns = []
+        for col in columns_with_order:
+            clean_col = {k: v for k, v in col.items() if k != '_order'}
+            user_columns.append(clean_col)
+    else:
+        # 설정이 없는 경우 기본값 사용
+        user_columns = PRODUCT_TABLE_COLUMNS
 
     # 📝 페이지당 표시 개수 옵션
     per_page_options = [20, 100, 500, 1000]
 
-    # 📝 컨텍스트 구성 (원산지 방식 참조)
+    # 📝 컨텍스트 구성
     context = {
-        # 🆕 공통 컴포넌트를 위한 데이터
+        # 공통 컴포넌트를 위한 데이터
         'products': products,
         'items': products,  # pagination 컴포넌트에서 사용
 
@@ -552,8 +605,8 @@ def product_list(request):
         'per_page_options': per_page_options,
         'total_count': products_qs.count(),
 
-        # 테이블 설정
-        'table_columns': table_columns,  # 사용자 설정이 적용된 컬럼
+        # 🔧 사용자 설정이 적용된 컬럼 (수정)
+        'table_columns': user_columns,
 
         # 상품분류 필터 데이터
         'gender_filter': gender_filter,
@@ -584,29 +637,25 @@ def product_list(request):
         'max_price': max_price,
         'price_field_choices': PRICE_FIELD_CHOICES,
 
-        # 🆕 품절상태 필터 데이터 (실제 구현)
+        # 🔧 품절상태 필터 데이터 (실제 구현)
         'sold_out_status': sold_out_status,
         'sold_out_status_choices': SOLD_OUT_STATUS_CHOICES,
 
-        # 🆕 판매상태 필터 데이터 (status 기반)
+        # 🔧 판매상태 필터 데이터 (실제 구현)
         'sales_status': sales_status,
         'sales_status_choices': SALES_STATUS_CHOICES,
-
-        # 📝 페이지네이션 데이터
-        'table_columns': table_columns,              # 템플릿 테이블 렌더링용(그대로 유지)
-        'table_columns_json': table_columns_json,    # 🔥 JS에서 쓰는 안전 JSON
     }
 
     return render(request, 'dashboard/product_list.html', context)
 
 
 # ========================================
-# 🆕 컬럼 설정 관련 AJAX 뷰
+# 🆕 컬럼 설정 관련 AJAX 뷰 (세션 기반 임시 구현)
 # ========================================
 
 @staff_member_required
 def save_column_settings(request):
-    """사용자별 컬럼 설정 저장 - AJAX"""
+    """사용자별 컬럼 설정 저장 - 세션 기반 임시 구현"""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': '잘못된 요청입니다.'})
     
@@ -615,15 +664,15 @@ def save_column_settings(request):
         if not column_settings:
             return JsonResponse({'success': False, 'message': '컬럼 설정 데이터가 없습니다.'})
         
-        # JSON 파싱
-        column_settings = json.loads(column_settings)
+        # JSON 파싱 및 검증
+        try:
+            column_settings = json.loads(column_settings)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': '잘못된 JSON 형식입니다.'})
         
-        # 사용자별 설정 저장
-        UserTableColumnSetting.save_user_columns(
-            user=request.user,
-            page_name='product_list',
-            column_settings=column_settings
-        )
+        # 세션에 저장 (임시 구현 - 추후 UserTableColumnSetting 모델로 변경)
+        request.session[f'column_settings_product_list_{request.user.id}'] = column_settings
+        request.session.modified = True
         
         return JsonResponse({
             'success': True,
@@ -639,20 +688,19 @@ def save_column_settings(request):
 
 @staff_member_required
 def get_column_settings(request):
-    """사용자의 현재 컬럼 설정 조회 - AJAX"""
+    """사용자의 현재 컬럼 설정 조회 - 세션 기반 임시 구현"""
     try:
-        user_setting = UserTableColumnSetting.objects.filter(
-            user=request.user,
-            page_name='product_list'
-        ).first()
+        # 세션에서 설정 조회 (임시 구현)
+        session_key = f'column_settings_product_list_{request.user.id}'
+        user_settings = request.session.get(session_key)
         
-        if user_setting:
+        if user_settings:
             return JsonResponse({
                 'success': True,
-                'column_settings': user_setting.column_settings
+                'column_settings': user_settings
             })
         else:
-            # 기본 설정 반환
+            # 기본 설정 생성 및 반환
             default_settings = {}
             for i, col in enumerate(PRODUCT_TABLE_COLUMNS):
                 default_settings[col['field']] = {
@@ -670,7 +718,3 @@ def get_column_settings(request):
             'success': False,
             'message': f'설정 조회 중 오류가 발생했습니다: {str(e)}'
         })
-    
-
-
-    

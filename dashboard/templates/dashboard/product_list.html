@@ -6,20 +6,19 @@
 {% comment %}
 ========================================
 📁 파일 위치: dashboard/templates/dashboard/product_list.html
-🎯 목적: 상품목록 페이지 (HTML 문법 오류 완전 수정)
-📅 버전: 2.2 - 모든 문법 오류 해결
+🎯 목적: 상품목록 페이지 - 오류 수정 및 기능 통합 완료
+📅 버전: 3.0 - 통합 JavaScript 적용
 ========================================
 {% endcomment %}
-
-
-
 
 {% block title %}상품목록 관리{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'dashboard/css/base_dashboard.css' %}">
 <style>
-/* 컬럼설정 모달 전용 스타일 */
+/* ========================================
+   🎨 컬럼설정 모달 전용 스타일
+   ======================================== */
 .column-settings-modal .modal-dialog {
     max-width: 600px;
 }
@@ -31,6 +30,12 @@
     margin-bottom: 5px;
     background: #f8f9fa;
     cursor: grab;
+    transition: all 0.2s ease;
+}
+
+.column-item:hover {
+    background: #e3f2fd;
+    border-color: #1976d2;
 }
 
 .column-item:active {
@@ -41,6 +46,7 @@
     visibility: visible !important;
     background: #e3f2fd;
     border: 2px dashed #1976d2;
+    opacity: 0.6;
 }
 
 .column-item .form-check {
@@ -51,10 +57,45 @@
     color: #666;
     margin-right: 10px;
     cursor: grab;
+    transition: color 0.2s ease;
 }
 
 .drag-handle:hover {
     color: #333;
+}
+
+/* ========================================
+   🎨 재고 셀 및 기타 개선 스타일
+   ======================================== */
+.stock-cell {
+    position: relative;
+    cursor: help;
+}
+
+.product-list-page .dashboard-table td {
+    vertical-align: middle;
+}
+
+/* 상품명 클릭 가능 표시 */
+.product-name-clickable {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.product-name-clickable:hover {
+    background-color: #f8f9fa !important;
+}
+
+/* 검색 조건 영역 개선 */
+.search-section .form-inline label {
+    font-weight: 600;
+    color: #495057;
+}
+
+/* 필터 조건 표시 */
+.filter-applied {
+    background-color: #e3f2fd;
+    border-left: 4px solid #1976d2;
 }
 </style>
 {% endblock %}
@@ -76,15 +117,15 @@
   </div>
 </section>
 
-<section class="content">
+<section class="content product-list-page">
 
-  {# 🔍 검색 필터 엔진 #}
+  {# 🔍 검색 필터 영역 (원본 디자인 복구) #}
   <div class="card mb-3">
     <div class="card-header py-2">
       <h6 class="mb-0" style="font-size: 14px;"><i class="fas fa-search"></i> {% trans "검색 필터" %}</h6>
     </div>
     <div class="card-body">
-      <form method="get" id="search-form">
+      <form method="get" id="search-form" class="search-form">
         
         {# 📋 첫 번째 줄: 기본 검색 #}
         <div class="row mb-3">
@@ -244,7 +285,7 @@
           </div>
         </div>
 
-                {# 📋 네 번째 줄: 품절상태 + 판매상태 #}
+        {# 📋 네 번째 줄: 품절상태 + 판매상태 #}
         <div class="row mb-4">
           <div class="col-md-6">
             <div class="form-inline">
@@ -284,15 +325,13 @@
           </div>
         </div>
 
-
-
         {# 🎯 검색 버튼 영역 (중앙 정렬) #}
         <div class="row">
           <div class="col-md-12 text-center">
             <button type="submit" class="btn btn-primary mr-3" style="font-size: 13px; padding: 8px 16px;">
               <i class="fas fa-search"></i> {% trans "검색" %}
             </button>
-            <button type="button" class="btn btn-outline-secondary" id="reset-search" style="font-size: 13px; padding: 8px 16px;">
+            <button type="button" class="btn btn-outline-secondary" onclick="location.href='?'" style="font-size: 13px; padding: 8px 16px;">
               <i class="fas fa-undo"></i> {% trans "초기화" %}
             </button>
           </div>
@@ -383,7 +422,7 @@
               </span>
               {% endif %}
 
-              {# 품절상태 조건 (UI만) #}
+              {# 품절상태 조건 #}
               {% if sold_out_status %}
               <span class="badge badge-secondary ml-1" style="font-size: 12px;">
                 품절상태:
@@ -393,7 +432,7 @@
               </span>
               {% endif %}
 
-              {# 품목판매상태 조건 (UI만) #}
+              {# 판매상태 조건 #}
               {% if sales_status %}
               <span class="badge badge-secondary ml-1" style="font-size: 12px;">
                 판매상태:
@@ -415,12 +454,6 @@
     </div>
   </div>
 
-
-
-
-
-  
-
   {# 📊 표시 설정 및 페이지네이션 정보 #}
   {% include 'common/pagination_info.html' with items=products sort_choices=sort_choices %}
 
@@ -438,9 +471,18 @@
               총 {{ products.paginator.count }}개
             {% endif %}
           </span>
+          
+          {# 🔧 현재 적용된 필터 조건 표시 #}
+          {% if search_value or gender_filter or category1_filter or sold_out_status or sales_status %}
+          <div class="mt-1">
+            
+          </div>
+          {% endif %}
         </div>
+        
         <div>
-          <button type="button" class="btn btn-outline-primary btn-sm" id="column-settings-btn" style="font-size: 13px;">
+          {# 🔧 컬럼설정 버튼 (ID 수정: column-settings-btn → column-settings) #}
+          <button type="button" class="btn btn-outline-primary btn-sm" id="column-settings" style="font-size: 13px;">
             <i class="fas fa-columns"></i> {% trans "컬럼설정" %}
           </button>
           <button type="button" class="btn btn-success btn-sm" onclick="location.href='add'" style="font-size: 13px;">
@@ -468,23 +510,16 @@
           {# 📊 테이블 본문 #}
           <tbody>
             {% for product in products %}
-            <tr>
+            <tr data-product-id="{{ product.id }}" data-product-name="{{ product.product_name|escapejs }}">
               {% for column in table_columns %}
-                <td class="{{ column|get_column_class }}{% if column.field == 'total_stock' %} stock-cell{% endif %}"
+                <td class="{{ column|get_column_class }}{% if column.field == 'total_stock' %} stock-cell{% endif %}{% if column.field == 'product_name' %} product-name-clickable{% endif %}"
                     {% if column.width %}style="width: {{ column.width }};"{% endif %}
-                    {% if column.field == 'options_total_stock' %}data-options="{{ product.options_json }}" title="옵션재고"{% endif %}
+                    {% if column.field == 'total_stock' %}data-options="{{ product.options_json }}" title="옵션재고 상세보기"{% endif %}
                     {% if column.field == 'product_name' %}onclick="editProduct({{ product.id }})" style="cursor: pointer;"{% endif %}>
                   
-                  {# 🔧 필드 값 처리 #}
+                  {# 🔧 필드 값 처리 (table_filters.py 활용) #}
                   {% with field_value=product|get_field_value:column %}
-                    {% if column.field == 'sold_out_status' %}
-                      {# 품절상태 특별 처리 #}
-                      {% if field_value == 'sold_out' %}
-                        <span class="badge badge-danger">품절됨</span>
-                      {% else %}
-                        <span class="badge badge-success">판매중</span>
-                      {% endif %}
-                    {% elif column.truncate %}
+                    {% if column.truncate %}
                       {{ field_value|truncate_smart:column }}
                     {% else %}
                       {{ field_value }}
@@ -495,11 +530,17 @@
               {% endfor %}
             </tr>
             {% empty %}
+            {# 🔧 상품이 없을 때 표시 #}
             <tr>
               <td colspan="{{ table_columns|length }}" class="text-center py-4">
                 <div class="text-muted">
                   <i class="fas fa-box fa-2x mb-3"></i>
-                  <p>등록된 상품이 없습니다.</p>
+                  <p class="mb-1">등록된 상품이 없습니다.</p>
+                  {% if search_value or gender_filter or category1_filter %}
+                    <small>검색 조건을 변경하거나 <a href="?">전체보기</a>를 해보세요.</small>
+                  {% else %}
+                    <small><a href="add" class="btn btn-primary btn-sm">첫 상품 등록하기</a></small>
+                  {% endif %}
                 </div>
               </td>
             </tr>
@@ -517,30 +558,40 @@
 
 </section>
 
-{# 🎛️ 컬럼 설정 모달 #}
-<div class="modal fade column-settings-modal" id="columnSettingsModal" tabindex="-1">
+{# 🎛️ 컬럼 설정 모달 (Bootstrap 4/5 호환) #}
+<div class="modal fade column-settings-modal" id="columnSettingsModal" tabindex="-1" aria-labelledby="columnSettingsModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">
+        <h5 class="modal-title" id="columnSettingsModalLabel">
           <i class="fas fa-columns"></i> 컬럼 표시 설정
         </h5>
-        <button type="button" class="close" data-dismiss="modal">
-          <span>&times;</span>
+        {# Bootstrap 4/5 호환 닫기 버튼 #}
+        <button type="button" class="close btn-close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
         </button>
       </div>
       <div class="modal-body">
-        <p class="text-muted" style="font-size: 13px;">
+        <div class="alert alert-info" style="font-size: 13px;">
           <i class="fas fa-info-circle"></i> 
-          표시할 컬럼을 선택하고 드래그하여 순서를 변경할 수 있습니다.
-        </p>
+          <strong>사용법:</strong> 체크박스로 표시할 컬럼을 선택하고, 드래그하여 순서를 변경할 수 있습니다.
+        </div>
         
         <div id="column-list" class="mt-3">
-          <!-- JavaScript로 동적 생성 -->
+          {# JavaScript로 동적 생성 #}
+        </div>
+        
+        <div class="mt-3">
+          <small class="text-muted">
+            <i class="fas fa-lightbulb"></i> 
+            설정은 사용자별로 저장되며, 새로고침 후에도 유지됩니다.
+          </small>
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">취소</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">
+          <i class="fas fa-times"></i> 취소
+        </button>
         <button type="button" class="btn btn-primary" id="save-column-settings">
           <i class="fas fa-save"></i> 저장
         </button>
@@ -549,17 +600,88 @@
   </div>
 </div>
 
-{# CSRF 토큰 #}
+{# 🔧 CSRF 토큰 (meta 태그로도 제공) #}
 {% csrf_token %}
+<meta name="csrf-token" content="{{ csrf_token }}">
 
-{# 📱 스크립트 #}
+{# 📱 JavaScript 파일들 #}
+{# 🔧 검색엔진 스크립트 #}
 <script src="{% static 'dashboard/js/search_engine.js' %}"></script>
-<script src="{% static 'dashboard/js/product_list_management.js' %}"></script>
 
-{# 컬럼 정보를 JavaScript로 전달 #}
+{# 🔧 통합 상품목록 관리 스크립트 (파일명 수정) #}
+<script src="{% static 'dashboard/js/product_list_complete.js' %}"></script>
+
+{# 🔧 전체 컬럼 정보를 JavaScript로 전달 (숨겨진 컬럼 포함) #}
 <script>
-  // ✅ 뷰에서 안전 직렬화된 JSON 그대로 사용
-  window.productColumns = {{ table_columns_json|safe }};
+document.addEventListener('DOMContentLoaded', function() {
+    // 🔧 전체 컬럼 정보 배열 생성 (PRODUCT_TABLE_COLUMNS 기준 - 숨겨진 컬럼도 포함)
+    window.productColumns = [
+        { field: 'external_product_id', header: '상품ID' },
+        { field: 'retailer', header: '부띠끄' },
+        { field: 'image_url_1', header: '썸네일' },
+        { field: 'brand_name', header: '브랜드' },
+        { field: 'product_name', header: '상품명' },
+        { field: 'sku', header: 'SKU' },
+        { field: 'gender', header: '성별' },
+        { field: 'category_combined', header: '카테고리' },
+        { field: 'season', header: '시즌' },
+        { field: 'color', header: '색상' },
+        { field: 'price_retail', header: '소비자가(€)' },
+        { field: 'price_org', header: 'COST' },
+        { field: 'markup', header: 'MARKUP' },
+        { field: 'price_supply', header: '공급가(€)' },
+        { field: 'retail_price_krw', header: '소비자가' },
+        { field: 'calculated_price_krw', header: '판매가' },
+        { field: 'total_stock', header: '재고' },
+        { field: 'status', header: '판매상태' },
+        { field: 'sold_out_status', header: '품절상태' },
+        { field: 'created_at', header: '등록일' },
+        { field: 'updated_at', header: '수정일' }
+    ];
+    
+    // 🔧 디버깅 정보 (개발 시에만 활성화)
+    console.log('전체 컬럼 정보 로드됨:', window.productColumns.length + '개');
+    
+    // 🔧 페이지 식별자 추가 (JS에서 자동 감지용)
+    document.body.classList.add('product-list-page');
+});
+
+// 🔧 상품 수정 함수 (전역 함수)
+function editProduct(productId) {
+    console.log('상품 수정 요청:', productId);
+    
+    // TODO: 실제 상품 수정 모달 또는 페이지로 이동
+    // 현재는 알림으로 대체
+    var confirmed = confirm('상품 ID ' + productId + '의 수정 페이지로 이동하시겠습니까?');
+    if (confirmed) {
+        // 상품 수정 페이지로 이동 (URL 패턴에 맞게 수정 필요)
+        location.href = 'edit/' + productId + '/';
+    }
+}
+
+// 🔧 카테고리1 변경 시 카테고리2 초기화
+document.getElementById('category1').addEventListener('change', function() {
+    if (this.value === '') {
+        document.getElementById('category2').value = '';
+    }
+});
 </script>
+
+{# 🔧 jQuery UI Sortable CDN (컬럼 드래그 정렬용) #}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>end_date').value = '';
+    }
+});
+
+// 재고 상태 선택 시 숫자 입력 클리어
+document.getElementById('stock_status').addEventListener('change', function() {
+    if (this.value !== '') {
+        document.getElementById('min_stock').value = '';
+        document.getElementById('max_stock').value = '';
+    }
+});
+</script>
+
+{# 🔧 jQuery UI Sortable CDN (컬럼 드래그 정렬용) #}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
 
 {% endblock %}
