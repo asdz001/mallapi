@@ -1,5 +1,911 @@
+<!-- dashboard/templates/dashboard/product_add.html -->
+
 {% extends "dashboard/base_admin.html" %}
+{% load static %}
+
+{% block title %}상품 등록{% endblock %}
+
+{% block extrahead %}
+<!-- ✅ favicon 오류 해결 -->
+<link rel="icon" type="image/x-icon" href="{% static 'dashboard/favicon.ico' %}">
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- ✅ 기존 구조 완전 유지하면서 최소한의 기능만 추가 -->
+<script>
+    // 전역 변수
+    let optionCount = 0;
+
+    // 부티크 모달 관련 함수들
+    function openRetailerModal() {
+        $('#retailerModal').modal('show');
+    }
+
+    function filterRetailers() {
+        const searchValue = document.getElementById('retailer-search').value.toLowerCase();
+        const items = document.querySelectorAll('.retailer-item');
+
+        items.forEach(item => {
+            const text = item.textContent.toLowerCase();
+            if (text.includes(searchValue)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    function selectRetailer(id, name) {
+        document.getElementById('retailer_display').value = name;
+        document.getElementById('retailer_text').value = name;
+        document.getElementById('retailer_id').value = id;
+        $('#retailerModal').modal('hide');
+    }
+
+    // 브랜드 관련 함수들
+    function openBrandModal() {
+        $('#brandModal').modal('show');
+    }
+
+    function filterBrands() {
+        const searchValue = document.getElementById('brand-search').value.toLowerCase();
+        const items = document.querySelectorAll('.brand-item');
+
+        items.forEach(item => {
+            const text = item.textContent.toLowerCase();
+            if (text.includes(searchValue)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    function selectBrand(id, name) {
+        document.getElementById('brand_display').value = name;
+        document.getElementById('brand_name_text').value = name;
+        document.getElementById('brand_name_id').value = id;
+        $('#brandModal').modal('hide');
+    }
+
+    // 성별 관련 함수들
+    function openGenderModal() {
+        $('#genderModal').modal('show');
+    }
+
+    function filterGenders() {
+        const searchValue = document.getElementById('gender-search').value.toLowerCase();
+        const items = document.querySelectorAll('.gender-item');
+
+        items.forEach(item => {
+            const text = item.textContent.toLowerCase();
+            if (text.includes(searchValue)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    function selectGenderFromModal(id, name) {
+        document.getElementById('gender_display').value = name;
+        document.getElementById('gender_text').value = name;
+        document.getElementById('gender_id').value = id;
+        $('#genderModal').modal('hide');
+    }
+
+    // 카테고리1 관련 함수들
+    function openCategory1Modal() {
+        $('#category1Modal').modal('show');
+    }
+
+    function filterCategory1() {
+        const searchValue = document.getElementById('category1-search').value.toLowerCase();
+        const items = document.querySelectorAll('.category1-item');
+
+        items.forEach(item => {
+            const text = item.textContent.toLowerCase();
+            if (text.includes(searchValue)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    function selectCategory1(id, name) {
+        document.getElementById('category1_display').value = name;
+        document.getElementById('category1_text').value = name;
+        document.getElementById('category1_id').value = id;
+        $('#category1Modal').modal('hide');
+    }
+
+    // 카테고리2 관련 함수들
+    function openCategory2Modal() {
+        $('#category2Modal').modal('show');
+    }
+
+    function filterCategory2() {
+        const searchValue = document.getElementById('category2-search').value.toLowerCase();
+        const items = document.querySelectorAll('.category2-item');
+
+        items.forEach(item => {
+            const text = item.textContent.toLowerCase();
+            if (text.includes(searchValue)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    function selectCategory2(id, name) {
+        document.getElementById('category2_display').value = name;
+        document.getElementById('category2_text').value = name;
+        document.getElementById('category2_id').value = id;
+        $('#category2Modal').modal('hide');
+    }
+
+    // 원산지 관련 함수들
+    function openOriginModal() {
+        $('#originModal').modal('show');
+    }
+
+    function filterOrigins() {
+        const searchValue = document.getElementById('origin-search').value.toLowerCase();
+        const items = document.querySelectorAll('.origin-item');
+
+        items.forEach(item => {
+            const text = item.textContent.toLowerCase();
+            if (text.includes(searchValue)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    function selectOrigin(id, name) {
+        document.getElementById('origin_display').value = name;
+        document.getElementById('origin_text').value = name;
+        document.getElementById('origin_id').value = id;
+        $('#originModal').modal('hide');
+    }
+
+    // ✅ 옵션 추가 (기존 로직 유지)
+    function addOption() {
+        optionCount++;
+        const optionHtml = `
+        <div class="row mb-2 option-row" id="option-${optionCount}">
+            <div class="col-md-6">
+                <input type="text" name="option_name[]" class="form-control" placeholder="옵션명 입력 (예: BLACK-M)">
+            </div>
+            <div class="col-md-3">
+                <input type="number" name="option_stock[]" class="form-control" placeholder="재고" min="0" value="0">
+            </div>
+            <div class="col-md-3">
+                <button type="button" class="btn btn-danger btn-sm" onclick="removeOption(${optionCount})">
+                    <i class="fas fa-trash"></i> 삭제
+                </button>
+            </div>
+        </div>
+        `;
+        document.getElementById('options-list').insertAdjacentHTML('beforeend', optionHtml);
+    }
+
+    // ✅ 옵션 삭제 (기존 로직 유지)
+    function removeOption(index) {
+        const element = document.getElementById('option-' + index);
+        if (element) {
+            element.remove();
+        }
+    }
+
+    // ✅ 템플릿 적용 (기존 로직 유지)
+    function applyTemplate(type) {
+        const templates = {
+            'clothing': ['XS', 'S', 'M', 'L', 'XL'],
+            'shoes': ['220', '225', '230', '235', '240', '245', '250'],
+            'color': ['BLACK', 'WHITE', 'NAVY', 'GRAY'],
+            'onesize': ['FREE SIZE']
+        };
+
+        // 기존 옵션 초기화
+        document.getElementById('options-list').innerHTML = '';
+        optionCount = 0;
+
+        // 템플릿 옵션 추가
+        if (templates[type]) {
+            templates[type].forEach(option => {
+                addOption();
+                const lastRow = document.querySelector('#options-list .option-row:last-child');
+                if (lastRow) {
+                    const input = lastRow.querySelector('input[name="option_name[]"]');
+                    if (input) {
+                        input.value = option;
+                    }
+                }
+            });
+        }
+    }
+
+    // ✅ 이미지 업로드 기능 추가 (기존 구조에 최소한 추가)
+    function handleImageChange(input) {
+        const file = input.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const container = input.closest('.col-md-3');
+                let preview = container.querySelector('.image-preview');
+                if (!preview) {
+                    const previewHtml = `<div class="image-preview mt-2"><img src="${e.target.result}" style="max-width:100px; max-height:100px;" class="img-thumbnail"></div>`;
+                    container.insertAdjacentHTML('beforeend', previewHtml);
+                } else {
+                    preview.querySelector('img').src = e.target.result;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // ✅ 미리보기 기능 추가 (기존 구조에 최소한 추가)
+    function showPreview() {
+        const productName = document.getElementById('product_name').value || '미입력';
+        const sku = document.getElementById('sku').value || '미입력';
+        const retailer = document.getElementById('retailer_display').value || '미선택';
+        const brand = document.getElementById('brand_display').value || '미선택';
+        
+        let optionsHtml = '';
+        const optionRows = document.querySelectorAll('#options-list .option-row');
+        optionRows.forEach(row => {
+            const name = row.querySelector('input[name="option_name[]"]').value;
+            const stock = row.querySelector('input[name="option_stock[]"]').value;
+            if (name) {
+                optionsHtml += `<li>${name}: ${stock}개</li>`;
+            }
+        });
+
+        const previewContent = `
+            <h5>상품 미리보기</h5>
+            <p><strong>상품명:</strong> ${productName}</p>
+            <p><strong>SKU:</strong> ${sku}</p>
+            <p><strong>부티크:</strong> ${retailer}</p>
+            <p><strong>브랜드:</strong> ${brand}</p>
+            <p><strong>옵션:</strong></p>
+            <ul>${optionsHtml}</ul>
+        `;
+
+        // 간단한 alert로 표시 (기존 구조 유지)
+        if (!document.getElementById('previewModal')) {
+            const modal = `
+                <div class="modal fade" id="previewModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">미리보기</h5>
+                                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                            </div>
+                            <div class="modal-body">${previewContent}</div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">닫기</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modal);
+        } else {
+            document.querySelector('#previewModal .modal-body').innerHTML = previewContent;
+        }
+        $('#previewModal').modal('show');
+    }
+
+    // ✅ 폼 검증 추가 (기존 구조에 최소한 추가)
+    function validateForm() {
+        const requiredFields = ['external_product_id', 'product_name', 'sku', 'retailer_display'];
+        let isValid = true;
+        let missingFields = [];
+
+        requiredFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (!field.value.trim()) {
+                isValid = false;
+                missingFields.push(field.previousElementSibling.textContent.replace(' *', ''));
+                field.style.borderColor = 'red';
+            } else {
+                field.style.borderColor = '';
+            }
+        });
+
+        if (!isValid) {
+            alert('다음 필수 항목을 입력해주세요:\n' + missingFields.join('\n'));
+            return false;
+        }
+
+        // 옵션 검증
+        const optionInputs = document.querySelectorAll('input[name="option_name[]"]');
+        let hasOption = false;
+        optionInputs.forEach(input => {
+            if (input.value.trim()) {
+                hasOption = true;
+            }
+        });
+
+        if (!hasOption) {
+            alert('최소 1개의 옵션을 입력해주세요.');
+            return false;
+        }
+
+        return true;
+    }
+
+    // ✅ [X] 버튼 이벤트 직접 바인딩 (추가)
+    function setupModalEvents() {
+        // 각 모달의 close 버튼에 직접 클릭 이벤트 바인딩
+        $('.modal .close').off('click').on('click', function() {
+            $(this).closest('.modal').modal('hide');
+        });
+    }
+
+    // ✅ 페이지 로드 후 초기화 (기존 구조 유지)
+    $(document).ready(function() {
+        setupModalEvents(); // ✅ [X] 버튼 이벤트 바인딩 추가
+        addOption(); // 초기 옵션 1개 추가
+        
+        // ✅ 이미지 업로드 이벤트 바인딩
+        $('.image-input').on('change', function() {
+            handleImageChange(this);
+        });
+        
+        // ✅ 미리보기 버튼 이벤트
+        $('#preview-btn').on('click', showPreview);
+        
+        // ✅ 폼 제출 이벤트
+        $('#product-form').on('submit', function(e) {
+            if (!validateForm()) {
+                e.preventDefault();
+                return false;
+            }
+        });
+        
+        console.log('✅ 상품등록 페이지 JavaScript 로드 완료');
+    });
+</script>
+{% endblock %}
 
 {% block content %}
-<h2>상품 등록 페이지 (준비 중)</h2>
+<div class="container-fluid">
+    <!-- ✅ 알림 컨테이너 추가 -->
+    <div id="alert-container"></div>
+    
+    <!-- 페이지 헤더 -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-plus-circle"></i> 상품 등록
+        </h1>
+        <div class="btn-group">
+            <a href="{% url 'dashboard:product_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-list"></i> 상품 목록
+            </a>
+        </div>
+    </div>
+
+    <!-- 등록 방식 탭 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs" id="registerTabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="manual-tab" data-toggle="tab" href="#manual-register" role="tab">
+                        <i class="fas fa-edit"></i> 일반 등록
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="excel-tab" data-toggle="tab" href="#excel-register" role="tab">
+                        <i class="fas fa-file-excel"></i> 엑셀 등록
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card-body">
+            <div class="tab-content" id="registerTabContent">
+                <!-- 일반 등록 탭 -->
+                <div class="tab-pane fade show active" id="manual-register" role="tabpanel">
+                    <!-- ✅ 폼에 ID 추가 -->
+                    <form method="post" enctype="multipart/form-data" id="product-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="register_type" value="manual">
+
+                        <!-- 기본 정보 섹션 -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">
+                                    <i class="fas fa-info-circle"></i> 기본 정보
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="external_product_id">고유상품ID <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="external_product_id" name="external_product_id" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="product_name">상품명 <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="product_name" name="product_name" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="sku">SKU <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="sku" name="sku" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="season">시즌</label>
+                                            <input type="text" class="form-control" id="season" name="season" placeholder="예: 2024 S/S">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="color">색상명</label>
+                                            <input type="text" class="form-control" id="color" name="color" placeholder="예: BLACK">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="material">소재</label>
+                                            <input type="text" class="form-control" id="material" name="material" placeholder="예: 면 100%">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="status">상태</label>
+                                            <select class="form-control" id="status" name="status">
+                                                <option value="판매중">판매중</option>
+                                                <option value="품절">품절</option>
+                                                <option value="중단">중단</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 분류 정보 섹션 -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">
+                                    <i class="fas fa-tags"></i> 분류 정보
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <!-- 부티크 선택 -->
+                                <div class="form-group">
+                                    <label>부티크 <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="retailer_display" name="retailer_display" placeholder="부티크를 선택하세요" readonly onclick="openRetailerModal()">
+                                        <input type="hidden" id="retailer_text" name="retailer_text">
+                                        <input type="hidden" id="retailer_id" name="retailer_id">
+                                        <div class="input-group-append">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="openRetailerModal()">
+                                                <i class="fas fa-search"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 브랜드 선택 -->
+                                <div class="form-group">
+                                    <label>브랜드</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="brand_display" name="brand_display" placeholder="브랜드를 선택하세요" readonly onclick="openBrandModal()">
+                                        <input type="hidden" id="brand_name_text" name="brand_name_text">
+                                        <input type="hidden" id="brand_name_id" name="brand_name_id">
+                                        <div class="input-group-append">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="openBrandModal()">
+                                                <i class="fas fa-search"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 성별 선택 -->
+                                <div class="form-group">
+                                    <label>성별</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="gender_display" name="gender_display" placeholder="성별을 선택하세요" readonly onclick="openGenderModal()">
+                                        <input type="hidden" id="gender_text" name="gender_text">
+                                        <input type="hidden" id="gender_id" name="gender_id">
+                                        <div class="input-group-append">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="openGenderModal()">
+                                                <i class="fas fa-search"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 카테고리1 선택 -->
+                                <div class="form-group">
+                                    <label>카테고리1</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="category1_display" name="category1_display" placeholder="카테고리1을 선택하세요" readonly onclick="openCategory1Modal()">
+                                        <input type="hidden" id="category1_text" name="category1_text">
+                                        <input type="hidden" id="category1_id" name="category1_id">
+                                        <div class="input-group-append">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="openCategory1Modal()">
+                                                <i class="fas fa-search"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 카테고리2 선택 -->
+                                <div class="form-group">
+                                    <label>카테고리2</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="category2_display" name="category2_display" placeholder="카테고리2를 선택하세요" readonly onclick="openCategory2Modal()">
+                                        <input type="hidden" id="category2_text" name="category2_text">
+                                        <input type="hidden" id="category2_id" name="category2_id">
+                                        <div class="input-group-append">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="openCategory2Modal()">
+                                                <i class="fas fa-search"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 원산지 선택 -->
+                                <div class="form-group">
+                                    <label>원산지</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="origin_display" name="origin_display" placeholder="원산지를 선택하세요" readonly onclick="openOriginModal()">
+                                        <input type="hidden" id="origin_text" name="origin_text">
+                                        <input type="hidden" id="origin_id" name="origin_id">
+                                        <div class="input-group-append">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="openOriginModal()">
+                                                <i class="fas fa-search"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 가격 정보 섹션 -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">
+                                    <i class="fas fa-euro-sign"></i> 가격 정보
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="price_org">COST (€)</label>
+                                            <input type="number" class="form-control" id="price_org" name="price_org" step="0.01" min="0">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="discount_rate">할인율 (%)</label>
+                                            <input type="number" class="form-control" id="discount_rate" name="discount_rate" step="0.1" min="0" max="100">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="price_retail">소비자가 (₩)</label>
+                                            <input type="number" class="form-control" id="price_retail" name="price_retail" step="1" min="0">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="manual_price_krw">수동 원화가 (₩)</label>
+                                            <input type="number" class="form-control" id="manual_price_krw" name="manual_price_krw" min="0">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 상품 이미지 섹션 -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">
+                                    <i class="fas fa-images"></i> 상품 이미지
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    {% for i in "1234" %}
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label>이미지 {{ i }}{% if forloop.first %} (썸네일){% endif %}</label>
+                                            <!-- ✅ 이미지 업로드 영역에 ID 추가 -->
+                                            <div id="image-upload-{{ i }}" class="border rounded p-3 text-center"
+                                                style="min-height: 150px; cursor: pointer;"
+                                                onclick="document.getElementById('image_file_{{ i }}').click()">
+                                                <input type="file" id="image_file_{{ i }}" name="image_file_{{ i }}"
+                                                    class="d-none image-input" accept="image/*">
+                                                <i class="fas fa-camera fa-2x text-muted mb-2"></i>
+                                                <p class="text-muted mb-0">이미지 {{ i }}</p>
+                                                <small class="text-muted">클릭하여 업로드</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 옵션 및 재고 섹션 -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">
+                                    <i class="fas fa-cogs"></i> 상품 옵션 및 재고
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <!-- 빠른 템플릿 -->
+                                <div class="mb-3">
+                                    <label class="mb-2"><strong>빠른 템플릿:</strong></label><br>
+                                    <button type="button" class="btn btn-sm btn-outline-info mr-2 mb-2" onclick="applyTemplate('clothing')">
+                                        의류 사이즈
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-info mr-2 mb-2" onclick="applyTemplate('shoes')">
+                                        신발 사이즈
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-info mr-2 mb-2" onclick="applyTemplate('color')">
+                                        기본 색상
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-info mr-2 mb-2" onclick="applyTemplate('onesize')">
+                                        원사이즈
+                                    </button>
+                                </div>
+
+                                <!-- 옵션 리스트 -->
+                                <div id="options-list">
+                                    <!-- JavaScript로 동적 생성 -->
+                                </div>
+
+                                <!-- 옵션 추가 버튼 -->
+                                <button type="button" class="btn btn-success" onclick="addOption()">
+                                    <i class="fas fa-plus"></i> 옵션 추가
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 액션 버튼 -->
+                        <div class="d-flex justify-content-between mb-4">
+                            <div>
+                                <!-- ✅ 미리보기 버튼에 ID 추가 -->
+                                <button type="button" class="btn btn-info" id="preview-btn">
+                                    <i class="fas fa-eye"></i> 미리보기
+                                </button>
+                            </div>
+                            <div>
+                                <a href="{% url 'dashboard:product_list' %}" class="btn btn-secondary mr-2">
+                                    <i class="fas fa-times"></i> 취소
+                                </a>
+                                <!-- ✅ 제출 버튼에 ID 추가 -->
+                                <button type="submit" class="btn btn-primary" id="submit-btn">
+                                    <i class="fas fa-save"></i> 상품 등록
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- 엑셀 등록 탭 -->
+                <div class="tab-pane fade" id="excel-register" role="tabpanel">
+                    <div class="text-center p-5">
+                        <i class="fas fa-file-excel fa-4x text-success mb-4"></i>
+                        <h4>엑셀 파일 업로드</h4>
+                        <p class="text-muted">상품 정보가 포함된 Excel 파일을 업로드하여 대량 등록이 가능합니다.</p>
+                        <!-- ✅ 엑셀 업로드 관련 요소들 추가 -->
+                        <div class="mt-4">
+                            <input type="file" id="excel-file" class="d-none" accept=".xlsx,.xls">
+                            <button type="button" class="btn btn-success btn-lg" onclick="$('#excel-file').click()">
+                                <i class="fas fa-upload"></i> 파일 선택
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-lg ml-2" id="download-template-btn">
+                                <i class="fas fa-download"></i> 템플릿 다운로드
+                            </button>
+                        </div>
+                        <!-- ✅ 파일 정보 표시 영역 추가 -->
+                        <div id="excel-file-info" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ 부티크 선택 모달 (기존 구조 유지) -->
+<div class="modal fade" id="retailerModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">부티크 선택</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <input type="text" class="form-control" id="retailer-search" placeholder="부티크명으로 검색..." onkeyup="filterRetailers()">
+                </div>
+                <div class="row" id="retailer-list">
+                    {% for retailer in retailer_options %}
+                    <div class="col-md-4 mb-2 retailer-item">
+                        <button type="button" class="btn btn-outline-primary btn-block" onclick="selectRetailer('{{ retailer.id }}', '{{ retailer.name }}')">
+                            {{ retailer.name }}
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ 브랜드 선택 모달 -->
+<div class="modal fade" id="brandModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">브랜드 선택</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <input type="text" class="form-control" id="brand-search" placeholder="브랜드명으로 검색..." onkeyup="filterBrands()">
+                </div>
+                <div class="row" id="brand-list">
+                    {% for brand in brand_options %}
+                    <div class="col-md-4 mb-2 brand-item">
+                        <button type="button" class="btn btn-outline-success btn-block" onclick="selectBrand('{{ brand.id }}', '{{ brand.name }}')">
+                            {{ brand.name }}
+                        </button>
+                    </div>
+                    {% empty %}
+                    <div class="col-12">
+                        <p class="text-muted text-center">등록된 브랜드가 없습니다.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ 성별 선택 모달 -->
+<div class="modal fade" id="genderModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">성별 선택</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <input type="text" class="form-control" id="gender-search" placeholder="성별로 검색..." onkeyup="filterGenders()">
+                </div>
+                <div class="row" id="gender-list">
+                    {% for gender in gender_options %}
+                    <div class="col-md-4 mb-2 gender-item">
+                        <button type="button" class="btn btn-outline-info btn-block" onclick="selectGenderFromModal('{{ gender.id }}', '{{ gender.name }}')">
+                            {{ gender.name }}
+                        </button>
+                    </div>
+                    {% empty %}
+                    <div class="col-12">
+                        <p class="text-muted text-center">등록된 성별이 없습니다.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ 카테고리1 선택 모달 -->
+<div class="modal fade" id="category1Modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">카테고리1 선택</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <input type="text" class="form-control" id="category1-search" placeholder="카테고리1명으로 검색..." onkeyup="filterCategory1()">
+                </div>
+                <div class="row" id="category1-list">
+                    {% for category in category1_options %}
+                    <div class="col-md-4 mb-2 category1-item">
+                        <button type="button" class="btn btn-outline-primary btn-block" onclick="selectCategory1('{{ category.id }}', '{{ category.name }}')">
+                            {{ category.name }}
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ 카테고리2 선택 모달 -->
+<div class="modal fade" id="category2Modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">카테고리2 선택</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <input type="text" class="form-control" id="category2-search" placeholder="카테고리2명으로 검색..." onkeyup="filterCategory2()">
+                </div>
+                <div class="row" id="category2-list">
+                    {% for category in category2_options %}
+                    <div class="col-md-4 mb-2 category2-item">
+                        <button type="button" class="btn btn-outline-primary btn-block" onclick="selectCategory2('{{ category.id }}', '{{ category.name }}')">
+                            {{ category.name }}
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ 원산지 선택 모달 (수정: Django view의 제한 제거 필요) -->
+<div class="modal fade" id="originModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">원산지 선택</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <input type="text" class="form-control" id="origin-search" placeholder="원산지명으로 검색..." onkeyup="filterOrigins()">
+                </div>
+                <div class="row" id="origin-list">
+                    {% for origin in origin_options %}
+                    <div class="col-md-4 mb-2 origin-item">
+                        <button type="button" class="btn btn-outline-warning btn-block" onclick="selectOrigin('{{ origin.id }}', '{{ origin.name }}')">
+                            {{ origin.name }}
+                        </button>
+                    </div>
+                    {% empty %}
+                    <div class="col-12">
+                        <p class="text-muted text-center">등록된 원산지가 없습니다.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

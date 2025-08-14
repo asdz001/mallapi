@@ -12,6 +12,8 @@ urlpatterns = [
     # 🆕 컬럼 설정 관련 URL 추가
     path('column-settings/save/', product_list.save_column_settings, name='save_column_settings'),
     path('column-settings/get/', product_list.get_column_settings, name='get_column_settings'),
+    
+    
 
 
     

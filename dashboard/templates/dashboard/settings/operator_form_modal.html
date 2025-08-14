@@ -1,102 +1,199 @@
-<!-- 📦 운영자 등록/수정 모달 -->
-<div class="modal fade" id="operatorModal" tabindex="-1" role="dialog" aria-labelledby="operatorModalLabel"
-  aria-hidden="true">
-  <div class="modal-dialog" role="document">
+<!-- operator_form_modal.html : 추가/수정 모달 포함 -->
+
+<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"/>
+
+<!-- =========================
+     1) 운영자 추가 모달 (원본 흐름 유지)
+     ========================= -->
+<div class="modal fade" id="addOperatorModal" tabindex="-1" role="dialog" aria-labelledby="addOperatorModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
     <div class="modal-content">
-      <form id="operatorForm" method="post">
-        {% csrf_token %}
-        <div class="modal-header">
-          <h5 class="modal-title" id="operatorModalLabel">운영자 추가</h5>
-          <button type="button" class="close" onclick="$('#operatorModal').modal('hide');" aria-label="닫기">
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
 
-        <div class="modal-body">
-          <input type="hidden" name="id" id="operatorId">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="addOperatorModalLabel">
+          <i class="fas fa-user-plus"></i> 운영자 추가
+        </h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="닫기">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
 
-          <!-- 🧑 아이디 -->
-          <div class="form-group">
-            <label for="username">아이디 <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" id="username" name="username" required>
-          </div>
-
-
-          <!-- 🔐 비밀번호 변경 버튼 (수정 모드에서만 JS로 노출) -->
-          <div class="form-group d-none" id="passwordToggleBtnWrapper">
-            <label>비밀번호</label><br>
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="togglePasswordFields">
-              🔒 비밀번호 변경
-            </button>
-          </div>
-
-          <!-- 🔐 비밀번호 입력 필드 (기본 숨김) -->
-          <div id="passwordFields" style="display: none;">
-            <div class="form-group">
-              <label for="password">새 비밀번호</label>
-              <div class="input-group">
-                <input type="password" name="password" class="form-control" id="password" placeholder="비밀번호를 입력하세요">
-                <button class="btn btn-outline-secondary toggle-password" type="button"
-                  data-target="#password">🔒</button>
-              </div>
+      <div class="modal-body">
+        <div class="container-fluid">
+          <div class="form-row">
+            <div class="form-group col-md-4">
+              <label for="add_username">아이디</label>
+              <input type="text" class="form-control" id="add_username" placeholder="로그인 아이디">
             </div>
-
-
-
-            <div class="form-group">
-              <label for="confirm_password">비밀번호 확인</label>
-              <div class="input-group">
-                <input type="password" class="form-control" id="confirm_password" placeholder="비밀번호를 다시 입력하세요">
-                <button class="btn btn-outline-secondary toggle-password" type="button"
-                  data-target="#confirm_password">🔒</button>
-              </div>
+            <div class="form-group col-md-4">
+              <label for="add_email">이메일</label>
+              <input type="email" class="form-control" id="add_email" placeholder="name@example.com">
+            </div>
+            <div class="form-group col-md-4">
+              <label for="add_first_name">이름(표시명)</label>
+              <input type="text" class="form-control" id="add_first_name" placeholder="홍길동">
             </div>
           </div>
 
-          <!-- 🧾 이름 -->
-          <div class="form-group">
-            <label for="operatorName">이름</label>
-            <input type="text" class="form-control" id="operatorName" name="first_name">
+          <div class="form-row">
+            <div class="form-group col-md-4">
+              <label for="add_phone">연락처</label>
+              <input type="text" class="form-control" id="add_phone" placeholder="010-0000-0000">
+            </div>
+
+            <div class="form-group col-md-4">
+              <label for="add_password">비밀번호</label>
+              <div class="input-group">
+                <input type="password" class="form-control" id="add_password" placeholder="영문/숫자/특수문자 조합 권장">
+                <div class="input-group-append">
+                  <button class="btn btn-outline-secondary toggle-visibility" type="button" data-target="#add_password" title="보임/숨김">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group col-md-4">
+              <label for="add_confirm_password">비밀번호 확인</label>
+              <div class="input-group">
+                <input type="password" class="form-control" id="add_confirm_password" placeholder="동일하게 한번 더">
+                <div class="input-group-append">
+                  <button class="btn btn-outline-secondary toggle-visibility" type="button" data-target="#add_confirm_password" title="보임/숨김">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <!-- 📞 연락처 -->
           <div class="form-group">
-            <label for="operatorPhone">연락처</label>
-            <input type="text" class="form-control" id="operatorPhone" name="contact_number">
+            <label for="add_allowed_retailers">접근 가능한 거래처</label>
+            <select id="add_allowed_retailers" class="form-control" multiple></select>
+            <small class="form-text text-muted">여러 거래처를 선택할 수 있습니다.</small>
           </div>
 
-          <!-- 📧 이메일 -->
-          <div class="form-group">
-            <label for="operatorEmail">이메일 <span class="text-danger">*</span></label>
-            <input type="email" class="form-control" id="operatorEmail" name="email" required>
-          </div>
-
-          <!-- 👥 권한 그룹 (보류 - UI만 존재) -->
-          <div class="form-group">
-            <label for="groups">권한 그룹</label>
-            <select class="form-control" id="groups" name="groups">
-              {% for group in group_choices %}
-              <option value="{{ group.id }}">{{ group.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <!-- 🏬 거래처 권한 (보류 - UI만 존재) -->
-          <div class="form-group">
-            <label for="retailers">접근 가능한 거래처</label>
-            <select multiple class="form-control" id="retailers" name="allowed_retailers">
-              {% for retailer in retailer_choices %}
-              <option value="{{ retailer.id }}">{{ retailer.name }}</option>
-              {% endfor %}
-            </select>
+          <div class="form-group form-check">
+            <input type="checkbox" class="form-check-input" id="add_disable_login">
+            <label class="form-check-label" for="add_disable_login">로그인 차단 (체크 시 즉시 로그인 불가)</label>
           </div>
         </div>
+      </div>
 
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="$('#operatorModal').modal('hide');">취소</button>
-          <button type="submit" class="btn btn-primary">저장</button>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">
+          <i class="fas fa-times"></i> 닫기
+        </button>
+        <button type="button" class="btn btn-primary" id="add_save_btn">
+          <i class="fas fa-save"></i> 저장
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- =========================
+     2) 운영자 수정 모달 — 비밀번호 토글 버튼 추가
+     ========================= -->
+<div class="modal fade" id="editOperatorModal" tabindex="-1" role="dialog" aria-labelledby="editOperatorModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+    <div class="modal-content">
+
+      <div class="modal-header bg-indigo text-white">
+        <h5 class="modal-title" id="editOperatorModalLabel">
+          <i class="fas fa-user-cog"></i> 운영자 수정
+        </h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="닫기">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="edit_operator_id"/>
+
+        <div class="container-fluid">
+          <div class="form-row">
+            <div class="form-group col-md-4">
+              <label for="edit_username">아이디</label>
+              <input type="text" class="form-control" id="edit_username" placeholder="로그인 아이디">
+            </div>
+            <div class="form-group col-md-4">
+              <label for="edit_email">이메일</label>
+              <input type="email" class="form-control" id="edit_email" placeholder="name@example.com">
+            </div>
+            <div class="form-group col-md-4">
+              <label for="edit_first_name">이름(표시명)</label>
+              <input type="text" class="form-control" id="edit_first_name" placeholder="홍길동">
+            </div>
+          </div>
+
+          <div class="form-row align-items-end">
+            <div class="form-group col-md-4">
+              <label for="edit_phone">연락처</label>
+              <input type="text" class="form-control" id="edit_phone" placeholder="010-0000-0000">
+            </div>
+
+            <div class="form-group col-md-4">
+              <label for="edit_password">비밀번호</label>
+              <div class="input-group">
+                <input type="password" class="form-control" id="edit_password" placeholder="비밀번호 변경 버튼을 눌러 활성화" disabled>
+                <div class="input-group-append">
+                  <button class="btn btn-outline-secondary toggle-visibility" type="button" data-target="#edit_password" title="보임/숨김" disabled>
+                    <i class="fas fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+              
+            </div>
+
+            <div class="form-group col-md-4">
+              <label for="edit_confirm_password">비밀번호 확인</label>
+              <div class="input-group">
+                <input type="password" class="form-control" id="edit_confirm_password" placeholder="비밀번호 변경 버튼을 눌러 활성화" disabled>
+                <div class="input-group-append">
+                  <button class="btn btn-outline-secondary toggle-visibility" type="button" data-target="#edit_confirm_password" title="보임/숨김" disabled>
+                    <i class="fas fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+
+          <!-- ★ 비밀번호 변경 토글 버튼(수정 모달 전용) -->
+          <div class="form-row">
+            <div class="col-md-12">
+              <button type="button" class="btn btn-outline-info" id="edit_toggle_pwd_btn">
+                <i class="fas fa-key"></i> 비밀번호변경
+              </button>
+              <small class="text-muted ml-2">OFF면 비밀번호는 전송되지 않아 기존 값이 유지됩니다.</small>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="form-group">
+            <label for="edit_allowed_retailers">접근 가능한 거래처</label>
+            <select id="edit_allowed_retailers" class="form-control" multiple></select>
+          </div>
+
+          <div class="form-group form-check">
+            <input type="checkbox" class="form-check-input" id="edit_disable_login">
+            <label class="form-check-label" for="edit_disable_login">로그인 차단 (체크 시 즉시 로그인 불가)</label>
+          </div>
+
         </div>
-      </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">
+          <i class="fas fa-times"></i> 닫기
+        </button>
+        <button type="button" class="btn btn-primary" id="edit_save_btn">
+          <i class="fas fa-save"></i> 저장
+        </button>
+      </div>
+
     </div>
   </div>
 </div>

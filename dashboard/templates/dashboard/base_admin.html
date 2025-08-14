@@ -37,6 +37,9 @@
   <script src="{% static 'dashboard/js/ckeditor/ckeditor.js' %}"></script>
   <script src="{% static 'dashboard/js/ckeditor/styles.js' %}"></script>
 
+   <!-- ✅ 공용 주소검색 모듈: 전역 1회 로드 -->
+  <script src="{% static 'dashboard/js/common/address_search.js' %}"></script>
+
   <div class="content-wrapper p-4">
     {% block content %}
     {% endblock %}

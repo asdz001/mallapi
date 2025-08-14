@@ -1,3 +1,4 @@
+#pricing/models
 from django.db import models
 from multiselectfield import MultiSelectField
 from django.contrib.auth.models import User

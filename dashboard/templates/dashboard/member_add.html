@@ -1,0 +1,300 @@
+{% extends "dashboard/base_admin.html" %}
+{% load static i18n %}
+
+{% block title %}신규 회원 등록{% endblock %}
+
+{% block extrahead %}
+<style>
+  .member-add-container { max-width: 980px; margin: 0 auto; }
+  .sticky-save-bar { position: sticky; bottom: 0; z-index: 10; background:#fff; border-top:1px solid #eee; padding:10px 0; }
+  .tab-pane { padding-top: 12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="content member-add-container">
+  <div class="card shadow-sm">
+    <div class="card-header py-2">
+      <h6 class="mb-0"><i class="fas fa-user-plus"></i> 신규 회원 등록</h6>
+    </div>
+
+    <div class="card-body">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} mb-2">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+
+      <form method="post" id="member-add-form" novalidate>
+        {% csrf_token %}
+
+        <!-- 탭 -->
+        <ul class="nav nav-tabs" role="tablist">
+          <li class="nav-item"><a class="nav-link active" data-toggle="tab" data-bs-toggle="tab" href="#tab-basic" role="tab">기본정보</a></li>
+          <li class="nav-item"><a class="nav-link"        data-toggle="tab" data-bs-toggle="tab" href="#tab-extra" role="tab">부가정보(B2C)</a></li>
+          <li class="nav-item"><a class="nav-link"        data-toggle="tab" data-bs-toggle="tab" href="#tab-b2b"   role="tab">B2B 정보</a></li>
+        </ul>
+
+        <div class="tab-content">
+          <!-- 기본정보 -->
+          <div class="tab-pane fade show active" id="tab-basic" role="tabpanel">
+            <div class="row mt-3">
+              <div class="col-md-6">
+                <label>아이디 <span class="text-danger">*</span></label>
+                {{ form.username }}
+                {% if form.username.errors %}<div class="text-danger">{{ form.username.errors|striptags }}</div>{% endif %}
+                <small class="form-text text-muted">4자 이상, 중복 불가</small>
+              </div>
+              <div class="col-md-6">
+                <label>회원유형 <span class="text-danger">*</span></label>
+                {{ form.member_type }}
+                {% if form.member_type.errors %}<div class="text-danger">{{ form.member_type.errors|striptags }}</div>{% endif %}
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <label>비밀번호 <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  {{ form.password1 }}
+                  <div class="input-group-append">
+                    <button type="button" class="btn btn-outline-secondary pw-toggle" data-target="#id_password1" aria-label="비밀번호 토글">
+                      <i class="far fa-eye"></i>
+                    </button>
+                  </div>
+                </div>
+                <small id="pw-hint" class="form-text text-muted mt-1">비밀번호 강도: -</small>
+                {% if form.password1.errors %}<div class="text-danger">{{ form.password1.errors|striptags }}</div>{% endif %}
+              </div>
+              <div class="col-md-6">
+                <label>비밀번호 확인 <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  {{ form.password2 }}
+                  <div class="input-group-append">
+                    <button type="button" class="btn btn-outline-secondary pw-toggle" data-target="#id_password2" aria-label="비밀번호 토글">
+                      <i class="far fa-eye"></i>
+                    </button>
+                  </div>
+                </div>
+                {% if form.password2.errors %}<div class="text-danger">{{ form.password2.errors|striptags }}</div>{% endif %}
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <label>이름 <span class="text-danger">*</span></label>
+                {{ form.name }}
+                {% if form.name.errors %}<div class="text-danger">{{ form.name.errors|striptags }}</div>{% endif %}
+              </div>
+              <div class="col-md-6">
+                <label>이메일</label>
+                {{ form.email }}
+                {% if form.email.errors %}<div class="text-danger">{{ form.email.errors|striptags }}</div>{% endif %}
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <label>휴대폰</label>
+                {{ form.phone }}
+                {% if form.phone.errors %}<div class="text-danger">{{ form.phone.errors|striptags }}</div>{% endif %}
+              </div>
+              <div class="col-md-6">
+                <label>상태</label>
+                <div class="form-check">
+                  {{ form.is_active }} <label class="form-check-label">활성화</label>
+                </div>
+                {% if form.is_active.errors %}<div class="text-danger">{{ form.is_active.errors|striptags }}</div>{% endif %}
+              </div>
+            </div>
+
+            <!-- 기본 주소 -->
+            <div class="row">
+              <div class="col-md-8">
+                <label>주소</label>
+                <div class="input-group">
+                  {{ form.address }}
+                  <div class="input-group-append">
+                    <button type="button" class="btn btn-outline-secondary" id="btn-postcode">주소검색</button>
+                  </div>
+                </div>
+                {% if form.address.errors %}<div class="text-danger">{{ form.address.errors|striptags }}</div>{% endif %}
+              </div>
+              <div class="col-md-4">
+                <label>우편번호</label>
+                {{ form.zip_code }}
+                {% if form.zip_code.errors %}<div class="text-danger">{{ form.zip_code.errors|striptags }}</div>{% endif %}
+              </div>
+            </div>
+
+            <div class="row mt-2">
+              <div class="col-md-12">
+                <label>상세주소</label>
+                {{ form.address_detail }}
+              </div>
+            </div>
+          </div> <!-- /#tab-basic -->
+
+          <!-- 부가정보(B2C) -->
+          <div class="tab-pane fade" id="tab-extra" role="tabpanel">
+            <div class="row mt-3">
+              <div class="col-md-4">
+                <label>성별</label>
+                {{ form.gender }}
+                {% if form.gender.errors %}<div class="text-danger">{{ form.gender.errors|striptags }}</div>{% endif %}
+              </div>
+              <div class="col-md-4">
+                <label>생년월일</label>
+                {{ form.birth_date }}
+                {% if form.birth_date.errors %}<div class="text-danger">{{ form.birth_date.errors|striptags }}</div>{% endif %}
+              </div>
+              <div class="col-md-4">
+                <label>가입채널</label>
+                {{ form.join_channel }}
+                {% if form.join_channel.errors %}<div class="text-danger">{{ form.join_channel.errors|striptags }}</div>{% endif %}
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-4">
+                <div class="form-check mt-2">
+                  {{ form.marketing_agree }} <label class="form-check-label">마케팅 수신 동의</label>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-check mt-2">
+                  {{ form.is_forever_member }} <label class="form-check-label">평생회원</label>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-check mt-2">
+                  {{ form.is_sms_agree }} <label class="form-check-label">SMS 수신 동의</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="row mt-2">
+              <div class="col-md-6">
+                <label>추천인 아이디</label>
+                {{ form.recommender_id }}
+                {% if form.recommender_id.errors %}<div class="text-danger">{{ form.recommender_id.errors|striptags }}</div>{% endif %}
+              </div>
+            </div>
+
+            <div class="row mt-2">
+              <div class="col-md-12">
+                <label>운영 메모</label>
+                {{ form.memo }}
+                {% if form.memo.errors %}<div class="text-danger">{{ form.memo.errors|striptags }}</div>{% endif %}
+              </div>
+            </div>
+          </div> <!-- /#tab-extra -->
+
+          <!-- B2B 정보 -->
+          <div class="tab-pane fade" id="tab-b2b" role="tabpanel">
+            <div class="alert alert-info mt-3">
+              <i class="fas fa-briefcase"></i> B2B 회원은 <strong>회사명</strong>과 <strong>사업자등록번호</strong>가 필요합니다.
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <label>회사명</label>
+                {{ form.company_name }}
+                {% if form.company_name.errors %}<div class="text-danger">{{ form.company_name.errors|striptags }}</div>{% endif %}
+              </div>
+              <div class="col-md-6">
+                <label>사업자등록번호</label>
+                {{ form.business_number }}
+                {% if form.business_number.errors %}<div class="text-danger">{{ form.business_number.errors|striptags }}</div>{% endif %}
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-4">
+                <label>대표자명</label>
+                {{ form.representative_name }}
+              </div>
+              <div class="col-md-4">
+                <label>업태</label>
+                {{ form.business_type }}
+              </div>
+              <div class="col-md-4">
+                <label>종목</label>
+                {{ form.business_item }}
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <label>회사 전화번호</label>
+                {{ form.company_phone }}
+              </div>
+              <div class="col-md-6">
+                <label>팩스</label>
+                {{ form.fax }}
+              </div>
+            </div>
+
+            <!-- 회사 주소 + 검색 버튼 -->
+            <div class="row">
+              <div class="col-md-12">
+                <label>회사 주소</label>
+                <div class="input-group">
+                  {{ form.company_address }}
+                  <div class="input-group-append">
+                    <button type="button" class="btn btn-outline-secondary" id="btn-company-postcode">주소검색</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ✅ 회사 상세주소 -->
+            <div class="row mt-2">
+              <div class="col-md-12">
+                <label>회사 상세주소</label>
+                {{ form.company_address_detail }}
+              </div>
+            </div>
+          </div> <!-- /#tab-b2b -->
+        </div> <!-- /.tab-content -->
+
+        <!-- 하단 저장 바 -->
+        <div class="sticky-save-bar mt-3">
+          <div class="d-flex justify-content-between">
+            <div class="text-muted small">* 별표는 필수 항목</div>
+            <div>
+              <a href="/dashboard/members/" class="btn btn-outline-secondary"><i class="fas fa-undo"></i> 취소</a>
+              <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> 저장</button>
+            </div>
+          </div>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'dashboard/js/member_add.js' %}"></script>
+  <script>
+    // 기본 주소
+    AddressSearch.init({
+      button: '#btn-postcode',
+      zip:    '#id_zip_code',
+      addr1:  '#id_address',
+      addr2:  '#id_address_detail',
+      mode:   'layer',
+      readonly: true
+    });
+    // 회사 주소 (addr2 = 회사 상세주소)
+    AddressSearch.init({
+      button: '#btn-company-postcode',
+      zip:    null,
+      addr1:  '#id_company_address',
+      addr2:  '#id_company_address_detail',
+      mode:   'layer',
+      readonly: false
+    });
+  </script>
+{% endblock %}

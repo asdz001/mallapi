@@ -42,6 +42,13 @@
                 <p>{% trans "회원 목록" %}</p>
               </a>
             </li>
+            <li class="nav-item">
+              <a href="{% url 'dashboard:member_add' %}"
+                class="nav-link {% if path == '/dashboard/members/add/' %}active{% endif %}">
+                <i class="far fa-circle nav-icon"></i>
+                <p>{% trans "회원 추가" %}</p>
+              </a>
+            </li>
           </ul>
 
         </li>

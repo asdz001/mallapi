@@ -7,10 +7,10 @@ from django.shortcuts import render
 def get_operator_table_columns():
     """운영자 목록 컬럼 정의"""
     return [
-        { 'field': 'username', 'header': '아이디', 'width': '120px', 'align': 'left', 'default': '-' },
-        { 'field': 'first_name', 'header': '이름', 'width': '120px', 'align': 'left', 'default': '-' },
-        { 'field': 'email', 'header': '이메일', 'width': '200px', 'align': 'left', 'default': '-' },
-        { 'field': 'contact_number', 'header': '연락처', 'width': '120px', 'align': 'left', 'default': '-' },
+        { 'field': 'username', 'header': '아이디', 'width': '120px', 'align': 'center', 'default': '-' },
+        { 'field': 'first_name', 'header': '이름', 'width': '120px', 'align': 'center', 'default': '-' },
+        { 'field': 'email', 'header': '이메일', 'width': '200px', 'align': 'center', 'default': '-' },
+        { 'field': 'contact_number', 'header': '연락처', 'width': '120px', 'align': 'center', 'default': '-' },
         { 'field': 'allowed_retailers', 'header': '접근 거래처', 'width': '200px', 'align': 'center', 'default': '없음' },
         { 'field': 'alerts', 'header': '알림 설정', 'width': '150px', 'align': 'center', 'default': '없음' },
     ]
