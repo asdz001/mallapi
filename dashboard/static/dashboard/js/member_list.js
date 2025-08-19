@@ -132,7 +132,7 @@ const MemberList = {
     },
     
     /**
-     * 🗑️ 벌크 삭제
+     * 🗑️ 벌크 삭제 - 🆕 삭제 사유 모달 연동으로 수정
      */
     bulkDelete: function() {
         const selectedIds = this.getSelectedMemberIds();
@@ -142,19 +142,8 @@ const MemberList = {
             return;
         }
         
-        const confirmMessage = `선택된 ${selectedIds.length}명의 회원을 정말 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`;
-        
-        if (confirm(confirmMessage)) {
-            this.showLoadingState('#bulk-delete', '삭제 중...');
-            
-            // TODO: 실제 AJAX 요청으로 구현
-            setTimeout(() => {
-                alert(`${selectedIds.length}명의 회원이 삭제되었습니다. (구현 예정)`);
-                this.hideLoadingState('#bulk-delete', '선택 삭제');
-                // 페이지 새로고침 또는 해당 행 제거
-                // window.location.reload();
-            }, 1000);
-        }
+        // 🆕 삭제 사유 모달 표시 (기존 confirm 대신)
+        this.showDeleteReasonModal('bulk', selectedIds);
     },
     
     /**
@@ -213,57 +202,136 @@ const MemberList = {
     },
     
     /**
-     * 🗑️ 삭제 확인 모달 표시
+     * 🗑️ 삭제 확인 모달 표시 - 🆕 삭제 사유 모달 연동으로 수정
      * @param {string|number} memberId - 회원 ID
      */
     showDeleteModal: function(memberId) {
-        // TODO: 실제 모달 구현 시 사용할 구조
-        // 현재는 기본 confirm으로 처리
-        const confirmMessage = '정말로 이 회원을 삭제하시겠습니까?\n\n⚠️ 이 작업은 되돌릴 수 없습니다.';
-        
-        if (confirm(confirmMessage)) {
-            this.deleteMember(memberId);
-        }
-        
-        /* 향후 실제 모달 구현 예시:
-        $('#deleteModal').modal('show');
-        $('#deleteModal').data('member-id', memberId);
-        $('#confirmDeleteBtn').off('click').on('click', function() {
-            self.deleteMember(memberId);
-            $('#deleteModal').modal('hide');
-        });
-        */
+        // 🆕 삭제 사유 모달 표시 (기존 confirm 대신)
+        this.showDeleteReasonModal('single', [memberId]);
     },
     
     /**
-     * 🗑️ 회원 삭제
-     * @param {string|number} memberId - 회원 ID
+     * 🆕 삭제 사유 입력 모달 표시 (새로 추가된 함수)
+     * @param {string} type - 'single' 또는 'bulk'
+     * @param {Array} memberIds - 회원 ID 배열
      */
-    deleteMember: function(memberId) {
+    showDeleteReasonModal: function(type, memberIds) {
+        const modal = $('#deleteReasonModal');
+        const targetInfo = $('#deleteTargetInfo');
+        
+        // 모달 설정
+        $('#deleteType').val(type);
+        if (type === 'single') {
+            $('#targetMemberId').val(memberIds[0]);
+            $('#targetMemberIds').val('');
+            
+            // 단일 회원 정보 표시
+            const row = $(`tr[data-member-id="${memberIds[0]}"]`);
+            const username = row.find('td').eq(1).text().trim();
+            const name = row.find('td').eq(2).text().trim();
+            targetInfo.html(`<i class="fas fa-user"></i> ${username} (${name})`);
+        } else {
+            $('#targetMemberId').val('');
+            $('#targetMemberIds').val(memberIds.join(','));
+            targetInfo.html(`<i class="fas fa-users"></i> 선택된 ${memberIds.length}명의 회원`);
+        }
+        
+        // 폼 초기화
+        $('#deleteReason').val('');
+        $('#confirmDeleteBtn').prop('disabled', false);
+        
+        // 모달 표시
+        modal.modal('show');
+    },
+    
+    /**
+     * 🗑️ 회원 삭제 - 🆕 실제 AJAX 구현으로 수정
+     * @param {string|number} memberId - 회원 ID
+     * @param {string} deleteReason - 삭제 사유 (새로 추가된 파라미터)
+     */
+    deleteMember: function(memberId, deleteReason) {
         console.log(`회원 삭제 처리: ${memberId}`);
         
         this.showLoadingState(`.btn-delete-member[data-member-id="${memberId}"]`, '삭제 중...');
         
-        // TODO: AJAX로 삭제 요청
-        setTimeout(() => {
-            alert(`회원 삭제 기능 구현 예정\n회원 ID: ${memberId}`);
-            this.hideLoadingState(`.btn-delete-member[data-member-id="${memberId}"]`, '<i class="fas fa-trash"></i>');
-        }, 1000);
+        // 🆕 실제 AJAX 삭제 요청 (기존 TODO 구현)
+        $.ajax({
+            url: `/dashboard/members/delete/${memberId}`,
+            method: 'POST',
+            data: {
+                'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val(),
+                'delete_reason': deleteReason
+            },
+            success: function(response) {
+                if (response.success) {
+                    // 성공 시 해당 행 제거
+                    $(`tr[data-member-id="${memberId}"]`).fadeOut(300, function() {
+                        $(this).remove();
+                    });
+                    
+                    // 성공 메시지 표시
+                    alert(response.message);
+                    
+                    // 체크박스 상태 업데이트
+                    MemberList.updateBulkButtons();
+                    MemberList.updateSelectAllState();
+                } else {
+                    alert('삭제 실패: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('삭제 중 오류가 발생했습니다.');
+            },
+            complete: function() {
+                MemberList.hideLoadingState(`.btn-delete-member[data-member-id="${memberId}"]`, '<i class="fas fa-trash"></i>');
+            }
+        });
+    },
+    
+    /**
+     * 🆕 벌크 삭제 실행 (새로 추가된 함수)
+     * @param {Array} memberIds - 회원 ID 배열
+     * @param {string} deleteReason - 삭제 사유
+     */
+    executeBulkDelete: function(memberIds, deleteReason) {
+        this.showLoadingState('#bulk-delete', '삭제 중...');
         
-        // 향후 구현:
-        // $.ajax({
-        //     url: `/dashboard/members/${memberId}/delete/`,
-        //     method: 'POST',
-        //     data: {
-        //         'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
-        //     },
-        //     success: function(response) {
-        //         if (response.success) {
-        //             $(`tr[data-member-id="${memberId}"]`).fadeOut();
-        //             alert('회원이 삭제되었습니다.');
-        //         }
-        //     }
-        // });
+        // 실제 AJAX 벌크 삭제 요청
+        $.ajax({
+            url: '/dashboard/members/bulk-action',
+            method: 'POST',
+            data: {
+                'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val(),
+                'action': 'delete',
+                'member_ids[]': memberIds,
+                'delete_reason': deleteReason
+            },
+            success: function(response) {
+                if (response.success) {
+                    // 성공 시 해당 행들 제거
+                    memberIds.forEach(function(id) {
+                        $(`tr[data-member-id="${id}"]`).fadeOut(300, function() {
+                            $(this).remove();
+                        });
+                    });
+                    
+                    // 성공 메시지 표시
+                    alert(response.message);
+                    
+                    // 체크박스 상태 초기화
+                    $('#select-all').prop('checked', false);
+                    MemberList.updateBulkButtons();
+                } else {
+                    alert('삭제 실패: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('벌크 삭제 중 오류가 발생했습니다.');
+            },
+            complete: function() {
+                MemberList.hideLoadingState('#bulk-delete', '<i class="fas fa-trash"></i> 선택 삭제');
+            }
+        });
     },
     
     /**
@@ -326,6 +394,46 @@ $(document).ready(function() {
     // 페이지당 표시 개수 변경 이벤트
     $('#per_page').on('change', function() {
         changePerPage(this.value);
+    });
+    
+    // 🆕 삭제 사유 모달 이벤트 처리 (새로 추가된 부분)
+    $('#deleteReasonModal').on('shown.bs.modal', function() {
+        $('#deleteReason').focus();
+    });
+    
+    // 🆕 삭제 사유 입력 검증 (새로 추가된 부분)
+    $('#deleteReason').on('input', function() {
+        const reason = $(this).val().trim();
+        const confirmBtn = $('#confirmDeleteBtn');
+        
+        if (reason.length >= 5) {
+            confirmBtn.prop('disabled', false);
+        } else {
+            confirmBtn.prop('disabled', true);
+        }
+    });
+    
+    // 🆕 삭제 확인 버튼 클릭 (새로 추가된 부분)
+    $('#confirmDeleteBtn').on('click', function() {
+        const deleteType = $('#deleteType').val();
+        const deleteReason = $('#deleteReason').val().trim();
+        
+        if (deleteReason.length < 5) {
+            alert('삭제 사유를 최소 5자 이상 입력해주세요.');
+            return;
+        }
+        
+        // 모달 숨기기
+        $('#deleteReasonModal').modal('hide');
+        
+        // 삭제 실행
+        if (deleteType === 'single') {
+            const memberId = $('#targetMemberId').val();
+            MemberList.deleteMember(memberId, deleteReason);
+        } else {
+            const memberIds = $('#targetMemberIds').val().split(',');
+            MemberList.executeBulkDelete(memberIds, deleteReason);
+        }
     });
 });
 

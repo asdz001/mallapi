@@ -1,13 +1,9 @@
 # dashboard/views/members/member_list.py
 
-
-
 from datetime import datetime, timedelta
-
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import render
-
 from members.models import Member
 
 # ✅ 테이블 컬럼 정의 (템플릿의 table_filters와 호환되는 구조)
@@ -116,11 +112,11 @@ PER_PAGE_OPTIONS = [10, 25, 50, 100]
 
 def member_list(request):
     """
-    회원 목록 뷰
+    회원 목록 뷰 (활성 회원만 표시)
     - 검색/필터/정렬/페이지네이션을 처리해서 템플릿에 전달
     """
-    # 📊 기본 쿼리셋
-    queryset = Member.objects.all()
+    # 📊 기본 쿼리셋 (소프트 삭제된 회원 제외)
+    queryset = Member.objects.all()  # 자동으로 is_deleted=False인 회원만 조회
 
     # 🔍 검색/필터 파라미터 수집
     search_field = request.GET.get("search_field", "username")
@@ -170,20 +166,13 @@ def member_list(request):
     # ↕️ 정렬 (기본: 최신 가입순)
     sort_by = request.GET.get("sort", "-created_at")
     valid_sort_fields = [
-        "username",
-        "-username",
-        "name",
-        "-name",
-        "email",
-        "-email",
-        "phone",           # ✚ 정렬 허용
-        "-phone",          # ✚ 정렬 허용
-        "member_type",     # ✚ 정렬 허용
-        "-member_type",    # ✚ 정렬 허용
-        "created_at",
-        "-created_at",
-        "is_active",
-        "-is_active",
+        "username", "-username",
+        "name", "-name",
+        "email", "-email",
+        "phone", "-phone",          # ✚ 정렬 허용
+        "member_type", "-member_type",    # ✚ 정렬 허용
+        "created_at", "-created_at",
+        "is_active", "-is_active",
     ]
     queryset = queryset.order_by(sort_by) if sort_by in valid_sort_fields else queryset.order_by("-created_at")
 
@@ -229,8 +218,8 @@ def member_list(request):
 
 def member_bulk_action(request):
     """
-    회원 벌크 액션 (AJAX)
-    - delete: 선택 회원 삭제(운영 정책상 soft delete 권장)
+    회원 벌크 액션 (AJAX) - 소프트 삭제 방식으로 변경
+    - delete: 선택 회원 소프트 삭제
     - deactivate: 비활성화
     - activate: 활성화
     """
@@ -239,20 +228,44 @@ def member_bulk_action(request):
 
     action = request.POST.get("action")
     member_ids = request.POST.getlist("member_ids[]")
-
+    delete_reason = request.POST.get("delete_reason", "").strip()
+    
     if not member_ids:
         return JsonResponse({"success": False, "message": "선택된 회원이 없습니다."})
 
     try:
         if action == "delete":
-            deleted_count = Member.objects.filter(id__in=member_ids).delete()[0]
-            return JsonResponse({"success": True, "message": f"{deleted_count}명의 회원이 삭제되었습니다."})
+            # 🔧 소프트 삭제로 변경
+            if not delete_reason:
+                return JsonResponse({"success": False, "message": "삭제 사유를 입력해주세요."})
+            
+            deleted_count = 0
+            admin_user = request.user.username if hasattr(request.user, 'username') else 'admin'
+            
+            # 활성 회원들만 대상으로 소프트 삭제 실행
+            members = Member.objects.filter(id__in=member_ids)  # objects 매니저로 이미 활성 회원만 조회됨
+            for member in members:
+                if not member.is_deleted:  # 추가 안전장치
+                    member.soft_delete(
+                        deleted_by=admin_user,
+                        reason=delete_reason,
+                        delete_type='admin_delete'
+                    )
+                    deleted_count += 1
+            
+            return JsonResponse({
+                "success": True, 
+                "message": f"{deleted_count}명의 회원이 삭제되었습니다.",
+                "deleted_count": deleted_count
+            })
 
         elif action == "deactivate":
+            # 활성 회원만 비활성화
             updated_count = Member.objects.filter(id__in=member_ids).update(is_active=False)
             return JsonResponse({"success": True, "message": f"{updated_count}명의 회원이 비활성화되었습니다."})
 
         elif action == "activate":
+            # 활성 회원만 활성화
             updated_count = Member.objects.filter(id__in=member_ids).update(is_active=True)
             return JsonResponse({"success": True, "message": f"{updated_count}명의 회원이 활성화되었습니다."})
 
@@ -265,16 +278,38 @@ def member_bulk_action(request):
 
 def member_delete(request, member_id):
     """
-    개별 회원 삭제 (AJAX)
+    개별 회원 소프트 삭제 (AJAX)
     """
     if request.method != "POST":
         return JsonResponse({"success": False, "message": "잘못된 요청입니다."})
 
     try:
+        # 활성 회원만 조회 (objects 매니저 사용)
         member = Member.objects.get(id=member_id)
+        
+        if member.is_deleted:
+            return JsonResponse({"success": False, "message": "이미 삭제된 회원입니다."})
+        
+        # 삭제 사유 확인
+        delete_reason = request.POST.get("delete_reason", "").strip()
+        if not delete_reason:
+            return JsonResponse({"success": False, "message": "삭제 사유를 입력해주세요."})
+        
         member_name = member.username or member.name or f"ID:{member_id}"
-        member.delete()  # 운영 정책상 실제 서비스에서는 soft delete 고려
-        return JsonResponse({"success": True, "message": f'회원 "{member_name}"이(가) 삭제되었습니다.'})
+        admin_user = request.user.username if hasattr(request.user, 'username') else 'admin'
+        
+        # 소프트 삭제 실행
+        member.soft_delete(
+            deleted_by=admin_user,
+            reason=delete_reason,
+            delete_type='admin_delete'
+        )
+        
+        return JsonResponse({
+            "success": True, 
+            "message": f'회원 "{member_name}"이(가) 삭제되었습니다.',
+            "member_name": member_name
+        })
 
     except Member.DoesNotExist:
         return JsonResponse({"success": False, "message": "존재하지 않는 회원입니다."})
@@ -284,17 +319,19 @@ def member_delete(request, member_id):
 
 def get_member_stats(request):
     """
-    회원 통계 (대시보드 요약용, AJAX)
+    회원 통계 (대시보드 요약용, AJAX) - 활성 회원 기준
     """
     try:
         stats = {
-            "total_members": Member.objects.count(),
+            "total_members": Member.objects.count(),  # 활성 회원 수
             "active_members": Member.objects.filter(is_active=True).count(),
             "inactive_members": Member.objects.filter(is_active=False).count(),
             "new_members_today": Member.objects.filter(created_at__date=datetime.now().date()).count(),
             "new_members_week": Member.objects.filter(
                 created_at__date__gte=datetime.now().date() - timedelta(days=7)
             ).count(),
+            # 🆕 삭제 관련 통계 추가
+            "deleted_members": Member.deleted_objects.count(),  # 삭제된 회원 수
         }
         return JsonResponse({"success": True, "stats": stats})
     except Exception as e:

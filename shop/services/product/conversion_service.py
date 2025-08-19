@@ -73,10 +73,10 @@ class UltraOptimizedConversionService:
         """최종 최적화된 대량 변환 (bulk 연산 적용)"""
         start_time = time.time()
         
-        # 기존 데이터 미리 로드 (메모리 캐싱)
-        existing_products = {p.external_product_id: p 
+        # ✅ 수정: 거래처별로 기존 데이터 미리 로드 (거래처 + 상품ID 조합으로 캐싱)
+        existing_products = {(p.retailer, p.external_product_id): p
                            for p in Product.objects.all().iterator(chunk_size=1000)}
-        existing_options = {(opt.product.external_product_id, opt.option_name): opt 
+        existing_options = {(opt.product.retailer, opt.product.external_product_id, opt.option_name): opt
                           for opt in ProductOption.objects.select_related('product').iterator(chunk_size=2000)}
         
         # 처리 대상 필터링 (재고 있는 것만)
@@ -126,36 +126,36 @@ class UltraOptimizedConversionService:
                 # 가격 계산 (다른 파일의 함수들 호출)
                 price_data = self._calculate_prices_with_external_functions(raw_product, mapped_data)
                 
-                # Product 처리
-                external_id = raw_product.external_product_id
+                # ✅ 수정: Product 처리 - 거래처와 상품ID 조합으로 기존 상품 찾기
+                product_key = (raw_product.retailer, raw_product.external_product_id)
                 product_data = self._build_product_data(raw_product, mapped_data, price_data)
                 
-                if external_id in existing_products:
+                if product_key in existing_products:
                     # 기존 상품 업데이트
-                    existing_product = existing_products[external_id]
+                    existing_product = existing_products[product_key]
                     for key, value in product_data.items():
                         setattr(existing_product, key, value)
                     products_to_update.append(existing_product)
                 else:
                     # 새 상품 생성
                     new_product = Product(
-                        external_product_id=external_id,
+                        external_product_id=raw_product.external_product_id,
                         created_at=raw_product.created_at or now(),
                         **product_data
                     )
                     products_to_create.append(new_product)
-                    existing_products[external_id] = new_product
+                    existing_products[product_key] = new_product
                 
-                # ProductOption 처리
+                # ✅ 수정: ProductOption 처리 - 거래처 정보 포함
                 self._process_options_with_external_functions(
-                    raw_product, existing_products[external_id], 
+                    raw_product, existing_products[product_key], 
                     existing_options, options_to_create, options_to_update
                 )
                 
                 self.stats['success'] += 1
                 
             except Exception as e:
-                logger.error(f"상품 처리 실패 [{raw_product.external_product_id}]: {str(e)}")
+                logger.error(f"상품 처리 실패 [{raw_product.retailer}-{raw_product.external_product_id}]: {str(e)}")
                 self.stats['failed'] += 1
         
         # bulk 연산으로 DB 저장
@@ -252,9 +252,10 @@ class UltraOptimizedConversionService:
 
     def _process_options_with_external_functions(self, raw_product, product, existing_options, 
                                                options_to_create, options_to_update):
-        """외부 함수를 활용한 옵션 처리"""
+        """✅ 수정: 외부 함수를 활용한 옵션 처리 - 거래처 정보 포함"""
         for raw_option in raw_product.options.filter(stock__gt=0):
-            option_key = (raw_product.external_product_id, raw_option.option_name)
+            # 거래처, 상품ID, 옵션명 조합으로 기존 옵션 찾기
+            option_key = (raw_product.retailer, raw_product.external_product_id, raw_option.option_name)
             
             # 옵션 가격 계산 (price_calculator.py의 최적화된 함수 사용)
             option_price_krw = None

@@ -73,7 +73,8 @@ class RawProductOption(models.Model):
 #상품정보
 class Product(models.Model):
     retailer = models.CharField(max_length=100, verbose_name=_("부띠끄명"))
-    external_product_id = models.CharField(_("고유상품 ID"), max_length=100, null=True, blank=True, db_index=True, unique=True)
+    #external_product_id = models.CharField(_("고유상품 ID"), max_length=100, null=True, blank=True, db_index=True, unique=True)
+    external_product_id = models.CharField(_("고유상품 ID"), max_length=100, null=True, blank=True, db_index=True)
     brand_name = models.CharField(max_length=100, verbose_name=_("브랜드명"), null=True, blank=True ) 
     raw_brand_name = models.CharField(max_length=100, verbose_name=_("원본 브랜드명"), null=True, blank=True ) 
     image_url_1 = models.CharField(verbose_name=_("이미지 URL 1"), blank=True, null=True)
@@ -148,6 +149,18 @@ class Product(models.Model):
     class Meta:
         verbose_name = _("상품")
         verbose_name_plural = _("2. 가공상품")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["retailer", "external_product_id"],
+                name="uq_prod_retailer_extid",   # ✅ 30자 이하의 짧은 이름
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["retailer", "external_product_id"],
+                name="ix_prod_retailer_extid",   # ✅ 30자 이하의 짧은 이름
+            ),
+        ]
 
 #옵션별 재고
 class ProductOption(models.Model):

@@ -36,17 +36,32 @@
           </a>
           <ul class="nav nav-treeview">
             <li class="nav-item">
+              <a href="{% url 'dashboard:member_add' %}"
+                class="nav-link {% if path == '/dashboard/members/add/' %}active{% endif %}">
+                <i class="far fa-circle nav-icon"></i>
+                <p>{% trans "회원 추가" %}</p>
+              </a>
+            </li>
+            
+            <li class="nav-item">
               <a href="{% url 'dashboard:member_list' %}"
                 class="nav-link {% if path == '/dashboard/members/' %}active{% endif %}">
                 <i class="far fa-circle nav-icon"></i>
                 <p>{% trans "회원 목록" %}</p>
               </a>
             </li>
+            
             <li class="nav-item">
-              <a href="{% url 'dashboard:member_add' %}"
-                class="nav-link {% if path == '/dashboard/members/add/' %}active{% endif %}">
+              <a href="{% url 'dashboard:deleted_member_list' %}"
+                class="nav-link {% if '/dashboard/members/deleted' in path %}active{% endif %}">
                 <i class="far fa-circle nav-icon"></i>
-                <p>{% trans "회원 추가" %}</p>
+                <p>
+                  {% trans "삭제 회원 관리" %}
+                  <!-- 🔢 삭제된 회원 수 배지 (선택사항) -->
+                  {% if deleted_member_count > 0 %}
+                    <span class="badge badge-danger badge-sm">{{ deleted_member_count }}</span>
+                  {% endif %}
+                </p>
               </a>
             </li>
           </ul>
