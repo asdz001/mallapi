@@ -6,7 +6,7 @@ from pricing.models import CountryAlias
 from shop.services.order_service import create_orders_from_carts
 from django.utils.html import format_html ,format_html_join 
 from shop.utils.markup_util import get_markup_from_product
-from shop.services.product.conversion_service import get_conversion_service
+from shop.services.product.conversion_service import convert_or_update_product
 from decimal import Decimal ,ROUND_HALF_UP
 from django.db.models import Count
 from django.utils.translation import gettext_lazy as _
@@ -54,25 +54,20 @@ class RawProductOptionInline(admin.TabularInline):
 # ✅ 원본상품 가공상품으로 전송버튼 (액션 최적화)
 @admin.action(description=_("선택한 상품을 가공상품으로 등록/수정"))
 def convert_selected_raw_products(modeladmin, request, queryset):
-    """
-    ✅ 핵심 변경점
-    - 기존: for raw in queryset: convert_or_update_product(raw)  # N번 전체 스캔 발생
-    - 변경: svc.bulk_convert_optimized(queryset)                 # 1회 배치 + 부분 프리로드(서비스 내부)
-    """
-    # 옵션/연관 로딩 최소화 (DB 왕복 줄임)
-    qs = queryset.select_related('retailer').prefetch_related('options')
-
-    svc = get_conversion_service()
-    try:
-        success, failed = svc.bulk_convert_optimized(qs, batch_size=500)
-
-        # (선택) 상태 필드가 있다면 한꺼번에 업데이트
-        if hasattr(qs.model, "status"):
-            qs.update(status="converted")
-
-        messages.success(request, f"일괄 변환 완료: 성공 {success}건 / 실패 {failed}건")
-    except Exception as e:
-        messages.error(request, f"변환 중 오류: {e}")
+    success_count = 0
+    fail_count = 0
+    
+    # ✅ prefetch_related로 옵션 데이터를 한 번에 가져옴
+    queryset = queryset.prefetch_related('options')
+    
+    for raw_product in queryset:
+        if convert_or_update_product(raw_product):
+            raw_product.status = "converted"  # ✅ 상태 갱신
+            raw_product.save(update_fields=["status"])  # ✅ DB 반영
+            success_count += 1
+        else:
+            fail_count += 1
+    messages.success(request, f"{success_count}건 등록 성공, {fail_count}건 실패 (로그 확인 필요)")
 
 
 # ✅ 성능 최적화된 원본상품 관리자
