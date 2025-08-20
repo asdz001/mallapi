@@ -45,20 +45,20 @@ class UltraOptimizedConversionService:
             for name in alias.alias.split(","):
                 self.category1_cache[name.strip().upper()] = alias.category.name
         
-        # 카테고리 매핑 (대분류)        
+        # 카테고리 매핑 (대분류)
         for alias in CategoryLevel2Alias.objects.select_related('category').all():
             for name in alias.alias.split(","):
                 self.category2_cache[name.strip().upper()] = alias.category.name
         
-        # 카테고리 매핑 (소분류)        
+        # 카테고리 매핑 (중분류)
         for alias in CategoryLevel3Alias.objects.select_related('category').all():
             for name in alias.alias.split(","):
                 self.category3_cache[name.strip().upper()] = alias.category.name
         
-        # 국가 매핑
-        for alias in CountryAlias.objects.select_related('standard_country').all():
-            for name in alias.origin_name.split(","):
-                self.country_cache[name.strip().upper()] = alias.standard_country.name
+        # 원산지 매핑
+        for alias in CountryAlias.objects.select_related('country').all():
+            for name in alias.alias.split(","):
+                self.country_cache[name.strip().upper()] = alias.country.name
         
         elapsed = time.time() - start_time
         logger.info(f"매핑 캐시 로딩 완료 ({elapsed:.1f}초)")
@@ -75,19 +75,14 @@ class UltraOptimizedConversionService:
         
         # ✅ 수정: 거래처별로 기존 데이터 미리 로드 (거래처 + 상품ID 조합으로 캐싱)
         existing_products = {(p.retailer, p.external_product_id): p
-                           for p in Product.objects.all().iterator(chunk_size=1000)}
-        existing_options = {(opt.product.retailer, opt.product.external_product_id, opt.option_name): opt
-                          for opt in ProductOption.objects.select_related('product').iterator(chunk_size=2000)}
+                             for p in Product.objects.only('id','retailer','external_product_id')}
+        existing_options = {(o.product_id, o.external_option_id): o
+                            for o in ProductOption.objects.only('id','product_id','external_option_id')}
         
-        # 처리 대상 필터링 (재고 있는 것만)
-        valid_queryset = queryset.filter(
-            Q(options__stock__gt=0) & Q(price_org__gt=0)
-        ).prefetch_related('options').distinct()
-        
+        valid_queryset = queryset.select_related('retailer').prefetch_related('options')
         total_count = valid_queryset.count()
-        logger.info(f"변환 시작: {total_count:,}개 상품")
+        logger.info(f"최적화된 변환 시작: 대상 {total_count:,}개")
         
-        # 배치 단위 처리
         for batch_start in range(0, total_count, batch_size):
             batch = valid_queryset[batch_start:batch_start + batch_size]
             self._process_batch_optimized(batch, existing_products, existing_options)
@@ -118,49 +113,90 @@ class UltraOptimizedConversionService:
                     continue
                 
                 # 매핑 수행
-                mapped_data = self._perform_mapping(raw_product)
-                if not mapped_data:
+                mapped = self._perform_mapping(raw_product)
+                if not mapped:
                     self.stats['failed'] += 1
                     continue
                 
-                # 가격 계산 (다른 파일의 함수들 호출)
-                price_data = self._calculate_prices_with_external_functions(raw_product, mapped_data)
+                # 기존 Product 존재 여부 확인 (retailer + external_product_id 기준)
+                key = (raw_product.retailer, raw_product.external_product_id)
+                existing_product = existing_products.get(key)
                 
-                # ✅ 수정: Product 처리 - 거래처와 상품ID 조합으로 기존 상품 찾기
-                product_key = (raw_product.retailer, raw_product.external_product_id)
-                product_data = self._build_product_data(raw_product, mapped_data, price_data)
-                
-                if product_key in existing_products:
-                    # 기존 상품 업데이트
-                    existing_product = existing_products[product_key]
-                    for key, value in product_data.items():
-                        setattr(existing_product, key, value)
+                if existing_product:
+                    # 업데이트 대상
+                    self._apply_product_fields(existing_product, raw_product, mapped)
                     products_to_update.append(existing_product)
                 else:
-                    # 새 상품 생성
-                    new_product = Product(
-                        external_product_id=raw_product.external_product_id,
-                        created_at=raw_product.created_at or now(),
-                        **product_data
-                    )
+                    # 생성 대상
+                    new_product = self._build_product_instance(raw_product, mapped)
                     products_to_create.append(new_product)
-                    existing_products[product_key] = new_product
-                
-                # ✅ 수정: ProductOption 처리 - 거래처 정보 포함
-                self._process_options_with_external_functions(
-                    raw_product, existing_products[product_key], 
-                    existing_options, options_to_create, options_to_update
-                )
                 
                 self.stats['success'] += 1
-                
+            
             except Exception as e:
-                logger.error(f"상품 처리 실패 [{raw_product.retailer}-{raw_product.external_product_id}]: {str(e)}")
+                logger.exception(f"배치 처리 중 예외: raw_id={raw_product.id}, err={e}")
                 self.stats['failed'] += 1
         
-        # bulk 연산으로 DB 저장
-        self._bulk_save_batch(products_to_create, products_to_update, 
-                             options_to_create, options_to_update, batch)
+        # Product 일괄 처리
+        with transaction.atomic():
+            if products_to_create:
+                Product.objects.bulk_create(products_to_create, batch_size=1000)
+                # 방금 생성한 product들의 ID 재조회 필요
+                created_keys = {(p.retailer, p.external_product_id) for p in products_to_create}
+                for p in Product.objects.filter(
+                    retailer__in=[k[0] for k in created_keys],
+                    external_product_id__in=[k[1] for k in created_keys]
+                ).only('id','retailer','external_product_id'):
+                    existing_products[(p.retailer, p.external_product_id)] = p
+            
+            if products_to_update:
+                Product.objects.bulk_update(
+                    products_to_update,
+                    fields=[
+                        'brand','gender','category1','category2','origin',
+                        'name','description','price_org','price_retail','price_final',
+                        'discount_rate','currency','status','stock','updated_at'
+                    ],
+                    batch_size=1000
+                )
+        
+        # 옵션 처리 (Product 생성 후 option 처리해야 함)
+        for raw_product in batch:
+            try:
+                product = existing_products.get((raw_product.retailer, raw_product.external_product_id))
+                if not product:
+                    # 이 케이스는 거의 없지만 방어적으로 처리
+                    logger.warning(f"옵션 처리용 product 미발견: retailer={raw_product.retailer_id}, ext={raw_product.external_product_id}")
+                    continue
+                
+                for raw_opt in raw_product.options.all():
+                    opt_key = (product.id, raw_opt.external_option_id)
+                    existing_option = existing_options.get(opt_key)
+                    
+                    if existing_option:
+                        # 업데이트
+                        self._apply_option_fields(existing_option, product, raw_opt)
+                        options_to_update.append(existing_option)
+                    else:
+                        # 생성
+                        new_opt = self._build_option_instance(product, raw_opt)
+                        options_to_create.append(new_opt)
+            
+            except Exception as e:
+                logger.exception(f"옵션 처리 중 예외: raw_id={raw_product.id}, err={e}")
+                self.stats['failed'] += 1
+        
+        with transaction.atomic():
+            if options_to_create:
+                ProductOption.objects.bulk_create(options_to_create, batch_size=1000)
+                for o in options_to_create:
+                    existing_options[(o.product_id, o.external_option_id)] = o
+            if options_to_update:
+                ProductOption.objects.bulk_update(
+                    options_to_update,
+                    fields=['size','color','stock','price_final','status','updated_at'],
+                    batch_size=1000
+                )
 
     def _validate_raw_product(self, raw_product):
         """기본 검증"""
@@ -178,221 +214,135 @@ class UltraOptimizedConversionService:
         std_category2 = self._match_cached(self.category3_cache, raw_product.category2)
         std_origin = self._match_cached(self.country_cache, raw_product.origin) or raw_product.origin or "-"
         
-        # 필수 매핑 검증
-        if not std_brand or not std_gender:
+        if not std_brand or not std_gender or not std_category1:
+            logger.debug(f"매핑 실패 - brand={raw_product.raw_brand_name}, "
+                         f"gender={raw_product.gender}, cat1={raw_product.category1}")
             return None
-            
+        
         return {
             'brand': std_brand,
             'gender': std_gender,
-            'category1': std_category1 or "-",
-            'category2': std_category2 or "-",
+            'category1': std_category1,
+            'category2': std_category2,
             'origin': std_origin
         }
 
-    def _calculate_prices_with_external_functions(self, raw_product, mapped_data):
-        """외부 함수들을 활용한 가격 계산"""
-        # 1. 마크업 계산 (markup_util.py의 최적화된 함수 사용)
-        markup = get_markup_from_product(raw_product) or 1.0
+    def _apply_product_fields(self, product, raw, mapped):
+        """기존 Product에 필드 적용"""
+        product.brand = mapped['brand']
+        product.gender = mapped['gender']
+        product.category1 = mapped['category1']
+        product.category2 = mapped['category2']
+        product.origin = mapped['origin']
         
-        # 2. 공급가 계산
-        price_supply = raw_product.price_org * Decimal(str(markup))
+        product.name = raw.name
+        product.description = raw.description
+        product.currency = raw.currency or 'EUR'
+        product.status = 'active'
+        product.updated_at = now()
         
-        # 3. 임시 Product 객체 생성 (가격 계산용)
-        temp_product = type('TempProduct', (), {
-            'price_supply': price_supply,
-            'price_retail': raw_product.price_retail,
-            'category1': mapped_data['category1'],
-            'origin': mapped_data['origin'],
-            'retailer': raw_product.retailer
-        })()
+        # 가격 계산
+        markup = get_markup_from_product(product)
+        product.price_retail = calculate_retail_price(raw.price_org, markup)
+        product.price_final = calculate_final_price(product.price_retail, raw.discount_rate or Decimal('0'))
+
+        # 옵션 재고 합계 반영
+        product.stock = sum(o.stock for o in raw.options.all())
+    
+    def _build_product_instance(self, raw, mapped):
+        """새 Product 인스턴스 생성"""
+        markup = get_markup_from_product(raw)  # Raw 기반으로도 마진 룰 가능
+        price_retail = calculate_retail_price(raw.price_org, markup)
+        price_final = calculate_final_price(price_retail, raw.discount_rate or Decimal('0'))
         
-        # 4. 원화가 계산 (price_calculator.py의 최적화된 함수 사용)
-        calculated_price_krw = calculate_final_price(temp_product)
+        return Product(
+            retailer=raw.retailer,
+            external_product_id=raw.external_product_id,
+            brand=mapped['brand'],
+            gender=mapped['gender'],
+            category1=mapped['category1'],
+            category2=mapped['category2'],
+            origin=mapped['origin'],
+            name=raw.name,
+            description=raw.description,
+            price_org=raw.price_org,
+            price_retail=price_retail,
+            price_final=price_final,
+            discount_rate=raw.discount_rate or Decimal('0'),
+            currency=raw.currency or 'EUR',
+            status='active',
+            stock=sum(o.stock for o in raw.options.all()),
+            created_at=now(),
+            updated_at=now(),
+        )
+
+    def _apply_option_fields(self, option, product, raw_opt):
+        """기존 옵션에 필드 적용"""
+        option.size = raw_opt.size
+        option.color = raw_opt.color
+        option.stock = raw_opt.stock
+        option.status = 'active' if raw_opt.stock > 0 else 'soldout'
+        option.updated_at = now()
         
-        # 5. 소비자가 계산 (price_calculator.py의 최적화된 함수 사용)
-        retail_price_krw = calculate_retail_price(temp_product)
-        
-        return {
-            'markup': markup,
-            'price_supply': price_supply,
-            'calculated_price_krw': calculated_price_krw,
-            'retail_price_krw': retail_price_krw
-        }
+        # 옵션 개별 가격 계산
+        option.price_final = calculate_option_final_price(
+            base_price=product.price_final,
+            size=raw_opt.size,
+            color=raw_opt.color
+        )
 
-    def _build_product_data(self, raw_product, mapped_data, price_data):
-        """Product 저장용 데이터 구성"""
-        return {
-            'retailer': raw_product.retailer,
-            'season': raw_product.season,
-            'gender': mapped_data['gender'],
-            'category1': mapped_data['category1'],
-            'category2': mapped_data['category2'],
-            'image_url_1': raw_product.image_url_1,
-            'image_url_2': raw_product.image_url_2,
-            'image_url_3': raw_product.image_url_3,
-            'image_url_4': raw_product.image_url_4,
-            'raw_brand_name': raw_product.raw_brand_name,
-            'brand_name': mapped_data['brand'],
-            'product_name': raw_product.product_name,
-            'sku': raw_product.sku,
-            'price_org': raw_product.price_org,
-            'markup': price_data['markup'],
-            'price_supply': price_data['price_supply'],
-            'calculated_price_krw': price_data['calculated_price_krw'],
-            'retail_price_krw': price_data['retail_price_krw'],
-            'price_retail': raw_product.price_retail,
-            'discount_rate': raw_product.discount_rate or 0,
-            'color': raw_product.color,
-            'material': raw_product.material,
-            'origin': mapped_data['origin'],
-            'status': 'active',
-            'updated_at': now(),
-        }
+    def _build_option_instance(self, product, raw_opt):
+        """새 옵션 인스턴스 생성"""
+        return ProductOption(
+            product=product,
+            external_option_id=raw_opt.external_option_id,
+            size=raw_opt.size,
+            color=raw_opt.color,
+            stock=raw_opt.stock,
+            status='active' if raw_opt.stock > 0 else 'soldout',
+            price_final=calculate_option_final_price(
+                base_price=product.price_final,
+                size=raw_opt.size,
+                color=raw_opt.color
+            ),
+            created_at=now(),
+            updated_at=now(),
+        )
 
-    def _process_options_with_external_functions(self, raw_product, product, existing_options, 
-                                               options_to_create, options_to_update):
-        """✅ 수정: 외부 함수를 활용한 옵션 처리 - 거래처 정보 포함"""
-        for raw_option in raw_product.options.filter(stock__gt=0):
-            # 거래처, 상품ID, 옵션명 조합으로 기존 옵션 찾기
-            option_key = (raw_product.retailer, raw_product.external_product_id, raw_option.option_name)
-            
-            # 옵션 가격 계산 (price_calculator.py의 최적화된 함수 사용)
-            option_price_krw = None
-            if raw_option.price:
-                # 임시 옵션 객체 생성
-                temp_option = type('TempOption', (), {
-                    'price': raw_option.price,
-                    'product': type('TempProduct', (), {
-                        'category1': product.category1,
-                        'origin': product.origin,
-                        'retailer': product.retailer
-                    })()
-                })()
-                option_price_krw = calculate_option_final_price(temp_option)
-            
-            option_data = {
-                'external_option_id': raw_option.external_option_id,
-                'stock': raw_option.stock,
-                'price': raw_option.price,
-                'price_krw': option_price_krw,
-                'option_url': raw_option.option_url or "",
-            }
-            
-            if option_key in existing_options:
-                # 기존 옵션 업데이트
-                existing_option = existing_options[option_key]
-                for key, value in option_data.items():
-                    setattr(existing_option, key, value)
-                options_to_update.append(existing_option)
-            else:
-                # 새 옵션 생성
-                new_option = ProductOption(
-                    product=product,
-                    option_name=raw_option.option_name,
-                    **option_data
-                )
-                options_to_create.append(new_option)
-                existing_options[option_key] = new_option
-
-    def _bulk_save_batch(self, products_to_create, products_to_update, 
-                        options_to_create, options_to_update, raw_batch):
-        """bulk 연산으로 배치 저장"""
-        with transaction.atomic():
-            # Product bulk 생성
-            if products_to_create:
-                Product.objects.bulk_create(products_to_create, batch_size=200)
-            
-            # Product bulk 업데이트
-            if products_to_update:
-                Product.objects.bulk_update(
-                    products_to_update,
-                    ['season', 'gender', 'category1', 'category2', 'image_url_1', 
-                     'image_url_2', 'image_url_3', 'image_url_4', 'brand_name', 
-                     'product_name', 'sku', 'price_org', 'markup', 'price_supply',
-                     'calculated_price_krw', 'retail_price_krw', 'price_retail',
-                     'discount_rate', 'color', 'material', 'origin', 'status', 'updated_at'],
-                    batch_size=200
-                )
-            
-            # ProductOption bulk 생성
-            if options_to_create:
-                ProductOption.objects.bulk_create(options_to_create, batch_size=500)
-            
-            # ProductOption bulk 업데이트
-            if options_to_update:
-                ProductOption.objects.bulk_update(
-                    options_to_update,
-                    ['external_option_id', 'stock', 'price', 'price_krw', 'option_url'],
-                    batch_size=500
-                )
-            
-            # RawProduct 상태 bulk 업데이트
-            success_ids = [rp.id for rp in raw_batch]
-            RawProduct.objects.filter(id__in=success_ids).update(
-                status='converted', 
-                updated_at=now()
-            )
-
-    def convert_single_product(self, raw_product):
-        """단일 상품 변환"""
-        return self.bulk_convert_optimized(
-            queryset=RawProduct.objects.filter(pk=raw_product.pk),
-            batch_size=1
-        )[0] == 1
-
-
-# 싱글톤 패턴으로 서비스 인스턴스 관리
-_conversion_service = None
+# ---- 호환성을 위한 외부 진입 함수들 ----
 
 def get_conversion_service():
-    """변환 서비스 인스턴스 반환 (매핑 캐시 재사용)"""
-    global _conversion_service
-    if _conversion_service is None:
-        _conversion_service = UltraOptimizedConversionService()
-    return _conversion_service
+    """서비스 인스턴스 제공 (싱글톤처럼 재사용 가능)"""
+    # 간단히 매 호출시 생성해도 캐시 로딩이 가볍도록 설계했음
+    return UltraOptimizedConversionService()
 
-
-# 거래처별 대량 변환
-def bulk_convert_by_retailer(retailer_code, batch_size=500):
-    """특정 거래처 상품 대량 변환"""
+def convert_single_raw_product(raw_product_id):
+    """단일 상품 변환 (기존 호환성)"""
     service = get_conversion_service()
-    logger.info(f"[{retailer_code}] 변환 시작")
+    try:
+        raw = RawProduct.objects.select_related('retailer').prefetch_related('options').get(id=raw_product_id)
+    except RawProduct.DoesNotExist:
+        logger.error(f"RawProduct 미존재: id={raw_product_id}")
+        return False
+    
+    success, fail = service.bulk_convert_optimized(RawProduct.objects.filter(id=raw.id), batch_size=1)
+    return success == 1 and fail == 0
 
-    raw_products = RawProduct.objects.filter(
-        retailer=retailer_code,
+def bulk_convert_by_retailer(retailer_code, batch_size=500):
+    """거래처별 대량 변환 (기존 호환성)"""
+    service = get_conversion_service()
+    
+    raw_products = RawProduct.objects.select_related('retailer').prefetch_related('options').filter(
+        retailer__code=retailer_code,
         status__in=['pending', 'converted']
     )
     
     success_count, fail_count = service.bulk_convert_optimized(raw_products, batch_size)
-    logger.info(f"[{retailer_code}] 완료 - 성공: {success_count:,}개, 실패: {fail_count:,}개")
+    logger.info(f"[{retailer_code}] 변환 완료 - 성공: {success_count:,}개, 실패: {fail_count:,}개")
     
     return success_count
 
-
-# 솔드아웃 동기화 (함수명 수정)
-def sync_soldout_products_from_raw(retailer_code: str):
-    """원본 솔드아웃 상품을 가공 테이블에 반영"""
-    soldout_ids = RawProduct.objects.filter(
-        retailer=retailer_code,
-        status="soldout"
-    ).values_list("external_product_id", flat=True)
-
-    updated_count = Product.objects.filter(
-        retailer=retailer_code,
-        external_product_id__in=soldout_ids
-    ).update(status="soldout")
-
-    logger.info(f"[{retailer_code}] 솔드아웃 동기화: {updated_count:,}개")
-
-
-# 기존 호환성 함수들
-def convert_or_update_product(raw_product):
-    """단일 상품 변환 (기존 호환성)"""
-    service = get_conversion_service()
-    return service.convert_single_product(raw_product)
-
-def bulk_convert_or_update_products(batch_size=500):
+def bulk_convert_all_products(batch_size=500):
     """전체 상품 대량 변환 (기존 호환성)"""
     service = get_conversion_service()
     
