@@ -646,7 +646,7 @@ def product_list(request):
         'sales_status_choices': SALES_STATUS_CHOICES,
     }
 
-    return render(request, 'dashboard/product_list.html', context)
+    return render(request, 'dashboard/product/product_list.html', context)
 
 
 # ========================================

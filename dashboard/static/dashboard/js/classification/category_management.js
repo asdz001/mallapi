@@ -1,4 +1,4 @@
-// dashboard/static/dashboard/js/category_management.js
+// dashboard/static/dashboard/js/classification/category_management.js
 // 🏷️ 카테고리 관리 전용 JavaScript (원산지 스타일 적용)
 
 $(document).ready(function() {

@@ -1,6 +1,6 @@
 /**
  * ========================================
- * 📁 파일 위치: dashboard/static/dashboard/js/origin_management.js
+ * 📁 파일 위치: dashboard/static/dashboard/js/classification/origin_management.js
  * 🎯 목적: 원산지 관리 JavaScript (통합된 별칭 관리)
  * 📅 버전: 2.0
  * ========================================

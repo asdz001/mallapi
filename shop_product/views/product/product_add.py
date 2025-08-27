@@ -179,7 +179,7 @@ def product_add(request):
     print(f"   - 브랜드: {context['brand_options'].count()}개")
     print(f"   - 원산지: {context['origin_options'].count()}개")
     
-    return render(request, 'dashboard/product_add.html', context)
+    return render(request, 'dashboard/product/product_add.html', context)
 
 def handle_manual_register(request):
     """일반등록 처리 - 업데이트된 필드 구조 기준"""

@@ -1,6 +1,6 @@
 /**
  * ========================================
- * 📁 파일 위치: dashboard/static/dashboard/js/deleted_member_list.js
+ * 📁 파일 위치: dashboard/static/dashboard/js/member/deleted_member_list.js
  * 🎯 목적: 삭제 회원 관리 페이지 전용 기능
  * 📅 버전: 1.0
  * 🔄 의존성: search_engine.js, jQuery, AdminLTE(로컬), Bootstrap(로컬)

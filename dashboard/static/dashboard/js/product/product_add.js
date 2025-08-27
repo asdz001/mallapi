@@ -1,4 +1,4 @@
-// dashboard/static/dashboard/js/product_add.js
+// dashboard/static/dashboard/js/product/product_add.js
 
 /**
  * 🎯 상품등록 페이지 JavaScript

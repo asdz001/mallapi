@@ -1,3 +1,4 @@
+<!-- dashboard/templates/dashboard/member/member_list.html -->
 {% extends "dashboard/base_admin.html" %}
 {% load i18n %}
 {% load table_filters %}
@@ -236,6 +237,8 @@
     {% include 'common/pagination.html' with items=members sort_choices=sort_choices %}
 
 </section>
+<!-- 🆕 회원 상세/수정 모달 포함 -->
+{% include 'dashboard/member/member_modal.html' %}
 
 <!-- 🆕 삭제 사유 입력 모달 -->
 <div class="modal fade" id="deleteReasonModal" tabindex="-1" role="dialog" aria-labelledby="deleteReasonModalLabel" aria-hidden="true">
@@ -292,6 +295,7 @@
 
 <!-- JavaScript 로드 -->
 <script src="{% static 'dashboard/js/search_engine.js' %}"></script>
-<script src="{% static 'dashboard/js/member_list.js' %}"></script>
+<script src="{% static 'dashboard/js/member/member_list.js' %}"></script>
+<script src="{% static 'dashboard/js/member/member_modal.js' %}"></script>
 
 {% endblock %}

@@ -1,4 +1,4 @@
-// dashboard/static/dashboard/js/supplier_management.js
+// dashboard/static/dashboard/js/classification/supplier_management.js
 // 🏢 거래처 관리 전용 JavaScript (카테고리 방식 적용)
 
 $(document).ready(function() {

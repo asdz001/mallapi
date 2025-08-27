@@ -213,7 +213,7 @@ def member_list(request):
         # 부가 정보
         "total_count": queryset.count(),
     }
-    return render(request, "dashboard/member_list.html", context)
+    return render(request, "dashboard/member/member_list.html", context)
 
 
 def member_bulk_action(request):

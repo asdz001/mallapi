@@ -1,7 +1,8 @@
 # shop_product/urls.py
 
 from django.urls import path
-from shop_product.views import product_list, product_add, supplier, category , origin , brand # ✅ category 추가
+from shop_product.views.classification import supplier, category , origin , brand
+from shop_product.views.product import product_add, product_list # ✅ category 추가
 
 
 urlpatterns = [

@@ -1,3 +1,4 @@
+<!-- dashboard/templates/dashboard/product/product_list.html -->
 {% extends "dashboard/base_admin.html" %}
 {% load static %}
 {% load i18n %}
@@ -5,7 +6,7 @@
 
 {% comment %}
 ========================================
-📁 파일 위치: dashboard/templates/dashboard/product_list.html
+📁 파일 위치: dashboard/templates/dashboard/product/product_list.html
 🎯 목적: 상품목록 페이지 - 오류 수정 및 기능 통합 완료
 📅 버전: 3.0 - 통합 JavaScript 적용
 ========================================
@@ -609,7 +610,7 @@
 <script src="{% static 'dashboard/js/search_engine.js' %}"></script>
 
 {# 🔧 통합 상품목록 관리 스크립트 (파일명 수정) #}
-<script src="{% static 'dashboard/js/product_list_complete.js' %}"></script>
+<script src="{% static 'dashboard/js/product/product_list_complete.js' %}"></script>
 
 {# 🔧 전체 컬럼 정보를 JavaScript로 전달 (숨겨진 컬럼 포함) #}
 <script>

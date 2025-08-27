@@ -31,4 +31,4 @@ def member_add(request):
         form = MemberCreateForm()
 
     context = {"form": form}
-    return render(request, "dashboard/member_add.html", context)
+    return render(request, "dashboard/member/member_add.html", context)

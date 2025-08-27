@@ -1,4 +1,4 @@
-// dashboard/static/dashboard/js/brand_management.js
+// dashboard/static/dashboard/js/classification/brand_management.js
 // 🏷️ 브랜드 관리 전용 JavaScript
 
 $(document).ready(function() {

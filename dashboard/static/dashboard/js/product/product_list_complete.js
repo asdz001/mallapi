@@ -1,6 +1,6 @@
 /**
  * ========================================
- * 📁 파일: dashboard/static/dashboard/js/product_list_complete.js
+ * 📁 파일: dashboard/static/dashboard/js/product/product_list_complete.js
  * 🎯 목적: 상품목록 관리 통합 JavaScript (재고호버 + 컬럼설정 + UI기능)
  * 📅 버전: 2.0 (통합 완성본)
  * ========================================

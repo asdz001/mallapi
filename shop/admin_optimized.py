@@ -8,7 +8,7 @@ from django.utils.html import format_html ,format_html_join
 from shop.utils.markup_util import get_markup_from_product
 from shop.services.product.conversion_service import convert_or_update_product
 from decimal import Decimal ,ROUND_HALF_UP
-
+from eventlog.services.log_service import log_conversion_failure
 
 # ✅ 성능 최적화된 원본상품 재고 인라인
 class RawProductOptionInline(admin.TabularInline):
@@ -22,15 +22,32 @@ class RawProductOptionInline(admin.TabularInline):
 def convert_selected_raw_products(modeladmin, request, queryset):
     success_count = 0
     fail_count = 0
-    
-    # ✅ prefetch_related로 옵션 데이터를 한 번에 가져옴
+
+    # ✅ N+1 방지 최적화 유지
     queryset = queryset.prefetch_related('options')
-    
+
     for raw_product in queryset:
-        if convert_or_update_product(raw_product):
-            success_count += 1
-        else:
+        try:
+            result = convert_or_update_product(raw_product)  # True/False 기대
+            if result:
+                success_count += 1
+            else:
+                fail_count += 1
+                # ✅ 함수가 False만 반환하고 사유를 남기지 않는 경우 대비
+                log_conversion_failure(
+                    raw_product,
+                    reason="변환 실패(사유 미상): convert_or_update_product가 False 반환",
+                    source="admin_action"
+                )
+        except Exception as e:
             fail_count += 1
+            # ✅ 예외도 반드시 로그로 남김(루프는 계속)
+            log_conversion_failure(
+                raw_product,
+                reason=f"예외 발생: {type(e).__name__} - {e}",
+                source="admin_action"
+            )
+
     messages.success(request, f"{success_count}건 등록 성공, {fail_count}건 실패 (로그 확인 필요)")
 
 

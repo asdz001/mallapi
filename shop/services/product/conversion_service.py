@@ -9,6 +9,7 @@ from pricing.models import CountryAlias
 from shop.services.price_calculator import calculate_final_price, calculate_retail_price, calculate_option_final_price
 from shop.utils.markup_util import get_markup_from_product
 from decimal import Decimal
+from eventlog.services.log_service import log_conversion_failure
 import logging
 import time
 
@@ -16,6 +17,41 @@ logger = logging.getLogger(__name__)
 
 class UltraOptimizedConversionService:
     """최종 최적화된 상품 변환 서비스"""
+
+
+ #===========================
+    def _build_reason_from_raw(self, raw_product):
+        """
+        원본(raw) 값과 현재 캐시 매칭 결과를 사용해
+        '브랜드 성공 / 카테고리 실패(사유: ...) / 원산지 성공' 형식의 문자열을 생성.
+        반환: (reason_str, all_ok_bool)
+        """
+        # 원본값 정리
+        brand_src = (getattr(raw_product, "raw_brand_name", "") or "").strip()
+        gender_src = (getattr(raw_product, "gender", "") or "").strip()
+        c1_src    = (getattr(raw_product, "category1", "") or "").strip()
+        c2_src    = (getattr(raw_product, "category2", "") or "").strip()
+        origin_src= (getattr(raw_product, "origin", "") or "").strip()
+
+        # 캐시 매칭 (이미 있는 캐시/유틸 사용)
+        brand_ok   = bool(self._match_cached(self.brand_cache,    brand_src))
+        gender_ok  = bool(self._match_cached(self.category1_cache, gender_src))
+        c1_ok      = bool(self._match_cached(self.category2_cache, c1_src)) if c1_src else True
+        c2_ok      = bool(self._match_cached(self.category3_cache, c2_src)) if c2_src else True
+        origin_ok  = bool(self._match_cached(self.country_cache,   origin_src))
+        category_ok = (gender_ok and c1_ok and c2_ok)
+
+        parts = []
+        parts.append("브랜드 성공" if brand_ok else f"브랜드 실패(사유: '{brand_src}' 미매핑)")
+        if category_ok:
+            parts.append("카테고리 성공")
+        else:
+            parts.append(f'카테고리 실패(사유: gender="{gender_src}" category1="{c1_src}" category2="{c2_src}" 미매핑)')
+        parts.append("원산지 성공" if origin_ok else f"원산지 실패(사유: {origin_src or '값 없음'})")
+    
+        return " / ".join(parts), (brand_ok and category_ok and origin_ok)
+
+# ==========================
     
     def __init__(self):
         # 매핑 데이터 캐시만 관리 (가격 계산은 다른 파일에서)
@@ -76,62 +112,64 @@ class UltraOptimizedConversionService:
         logger.info(f"단일상품 변환 시작: [{raw_product.retailer}-{raw_product.external_product_id}]")
         
         try:
-            # 1. 기본 검증
+            # 1) 기본 검증
             if not self._validate_raw_product(raw_product):
+                # ✅ 검증 실패 → 단계별 포맷으로 로그
+                reason, _ = self._build_reason_from_raw(raw_product)
+                log_conversion_failure(raw_product, reason, source="conversion")
                 logger.warning(f"검증 실패: [{raw_product.retailer}-{raw_product.external_product_id}]")
                 return False
-            
-            # 2. 매핑 수행
+
+            # 2) 매핑 수행
             mapped_data = self._perform_mapping(raw_product)
             if not mapped_data:
+                # ✅ 매핑 실패 → 단계별 포맷으로 로그
+                reason, _ = self._build_reason_from_raw(raw_product)
+                log_conversion_failure(raw_product, reason, source="conversion")
                 logger.warning(f"매핑 실패: [{raw_product.retailer}-{raw_product.external_product_id}]")
                 return False
-            
-            # 3. 가격 계산
+
+            # 3) 가격 계산
             price_data = self._calculate_prices_with_external_functions(raw_product, mapped_data)
-            
-            # 4. 기존 상품 조회 (해당 상품만 조회 - 핵심 최적화!)
+
+            # 4) 기존 상품 조회
             existing_product = Product.objects.filter(
                 retailer=raw_product.retailer,
                 external_product_id=raw_product.external_product_id
             ).first()
-            
-            # 5. Product 데이터 구성
+
+            # 5) 저장 데이터 구성
             product_data = self._build_product_data(raw_product, mapped_data, price_data)
-            
+
             with transaction.atomic():
-                # 6. Product 생성 또는 업데이트
                 if existing_product:
-                    # 기존 상품 업데이트
                     for key, value in product_data.items():
                         setattr(existing_product, key, value)
                     existing_product.save()
                     product = existing_product
                     logger.info(f"상품 업데이트 완료: [{raw_product.retailer}-{raw_product.external_product_id}]")
                 else:
-                    # 새 상품 생성
                     product = Product.objects.create(
                         external_product_id=raw_product.external_product_id,
                         created_at=raw_product.created_at or now(),
                         **product_data
                     )
                     logger.info(f"상품 생성 완료: [{raw_product.retailer}-{raw_product.external_product_id}]")
-                
-                # 7. 옵션 처리 (해당 상품의 옵션만 조회 - 핵심 최적화!)
-                self._process_single_product_options(raw_product, product)
-                
-                # 8. 원본상품 상태 업데이트
-                raw_product.status = 'converted'
-                raw_product.updated_at = now()
-                raw_product.save(update_fields=['status', 'updated_at'])
-            
-            elapsed = time.time() - start_time
-            logger.info(f"단일상품 변환 완료: [{raw_product.retailer}-{raw_product.external_product_id}] ({elapsed:.2f}초)")
+
+            # 옵션 처리 (기존 로직 유지)
+            self._process_options_with_external_functions(raw_product, product, existing_options={}, options_to_create=[], options_to_update=[])
+
             return True
-            
+
         except Exception as e:
-            logger.error(f"단일상품 변환 실패 [{raw_product.retailer}-{raw_product.external_product_id}]: {str(e)}")
+            # ✅ 예외 발생 → 단계별 포맷 + 에러 꼬리표로 로그
+            base_reason, _ = self._build_reason_from_raw(raw_product)
+            reason = f"{base_reason} / 저장 실패(에러: {type(e).__name__}: {e})"
+            log_conversion_failure(raw_product, reason, source="conversion")
+            logger.exception(f"예외로 인한 변환 실패: [{raw_product.retailer}-{raw_product.external_product_id}] - {e}")
             return False
+
+
 
     # ✅ 단일상품용 옵션 처리 메서드 (경량화)
     def _process_single_product_options(self, raw_product, product):

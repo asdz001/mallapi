@@ -1,0 +1,415 @@
+<!-- dashboard/templates/dashboard/member/member_modal.html -->
+<!-- 통합 탭 구조로 개선된 회원 상세보기/수정 모달 -->
+
+<!-- 회원 상세보기/수정 모달 -->
+<div class="modal fade" id="memberModal" tabindex="-1" role="dialog" aria-labelledby="memberModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document"> <!-- 대형 모달 -->
+        <div class="modal-content">
+            
+            <!-- 모달 헤더 -->
+            <div class="modal-header">
+                <h5 class="modal-title" id="memberModalLabel">
+                    <i class="fas fa-user"></i> 회원 정보
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="닫기">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <!-- 모달 본문 -->
+            <div class="modal-body">
+                <!-- 로딩 상태 (초기 표시) -->
+                <div id="modal-loading" class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                    <p>회원 정보를 불러오는 중...</p>
+                </div>
+
+                <!-- 실제 컨텐츠 영역 (로딩 완료 후 표시) -->
+                <div id="modal-content" style="display: none;">
+                    
+                    <!-- 회원 상태 배지 -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span id="modal-status-badge"></span>
+                                    <span id="modal-member-type-badge" class="badge badge-info ml-2"></span>
+                                </div>
+                                <div>
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar"></i> 가입일: <span id="modal-created-at"></span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 간소화된 탭 네비게이션 -->
+                    <ul class="nav nav-tabs" id="memberModalTabs" role="tablist">
+                        <!-- 통합 회원정보 탭 -->
+                        <li class="nav-item">
+                            <a class="nav-link active" id="tab-member-info-link" data-toggle="tab" href="#tab-member-info" role="tab">
+                                <i class="fas fa-user"></i> 회원정보
+                            </a>
+                        </li>
+                        <!-- 마케팅설정 탭 -->
+                        <li class="nav-item">
+                            <a class="nav-link" id="tab-marketing-link" data-toggle="tab" href="#tab-marketing" role="tab">
+                                <i class="fas fa-bullhorn"></i> 마케팅설정
+                            </a>
+                        </li>
+                        <!-- 시스템정보 탭 -->
+                        <li class="nav-item">
+                            <a class="nav-link" id="tab-system-link" data-toggle="tab" href="#tab-system" role="tab">
+                                <i class="fas fa-cog"></i> 시스템정보
+                            </a>
+                        </li>
+                        <!-- 활동내역 탭 -->
+                        <li class="nav-item">
+                            <a class="nav-link" id="tab-activity-link" data-toggle="tab" href="#tab-activity" role="tab">
+                                <i class="fas fa-chart-line"></i> 활동내역
+                            </a>
+                        </li>
+                    </ul>
+
+                    <!-- 탭 컨텐츠 -->
+                    <div class="tab-content mt-3" id="memberModalTabContent">
+                        
+                        <!-- 통합 회원정보 탭 (기본+연락처+B2C+B2B) -->
+                        <div class="tab-pane fade show active" id="tab-member-info" role="tabpanel">
+                            
+                            <!-- 기본 정보 섹션 -->
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-id-card"></i> 기본 정보</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label><strong>아이디</strong></label>
+                                                <input type="text" class="form-control" id="modal-username" disabled>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label><strong>이름</strong></label>
+                                                <input type="text" class="form-control" id="modal-name" disabled>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label><strong>회원유형</strong></label>
+                                                <input type="text" class="form-control" id="modal-member-type" disabled>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="form-group">
+                                                <div class="form-check">
+                                                    <input type="checkbox" class="form-check-input" id="modal-is-active" disabled>
+                                                    <label class="form-check-label"><strong>활성화</strong></label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 연락처 정보 섹션 -->
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-phone"></i> 연락처 정보</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label><strong>이메일</strong></label>
+                                                <input type="email" class="form-control" id="modal-email" disabled>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="form-group">
+                                                <label><strong>휴대폰</strong></label>
+                                                <input type="text" class="form-control" id="modal-phone" disabled>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="form-group">
+                                                <label><strong>집전화</strong></label>
+                                                <input type="text" class="form-control" id="modal-home-phone" disabled>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-9">
+                                            <div class="form-group">
+                                                <label><strong>주소</strong></label>
+                                                <input type="text" class="form-control" id="modal-address" disabled>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="form-group">
+                                                <label><strong>우편번호</strong></label>
+                                                <input type="text" class="form-control" id="modal-zip-code" disabled>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- B2C 전용 필드 (조건부 표시) -->
+                            <div class="card mb-3 b2c-fields" style="display: none;">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-user-circle"></i> 개인 정보 (일반회원)</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <div class="form-group">
+                                                <label><strong>성별</strong></label>
+                                                <select class="form-control" id="modal-gender" disabled>
+                                                    <option value="">선택안함</option>
+                                                    <option value="M">남자</option>
+                                                    <option value="F">여자</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="form-group">
+                                                <label><strong>생년월일</strong></label>
+                                                <input type="date" class="form-control" id="modal-birth-date" disabled>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="form-group">
+                                                <label><strong>닉네임</strong></label>
+                                                <input type="text" class="form-control" id="modal-nickname" disabled>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="form-group">
+                                                <label><strong>추천인 아이디</strong></label>
+                                                <input type="text" class="form-control" id="modal-recommender-id" disabled>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label><strong>가입경로</strong></label>
+                                                <select class="form-control" id="modal-join-channel" disabled>
+                                                    <option value="direct">직접가입</option>
+                                                    <option value="naver">네이버</option>
+                                                    <option value="kakao">카카오</option>
+                                                    <option value="google">구글</option>
+                                                    <option value="facebook">페이스북</option>
+                                                    <option value="recommend">지인추천</option>
+                                                    <option value="ad">광고</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check mt-4">
+                                                <input type="checkbox" class="form-check-input" id="modal-is-forever-member" disabled>
+                                                <label class="form-check-label"><strong>평생회원</strong></label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- B2B 전용 필드 (조건부 표시) -->
+                            <div class="card mb-3 b2b-fields" style="display: none;">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-briefcase"></i> 사업자 정보 (사업자회원)</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label><strong>회사명</strong></label>
+                                                <input type="text" class="form-control" id="modal-company-name" disabled>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label><strong>사업자등록번호</strong></label>
+                                                <input type="text" class="form-control" id="modal-business-number" disabled>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label><strong>대표자명</strong></label>
+                                                <input type="text" class="form-control" id="modal-representative-name" disabled>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label><strong>업태</strong></label>
+                                                <input type="text" class="form-control" id="modal-business-type" disabled>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label><strong>종목</strong></label>
+                                                <input type="text" class="form-control" id="modal-business-item" disabled>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label><strong>회사전화</strong></label>
+                                                <input type="text" class="form-control" id="modal-company-phone" disabled>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label><strong>팩스</strong></label>
+                                                <input type="text" class="form-control" id="modal-fax" disabled>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label><strong>회사주소</strong></label>
+                                                <input type="text" class="form-control" id="modal-company-address" disabled>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 마케팅설정 탭 -->
+                        <div class="tab-pane fade" id="tab-marketing" role="tabpanel">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-bullhorn"></i> 마케팅 수신 설정</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-check mb-3">
+                                                <input type="checkbox" class="form-check-input" id="modal-marketing-agree" disabled>
+                                                <label class="form-check-label"><strong>마케팅 수신동의</strong></label>
+                                                <small class="form-text text-muted">이벤트, 할인 정보 등 마케팅 정보 수신</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-check mb-3">
+                                                <input type="checkbox" class="form-check-input" id="modal-is-sms-agree" disabled>
+                                                <label class="form-check-label"><strong>SMS 수신동의</strong></label>
+                                                <small class="form-text text-muted">주문 관련 SMS 발송</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label><strong>가입경로 상세</strong></label>
+                                                <input type="text" class="form-control" id="modal-join-channel-display" disabled>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 시스템정보 탭 -->
+                        <div class="tab-pane fade" id="tab-system" role="tabpanel">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-cog"></i> 시스템 관리 정보</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label><strong>보유포인트</strong></label>
+                                                <div class="input-group">
+                                                    <input type="text" class="form-control" id="modal-point" disabled>
+                                                    <div class="input-group-append">
+                                                        <span class="input-group-text">P</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-check mt-4">
+                                                <input type="checkbox" class="form-check-input" id="modal-is-blacklisted" disabled>
+                                                <label class="form-check-label text-danger"><strong>블랙리스트</strong></label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="form-group">
+                                                <label><strong>운영 메모</strong></label>
+                                                <textarea class="form-control" id="modal-memo" rows="3" disabled placeholder="관리자용 메모"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 활동내역 탭 -->
+                        <div class="tab-pane fade" id="tab-activity" role="tabpanel">
+                            <div id="activity-content">
+                                <div class="text-center text-muted py-4">
+                                    <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                                    <p>활동 내역을 불러오는 중...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div> <!-- /.tab-content -->
+                </div> <!-- /#modal-content -->
+            </div> <!-- /.modal-body -->
+
+            <!-- 모달 푸터 -->
+            <div class="modal-footer">
+                <div class="d-flex justify-content-between w-100">
+                    <!-- 왼쪽: 수정 모드 표시 -->
+                    <div id="edit-mode-indicator" style="display: none;">
+                        <small class="text-warning">
+                            <i class="fas fa-edit"></i> 수정 모드
+                        </small>
+                    </div>
+                    
+                    <!-- 오른쪽: 버튼들 -->
+                    <div>
+                        <!-- 조회 모드 버튼들 -->
+                        <div id="view-mode-buttons">
+                            <button type="button" class="btn btn-warning" id="editModeBtn">
+                                <i class="fas fa-edit"></i> 수정
+                            </button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                                <i class="fas fa-times"></i> 닫기
+                            </button>
+                        </div>
+                        
+                        <!-- 수정 모드 버튼들 -->
+                        <div id="edit-mode-buttons" style="display: none;">
+                            <button type="button" class="btn btn-success" id="saveMemberBtn">
+                                <i class="fas fa-save"></i> 저장
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="cancelEditBtn">
+                                <i class="fas fa-undo"></i> 취소
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div> <!-- /.modal-content -->
+    </div> <!-- /.modal-dialog -->
+</div> <!-- /.modal -->
+
+<!-- CSRF 토큰 (Django 필수) -->
+{% csrf_token %}

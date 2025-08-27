@@ -239,7 +239,7 @@ def deleted_member_list(request):
         # 통계 정보
         "stats": get_deleted_member_stats(),
     }
-    return render(request, "dashboard/deleted_member_list.html", context)
+    return render(request, "dashboard/member/deleted_member_list.html", context)
 
 
 def restore_member(request, member_id):

@@ -1,29 +1,29 @@
 /**
  * ========================================
- * 📁 파일 위치: dashboard/static/dashboard/js/member_list.js
- * 🎯 목적: 회원 목록 페이지 전용 기능
- * 📅 버전: 1.0
- * 🔄 의존성: search_engine.js, jQuery, AdminLTE(로컬), Bootstrap(로컬)
+ * 파일 위치: dashboard/static/dashboard/js/member/member_list.js
+ * 목적: 회원 목록 페이지 전용 기능
+ * 버전: 2.0 - 수정 버튼 구현 완료
+ * 수정사항: editMember 함수에서 MemberModal 연동 구현
  * ========================================
  */
 
 /**
- * 🎯 회원 목록 관리 객체
+ * 회원 목록 관리 객체
  */
 const MemberList = {
     
     /**
-     * 🔧 초기화
+     * 초기화
      */
     init: function() {
-        console.log('👥 회원 목록 관리 모듈 초기화 중...');
+        console.log('회원 목록 관리 모듈 초기화 중...');
         
         this.bindEvents();
         this.initializeCheckboxes();
     },
     
     /**
-     * 🔧 이벤트 바인딩
+     * 이벤트 바인딩
      */
     bindEvents: function() {
         const self = this;
@@ -66,7 +66,7 @@ const MemberList = {
     },
     
     /**
-     * 🔧 체크박스 초기화
+     * 체크박스 초기화
      */
     initializeCheckboxes: function() {
         this.updateBulkButtons();
@@ -74,7 +74,7 @@ const MemberList = {
     },
     
     /**
-     * 🎯 전체 선택/해제
+     * 전체 선택/해제
      * @param {boolean} checked - 선택 상태
      */
     toggleAllCheckboxes: function(checked) {
@@ -83,7 +83,7 @@ const MemberList = {
     },
     
     /**
-     * 🎯 벌크 액션 버튼 상태 업데이트
+     * 벌크 액션 버튼 상태 업데이트
      */
     updateBulkButtons: function() {
         const checkedCount = $('input[name="member_ids"]:checked').length;
@@ -99,7 +99,7 @@ const MemberList = {
     },
     
     /**
-     * 🎯 전체 선택 체크박스 상태 업데이트
+     * 전체 선택 체크박스 상태 업데이트
      */
     updateSelectAllState: function() {
         const totalCheckboxes = $('input[name="member_ids"]').length;
@@ -120,7 +120,7 @@ const MemberList = {
     },
     
     /**
-     * 🎯 선택된 회원 ID 목록 가져오기
+     * 선택된 회원 ID 목록 가져오기
      * @returns {Array} 선택된 회원 ID 배열
      */
     getSelectedMemberIds: function() {
@@ -132,7 +132,7 @@ const MemberList = {
     },
     
     /**
-     * 🗑️ 벌크 삭제 - 🆕 삭제 사유 모달 연동으로 수정
+     * 벌크 삭제 - 삭제 사유 모달 연동
      */
     bulkDelete: function() {
         const selectedIds = this.getSelectedMemberIds();
@@ -142,12 +142,12 @@ const MemberList = {
             return;
         }
         
-        // 🆕 삭제 사유 모달 표시 (기존 confirm 대신)
+        // 삭제 사유 모달 표시
         this.showDeleteReasonModal('bulk', selectedIds);
     },
     
     /**
-     * 🚫 벌크 비활성화
+     * 벌크 비활성화
      */
     bulkDeactivate: function() {
         const selectedIds = this.getSelectedMemberIds();
@@ -162,56 +162,85 @@ const MemberList = {
         if (confirm(confirmMessage)) {
             this.showLoadingState('#bulk-deactivate', '처리 중...');
             
-            // TODO: 실제 AJAX 요청으로 구현
-            setTimeout(() => {
-                alert(`${selectedIds.length}명의 회원이 비활성화되었습니다. (구현 예정)`);
-                this.hideLoadingState('#bulk-deactivate', '선택 비활성화');
-                // 페이지 새로고침 또는 상태 업데이트
-                // window.location.reload();
-            }, 1000);
+            // 실제 AJAX 요청
+            $.ajax({
+                url: '/dashboard/members/bulk-action',
+                method: 'POST',
+                data: {
+                    'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val(),
+                    'action': 'deactivate',
+                    'member_ids[]': selectedIds
+                },
+                success: function(response) {
+                    if (response.success) {
+                        alert(response.message);
+                        window.location.reload();
+                    } else {
+                        alert('오류: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('비활성화 중 오류가 발생했습니다.');
+                },
+                complete: function() {
+                    MemberList.hideLoadingState('#bulk-deactivate', '<i class="fas fa-ban"></i> 선택 비활성화');
+                }
+            });
         }
     },
     
     /**
-     * 👁️ 회원 상세보기
+     * 회원 상세보기 - MemberModal 연동
      * @param {string|number} memberId - 회원 ID
      */
     viewMember: function(memberId) {
         console.log(`회원 상세보기: ${memberId}`);
         
-        // TODO: 모달 또는 새 페이지로 이동
-        alert(`회원 상세보기 기능 구현 예정\n회원 ID: ${memberId}`);
-        
-        // 향후 구현:
-        // window.location.href = `/dashboard/members/${memberId}/`;
-        // 또는 모달로 상세정보 표시
+        // MemberModal을 사용해서 상세보기 모달 열기
+        if (typeof MemberModal !== 'undefined') {
+            MemberModal.showMemberDetail(memberId);
+        } else {
+            console.error('MemberModal이 로드되지 않았습니다.');
+            alert('상세보기 기능을 사용할 수 없습니다. 페이지를 새로고침해주세요.');
+        }
     },
     
     /**
-     * ✏️ 회원 정보 수정
+     * ✅ 수정 완료: 회원 정보 수정 - MemberModal 연동으로 구현
      * @param {string|number} memberId - 회원 ID
      */
     editMember: function(memberId) {
         console.log(`회원 정보 수정: ${memberId}`);
         
-        // TODO: 수정 페이지로 이동
-        alert(`회원 정보 수정 기능 구현 예정\n회원 ID: ${memberId}`);
-        
-        // 향후 구현:
-        // window.location.href = `/dashboard/members/${memberId}/edit/`;
+        // MemberModal을 사용해서 상세보기 모달을 열고, 바로 수정 모드로 전환
+        if (typeof MemberModal !== 'undefined') {
+            // 먼저 상세보기 모달 열기
+            MemberModal.showMemberDetail(memberId);
+            
+            // 모달이 완전히 로드된 후 수정 모드 활성화
+            setTimeout(() => {
+                if (MemberModal.currentMember) {
+                    MemberModal.enableEditMode();
+                    console.log('수정 모드로 자동 전환 완료');
+                }
+            }, 500); // 모달 로딩 완료를 위한 대기시간
+        } else {
+            console.error('MemberModal이 로드되지 않았습니다.');
+            alert('수정 기능을 사용할 수 없습니다. 페이지를 새로고침해주세요.');
+        }
     },
     
     /**
-     * 🗑️ 삭제 확인 모달 표시 - 🆕 삭제 사유 모달 연동으로 수정
+     * 삭제 확인 모달 표시 - 삭제 사유 모달 연동
      * @param {string|number} memberId - 회원 ID
      */
     showDeleteModal: function(memberId) {
-        // 🆕 삭제 사유 모달 표시 (기존 confirm 대신)
+        // 삭제 사유 모달 표시
         this.showDeleteReasonModal('single', [memberId]);
     },
     
     /**
-     * 🆕 삭제 사유 입력 모달 표시 (새로 추가된 함수)
+     * 삭제 사유 입력 모달 표시
      * @param {string} type - 'single' 또는 'bulk'
      * @param {Array} memberIds - 회원 ID 배열
      */
@@ -245,16 +274,16 @@ const MemberList = {
     },
     
     /**
-     * 🗑️ 회원 삭제 - 🆕 실제 AJAX 구현으로 수정
+     * 회원 삭제 - 실제 AJAX 구현
      * @param {string|number} memberId - 회원 ID
-     * @param {string} deleteReason - 삭제 사유 (새로 추가된 파라미터)
+     * @param {string} deleteReason - 삭제 사유
      */
     deleteMember: function(memberId, deleteReason) {
         console.log(`회원 삭제 처리: ${memberId}`);
         
         this.showLoadingState(`.btn-delete-member[data-member-id="${memberId}"]`, '삭제 중...');
         
-        // 🆕 실제 AJAX 삭제 요청 (기존 TODO 구현)
+        // 실제 AJAX 삭제 요청
         $.ajax({
             url: `/dashboard/members/delete/${memberId}`,
             method: 'POST',
@@ -269,7 +298,6 @@ const MemberList = {
                         $(this).remove();
                     });
                     
-                    // 성공 메시지 표시
                     alert(response.message);
                     
                     // 체크박스 상태 업데이트
@@ -289,7 +317,7 @@ const MemberList = {
     },
     
     /**
-     * 🆕 벌크 삭제 실행 (새로 추가된 함수)
+     * 벌크 삭제 실행
      * @param {Array} memberIds - 회원 ID 배열
      * @param {string} deleteReason - 삭제 사유
      */
@@ -315,7 +343,6 @@ const MemberList = {
                         });
                     });
                     
-                    // 성공 메시지 표시
                     alert(response.message);
                     
                     // 체크박스 상태 초기화
@@ -335,7 +362,7 @@ const MemberList = {
     },
     
     /**
-     * 🔄 로딩 상태 표시
+     * 로딩 상태 표시
      * @param {string} selector - 버튼 선택자
      * @param {string} text - 로딩 텍스트
      */
@@ -347,9 +374,9 @@ const MemberList = {
     },
     
     /**
-     * 🔄 로딩 상태 해제
+     * 로딩 상태 해제
      * @param {string} selector - 버튼 선택자
-     * @param {string} originalText - 원본 텍스트 (선택사항)
+     * @param {string} originalText - 원본 텍스트
      */
     hideLoadingState: function(selector, originalText = null) {
         const button = $(selector);
@@ -360,7 +387,7 @@ const MemberList = {
     },
     
     /**
-     * 🛠️ 유틸리티: 현재 선택된 회원 수 표시
+     * 현재 선택된 회원 수 표시
      */
     updateSelectionInfo: function() {
         const selectedCount = this.getSelectedMemberIds().length;
@@ -373,7 +400,7 @@ const MemberList = {
 
 /**
  * ========================================
- * 🚀 자동 초기화 (DOM 로드 완료 시)
+ * 자동 초기화 (DOM 로드 완료 시)
  * ========================================
  */
 $(document).ready(function() {
@@ -396,12 +423,12 @@ $(document).ready(function() {
         changePerPage(this.value);
     });
     
-    // 🆕 삭제 사유 모달 이벤트 처리 (새로 추가된 부분)
+    // 삭제 사유 모달 이벤트 처리
     $('#deleteReasonModal').on('shown.bs.modal', function() {
         $('#deleteReason').focus();
     });
     
-    // 🆕 삭제 사유 입력 검증 (새로 추가된 부분)
+    // 삭제 사유 입력 검증
     $('#deleteReason').on('input', function() {
         const reason = $(this).val().trim();
         const confirmBtn = $('#confirmDeleteBtn');
@@ -413,7 +440,7 @@ $(document).ready(function() {
         }
     });
     
-    // 🆕 삭제 확인 버튼 클릭 (새로 추가된 부분)
+    // 삭제 확인 버튼 클릭
     $('#confirmDeleteBtn').on('click', function() {
         const deleteType = $('#deleteType').val();
         const deleteReason = $('#deleteReason').val().trim();
@@ -438,7 +465,7 @@ $(document).ready(function() {
 });
 
 /**
- * 🔧 페이지당 표시 개수 변경 함수
+ * 페이지당 표시 개수 변경 함수
  * @param {number} value - 표시할 개수
  */
 function changePerPage(value) {
@@ -450,7 +477,7 @@ function changePerPage(value) {
 
 /**
  * ========================================
- * 🔧 전역 접근용 (다른 스크립트에서 사용 가능)
+ * 전역 접근용 (다른 스크립트에서 사용 가능)
  * ========================================
  */
 window.MemberList = MemberList;
