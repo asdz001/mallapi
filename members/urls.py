@@ -9,7 +9,7 @@
 from django.urls import path
 
 # ✅ 기존 정상 구조: 모듈 단위 import
-from members.views import member_list, member_add, deleted_member_list
+from members.views import member_list, member_add, deleted_member_list, grade_views 
 
 # ✅ 신규 API 전용 모듈 (안에 스텁 함수 3개가 있어야 함)
 from members.views import member_detail  # member_detail.member_detail_api 등으로 접근
@@ -43,6 +43,16 @@ urlpatterns = [
     # ✅ 삭제된 회원 벌크 작업 (AJAX)
     path('deleted/bulk-restore', deleted_member_list.bulk_restore_members, name='bulk_restore_members'),  # 벌크 복구
     path('deleted/bulk-permanent-delete', deleted_member_list.bulk_permanent_delete_members, name='bulk_permanent_delete_members'),  # 벌크 완전삭제
+
+
+    # 🆕 등급 관리 URL 추가
+    path('grade', grade_views.grade_list, name='grade_list'),
+    path('grade/create', grade_views.grade_create, name='grade_create'),
+    path('grade/<int:grade_id>/update', grade_views.grade_update, name='grade_update'),
+    path('grade/<int:grade_id>/delete', grade_views.grade_delete, name='grade_delete'),
+    path('grade/bulk-change', grade_views.member_grade_change, name='member_grade_change'),
+    path('grade/history/<int:member_id>', grade_views.grade_history, name='grade_history'),
+
 
     # =========================
     # 📄 향후 구현 예정 (인터페이스만)

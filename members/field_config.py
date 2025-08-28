@@ -398,40 +398,119 @@ MEMBER_FIELDS = {
         'format': 'number_comma',  # 천단위 콤마
     },
 
-    # 🆕 향후 확장 필드들 (현재는 주석 처리)
-    # 'grade_level': {
-    #     'group': 'grade',
-    #     'label': '등급',
-    #     'type': 'choice',
-    #     'choices': [
-    #         ('bronze', '브론즈'),
-    #         ('silver', '실버'),
-    #         ('gold', '골드'),
-    #         ('vip', 'VIP'),
-    #     ],
-    #     'required': False,
-    #     'default': 'bronze',
-    #     'coming_soon': True,
-    # },
-    # 'total_orders': {
-    #     'group': 'orders',
-    #     'label': '총 주문수',
-    #     'type': 'number',
-    #     'required': False,
-    #     'default': 0,
-    #     'editable': False,
-    #     'coming_soon': True,
-    # },
-    # 'total_spent': {
-    #     'group': 'orders',
-    #     'label': '총 구매금액',
-    #     'type': 'money',
-    #     'required': False,
-    #     'default': 0,
-    #     'editable': False,
-    #     'format': 'money_comma',
-    #     'coming_soon': True,
-    # },
+    # ========================================
+    # 👑 등급 관리 그룹 (활성화)
+    # ========================================
+    'grade': {
+        'group': 'grade',
+        'label': '회원등급',
+        'type': 'choice_foreign',  # 새로운 타입: ForeignKey 선택
+        'model': 'MemberGrade',  # 연결할 모델명
+        'required': False,
+        'editable': True,
+        'list_display': True,
+        'list_width': '100px',
+        'list_align': 'center',
+        'filter_field': True,
+        'help_text': '회원의 현재 등급',
+        # 'coming_soon': False,  # 주석 제거로 활성화
+    },
+    
+    'grade_fixed': {
+        'group': 'grade',
+        'label': '등급고정',
+        'type': 'boolean',
+        'required': False,
+        'default': False,
+        'editable': 'admin_only',  # 관리자만 수정 가능
+        'list_display': True,
+        'list_width': '80px',
+        'list_align': 'center',
+        'help_text': '체크 시 자동 승급/강등 방지',
+        'icon_true': 'fas fa-lock',
+        'icon_false': 'fas fa-unlock',
+    },
+    
+    'grade_fixed_reason': {
+        'group': 'grade',
+        'label': '고정사유',
+        'type': 'textarea',
+        'required': False,
+        'editable': 'admin_only',
+        'rows': 2,
+        'help_text': '등급 고정 사유 (관리자용)',
+        'depends_on': 'grade_fixed',  # grade_fixed가 True일 때만 표시
+    },
+    
+    'grade_fixed_at': {
+        'group': 'grade',
+        'label': '고정일시',
+        'type': 'datetime',
+        'required': False,
+        'editable': False,
+        'exclude_from_form': True,
+        'list_display': False,
+        'format': 'Y-m-d H:i',
+    },
+    
+    # ========================================
+    # 📊 주문 통계 그룹 (향후 주문 시스템 연동용)
+    # ========================================
+    'total_orders': {
+        'group': 'orders',
+        'label': '총 주문수',
+        'type': 'number',
+        'required': False,
+        'default': 0,
+        'editable': False,
+        'list_display': True,
+        'list_width': '80px',
+        'list_align': 'center',
+        'format': 'number_comma',
+        'help_text': '총 주문 횟수 (자동 계산)',
+        'coming_soon': True,  # 주문 시스템 완성 후 활성화 예정
+    },
+    
+    'total_spent': {
+        'group': 'orders',
+        'label': '총 구매금액',
+        'type': 'money',
+        'required': False,
+        'default': 0,
+        'editable': False,
+        'list_display': True,
+        'list_width': '120px',
+        'list_align': 'right',
+        'format': 'money_comma',
+        'help_text': '총 구매 금액 (자동 계산)',
+        'coming_soon': True,  # 주문 시스템 완성 후 활성화 예정
+    },
+    
+    'last_order_date': {
+        'group': 'orders',
+        'label': '최근주문일',
+        'type': 'date',
+        'required': False,
+        'editable': False,
+        'exclude_from_form': True,
+        'list_display': True,
+        'list_width': '100px',
+        'list_align': 'center',
+        'format': 'Y-m-d',
+        'help_text': '마지막 주문 날짜',
+        'coming_soon': True,
+    },
+
+# FIELD_GROUPS 딕셔너리에서 grade 그룹 활성화
+# 기존 'coming_soon': True를 제거하거나 False로 변경:
+
+    'grade': {
+        'name': '등급정보',
+        'icon': 'fas fa-crown',
+        'description': '회원 등급 및 혜택 정보',
+        'required_for': ['B2C', 'B2B'],
+        # 'coming_soon': False,  # 활성화 (주석 처리하거나 False로 설정)
+    },
 }
 
 # ========================================

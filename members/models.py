@@ -136,6 +136,204 @@ class Member(models.Model):
         help_text="이 날짜 이후에는 자동으로 완전삭제됩니다."
     )
 
+
+        # ========================================
+    # 👑 등급 관련 필드들 (추가)
+    # ========================================
+    
+    grade = models.ForeignKey(
+        'MemberGrade',  # 문자열로 참조 (아직 정의되지 않은 모델)
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="회원 등급",
+        help_text="현재 회원 등급"
+    )
+    
+    grade_fixed = models.BooleanField(
+        default=False,
+        verbose_name="등급 고정",
+        help_text="체크 시 자동 승급/강등 방지"
+    )
+    
+    grade_fixed_reason = models.TextField(
+        blank=True,
+        verbose_name="등급 고정 사유",
+        help_text="등급을 고정한 상세 사유"
+    )
+    
+    grade_fixed_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='fixed_grade_members',
+        verbose_name="등급 고정한 관리자"
+    )
+    
+    grade_fixed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="등급 고정 일시"
+    )
+    
+    # ========================================
+    # 📊 주문 통계 필드들 (향후 주문 시스템 연동용)
+    # ========================================
+    
+    total_orders = models.IntegerField(
+        default=0,
+        verbose_name="총 주문수",
+        help_text="총 주문 횟수 (자동 계산)"
+    )
+    
+    total_spent = models.DecimalField(
+        max_digits=12,
+        decimal_places=0,
+        default=0,
+        verbose_name="총 구매금액",
+        help_text="총 구매 금액 (자동 계산)"
+    )
+    
+    last_order_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="최근 주문일",
+        help_text="마지막 주문 날짜"
+    )
+    
+    # ... 기존 메서드들 ...
+    
+    def save(self, *args, **kwargs):
+        """회원 정보 저장 시 등급 관련 처리"""
+        
+        # 신규 회원인 경우 기본 등급 할당
+        if not self.pk and not self.grade:
+            default_grade = MemberGrade.get_default_grade(self.member_type)
+            if default_grade:
+                self.grade = default_grade
+        
+        # 등급 고정 처리
+        if self.grade_fixed and not self.grade_fixed_at:
+            self.grade_fixed_at = timezone.now()
+        elif not self.grade_fixed:
+            self.grade_fixed_at = None
+            self.grade_fixed_reason = ''
+            self.grade_fixed_by = None
+        
+        super().save(*args, **kwargs)
+    
+    def change_grade(self, new_grade, reason='manual', changed_by=None, reason_detail=''):
+        """
+        회원 등급 변경 (이력 기록 포함)
+        
+        Args:
+            new_grade: 새로운 등급 (MemberGrade 객체)
+            reason: 변경 사유 ('auto', 'manual', 'promotion' 등)
+            changed_by: 변경한 관리자 (User 객체)
+            reason_detail: 상세 사유
+        """
+        from django.utils import timezone
+        
+        old_grade = self.grade
+        
+        # 등급 변경
+        self.grade = new_grade
+        self.save()
+        
+        # 이력 기록
+        MemberGradeHistory.objects.create(
+            member=self,
+            old_grade=old_grade,
+            new_grade=new_grade,
+            change_reason=reason,
+            reason_detail=reason_detail,
+            changed_by=changed_by
+        )
+    
+    def fix_grade(self, reason='', fixed_by=None):
+        """등급 고정 설정"""
+        from django.utils import timezone
+        
+        self.grade_fixed = True
+        self.grade_fixed_reason = reason
+        self.grade_fixed_by = fixed_by
+        self.grade_fixed_at = timezone.now()
+        self.save()
+    
+    def unfix_grade(self):
+        """등급 고정 해제"""
+        self.grade_fixed = False
+        self.grade_fixed_reason = ''
+        self.grade_fixed_by = None
+        self.grade_fixed_at = None
+        self.save()
+    
+    def can_auto_upgrade(self):
+        """자동 승급 가능 여부 확인"""
+        # 등급이 고정된 경우 승급 불가
+        if self.grade_fixed:
+            return False
+        
+        # 현재 등급이 자동 승급을 허용하지 않는 경우
+        if self.grade and not self.grade.auto_upgrade:
+            return False
+            
+        return True
+    
+    def check_grade_upgrade(self):
+        """
+        등급 승급 조건 확인 및 자동 승급 처리
+        주문 완료 시마다 호출되는 메서드
+        """
+        if not self.can_auto_upgrade():
+            return False
+        
+        # 더 높은 등급들 중에서 승급 조건을 만족하는 등급 찾기
+        available_grades = MemberGrade.objects.filter(
+            member_type__in=[self.member_type, 'ALL'],
+            is_active=True,
+            auto_upgrade=True
+        )
+        
+        if self.grade:
+            # 현재 등급보다 높은 등급들만 확인
+            available_grades = available_grades.filter(order__lt=self.grade.order)
+        
+        available_grades = available_grades.order_by('order')
+        
+        for grade in available_grades:
+            if grade.can_upgrade_to(self):
+                # 승급 처리
+                self.change_grade(
+                    new_grade=grade,
+                    reason='auto',
+                    reason_detail=f'자동 승급 조건 달성'
+                )
+                return True
+        
+        return False
+    
+    @property
+    def grade_display(self):
+        """등급 표시용 속성"""
+        if not self.grade:
+            return "등급없음"
+        
+        # 고정 표시 추가
+        fixed_mark = " 🔒" if self.grade_fixed else ""
+        return f"{self.grade.display_name}{fixed_mark}"
+    
+    @property
+    def grade_color(self):
+        """등급 색상 반환"""
+        return self.grade.color_code if self.grade else '#6c757d'
+    
+    @property
+    def grade_icon(self):
+        """등급 아이콘 반환"""
+        return self.grade.icon_class if self.grade else 'fas fa-user'
+
     # ========================================
     # 🔧 매니저 설정 (중요: 순서가 중요함)
     # ========================================
@@ -247,3 +445,284 @@ class Member(models.Model):
             models.Index(fields=['deleted_at']),  # 삭제 회원 관리 최적화
             models.Index(fields=['restore_deadline']),  # 자동 정리 작업 최적화
         ]
+
+
+
+
+
+# 회원 등급 모델
+class MemberGrade(models.Model):
+    """
+    🎯 회원 등급 마스터 테이블
+    - 등급별 혜택 및 승급 조건 관리
+    - B2C/B2B 구분별 등급 설정
+    - 자동 승급 조건 설정
+    """
+    
+    # 기본 등급 정보
+    name = models.CharField(
+        max_length=50,
+        verbose_name="등급명",
+        help_text="예: 브론즈, 실버, 골드, VIP"
+    )
+    
+    display_name = models.CharField(
+        max_length=50,
+        verbose_name="표시명",
+        help_text="화면에 표시될 등급명",
+        blank=True
+    )
+    
+    # 회원 타입별 구분
+    member_type = models.CharField(
+        max_length=10,
+        choices=[('B2C', '일반회원'), ('B2B', '사업자회원'), ('ALL', '공통')],
+        default='ALL',
+        verbose_name="적용 회원타입"
+    )
+    
+    # 등급 순서 (낮을수록 높은 등급)
+    order = models.IntegerField(
+        default=999,
+        verbose_name="등급 순서",
+        help_text="낮은 숫자일수록 높은 등급 (1=최고등급)"
+    )
+    
+    # 혜택 설정
+    discount_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name="할인율 (%)",
+        help_text="등급별 기본 할인율"
+    )
+    
+    point_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=1.0,
+        verbose_name="포인트 적립율 (%)",
+        help_text="구매금액 대비 포인트 적립 비율"
+    )
+    
+    # 자동 승급 조건
+    auto_upgrade = models.BooleanField(
+        default=True,
+        verbose_name="자동 승급 사용",
+        help_text="조건 달성 시 자동으로 등급 승급"
+    )
+    
+    min_order_count = models.IntegerField(
+        null=True,
+        blank=True,
+        verbose_name="최소 주문횟수",
+        help_text="승급을 위한 최소 주문 횟수"
+    )
+    
+    min_total_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=0,
+        null=True,
+        blank=True,
+        verbose_name="최소 총 구매금액",
+        help_text="승급을 위한 최소 총 구매금액 (원)"
+    )
+    
+    min_period_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=0,
+        null=True,
+        blank=True,
+        verbose_name="기간별 구매금액",
+        help_text="1년간 최소 구매금액 (원)"
+    )
+    
+    # 기본 등급 설정
+    is_default = models.BooleanField(
+        default=False,
+        verbose_name="기본 등급",
+        help_text="신규 가입시 자동 할당되는 등급"
+    )
+    
+    # 시각적 요소
+    color_code = models.CharField(
+        max_length=7,
+        default='#6c757d',
+        verbose_name="등급 색상",
+        help_text="등급 표시용 색상 코드 (예: #ff6b6b)"
+    )
+    
+    icon_class = models.CharField(
+        max_length=50,
+        default='fas fa-user',
+        verbose_name="아이콘 클래스",
+        help_text="FontAwesome 아이콘 클래스"
+    )
+    
+    # 시스템 필드
+    is_active = models.BooleanField(default=True, verbose_name="활성화")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="생성일")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="수정일")
+    
+    class Meta:
+        verbose_name = "회원 등급"
+        verbose_name_plural = "회원 등급"
+        ordering = ['member_type', 'order', 'name']
+        # 회원타입별로 등급명 중복 방지
+        unique_together = ['member_type', 'name']
+    
+    def __str__(self):
+        type_display = dict(self._meta.get_field('member_type').choices)[self.member_type]
+        return f"[{type_display}] {self.display_name or self.name}"
+    
+    def save(self, *args, **kwargs):
+        """저장 시 display_name 자동 설정"""
+        if not self.display_name:
+            self.display_name = self.name
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_default_grade(cls, member_type):
+        """특정 회원타입의 기본 등급 반환"""
+        return cls.objects.filter(
+            member_type__in=[member_type, 'ALL'],
+            is_default=True,
+            is_active=True
+        ).first()
+    
+    def can_upgrade_to(self, member):
+        """특정 회원이 이 등급으로 승급 가능한지 확인"""
+        if not self.auto_upgrade:
+            return False
+            
+        # 주문 횟수 조건 확인 (향후 구현)
+        if self.min_order_count:
+            # member.total_orders >= self.min_order_count
+            pass
+            
+        # 총 구매금액 조건 확인 (향후 구현)  
+        if self.min_total_amount:
+            # member.total_spent >= self.min_total_amount
+            pass
+            
+        return True
+
+
+class MemberGradeHistory(models.Model):
+    """
+    🎯 회원 등급 변경 이력 테이블
+    - 등급 변경 내역 추적
+    - 변경 사유 및 관리자 정보 기록
+    """
+    
+    # 연결 정보
+    member = models.ForeignKey(
+        Member,
+        on_delete=models.CASCADE,
+        related_name='grade_histories',
+        verbose_name="회원"
+    )
+    
+    # 등급 변경 정보
+    old_grade = models.ForeignKey(
+        MemberGrade,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='old_grade_histories',
+        verbose_name="이전 등급"
+    )
+    
+    new_grade = models.ForeignKey(
+        MemberGrade,
+        on_delete=models.CASCADE,
+        related_name='new_grade_histories',
+        verbose_name="새 등급"
+    )
+    
+    # 변경 사유
+    CHANGE_REASON_CHOICES = [
+        ('auto', '자동 승급'),
+        ('manual', '수동 변경'),
+        ('signup', '신규 가입'),
+        ('promotion', '특별 승급'),
+        ('demotion', '등급 강등'),
+        ('fixed', '등급 고정'),
+        ('unfixed', '고정 해제'),
+    ]
+    
+    change_reason = models.CharField(
+        max_length=20,
+        choices=CHANGE_REASON_CHOICES,
+        default='manual',
+        verbose_name="변경 사유"
+    )
+    
+    reason_detail = models.TextField(
+        blank=True,
+        verbose_name="상세 사유",
+        help_text="등급 변경에 대한 상세한 설명"
+    )
+    
+    # 변경자 정보
+    changed_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="변경자",
+        help_text="관리자가 수동 변경한 경우"
+    )
+    
+    # 시스템 필드
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="변경일시")
+    
+    class Meta:
+        verbose_name = "등급 변경 이력"
+        verbose_name_plural = "등급 변경 이력"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        old_name = self.old_grade.display_name if self.old_grade else "없음"
+        return f"{self.member.name}: {old_name} → {self.new_grade.display_name}"
+
+
+# 기존 Member 모델에 추가할 필드들
+"""
+Member 모델에 다음 필드들을 추가하세요:
+
+    # 등급 관련 필드들 (Member 모델에 추가)
+    grade = models.ForeignKey(
+        MemberGrade,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="회원 등급"
+    )
+    
+    grade_fixed = models.BooleanField(
+        default=False,
+        verbose_name="등급 고정",
+        help_text="체크 시 자동 승급/강등 방지"
+    )
+    
+    grade_fixed_reason = models.TextField(
+        blank=True,
+        verbose_name="등급 고정 사유"
+    )
+    
+    grade_fixed_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='fixed_grade_members',
+        verbose_name="등급 고정한 관리자"
+    )
+    
+    grade_fixed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="등급 고정 일시"
+    )
+"""

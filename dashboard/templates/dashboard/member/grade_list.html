@@ -1,0 +1,258 @@
+{% extends "dashboard/base_admin.html" %}
+{% load i18n static %}
+
+{% block title %}등급 관리{% endblock %}
+
+{# 
+  ⬇️ 추가 스타일 (베이스에 해당 블록이 없어도 무해)
+  - 등급 색상 점/아이콘/상단 카드 등
+#}
+{% block extrahead %}
+<style>
+  .grade-color { width: 20px; height: 20px; border-radius: 50%; display: inline-block; border: 2px solid #ddd; }
+  .grade-icon { font-size: 1.2em; margin-right: 8px; }
+  .stats-card { border-left: 4px solid; padding-left: 15px; }
+  .stats-card.b2c { border-color: #007bff; }
+  .stats-card.b2b { border-color: #28a745; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 📌 페이지 헤더 -->
+<section class="content-header">
+  <div class="d-flex justify-content-between align-items-center">
+    <div>
+      <h1><i class="fas fa-crown"></i> 등급 관리</h1>
+      <small class="text-muted">회원 등급 및 혜택 관리</small>
+    </div>
+    <div>
+      {# ✅ 네임스페이스를 dashboard로 통일 (프로젝트 전반과 일치) #}
+      <a href="{% url 'dashboard:grade_create' %}" class="btn btn-success btn-sm">
+        <i class="fas fa-plus"></i> 등급 추가
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="content">
+  <!-- 📊 상단 통계 카드 -->
+  <div class="row mb-3">
+    <div class="col-md-3">
+      <div class="card stats-card">
+        <div class="card-body">
+          <h4>{{ stats.total }}</h4>
+          <small>전체 등급</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card stats-card">
+        <div class="card-body">
+          <h4>{{ stats.active }}</h4>
+          <small>활성 등급</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card stats-card b2c">
+        <div class="card-body">
+          <h4>{{ stats.b2c }}</h4>
+          <small>B2C 등급</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card stats-card b2b">
+        <div class="card-body">
+          <h4>{{ stats.b2b }}</h4>
+          <small>B2B 등급</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔎 검색/필터 (GET 폼: CSRF 필요 없음) -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <form method="get" class="form-inline">
+        <input type="text" name="search" class="form-control mr-2" placeholder="등급명 검색" value="{{ search }}">
+        <select name="member_type" class="form-control mr-2">
+          <option value="">전체 타입</option>
+          <option value="B2C" {% if member_type_filter == 'B2C' %}selected{% endif %}>B2C</option>
+          <option value="B2B" {% if member_type_filter == 'B2B' %}selected{% endif %}>B2B</option>
+          <option value="ALL" {% if member_type_filter == 'ALL' %}selected{% endif %}>공통</option>
+        </select>
+        <button type="submit" class="btn btn-primary mr-2">필터 적용</button>
+        {# ✅ 초기화 링크도 dashboard 네임스페이스로 통일 #}
+        <a href="{% url 'dashboard:grade_list' %}" class="btn btn-secondary">초기화</a>
+      </form>
+    </div>
+  </div>
+
+  <!-- 📋 등급 목록 테이블 -->
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h6 class="mb-0">등급 목록 ({{ grades.paginator.count }}개)</h6>
+    </div>
+
+    <div class="card-body p-0">
+      <table class="table table-striped mb-0">
+        <thead>
+          <tr>
+            {# ✅ 뷰에서 넘어온 columns로 머리글 자동 생성 #}
+            {% for c in columns %}
+              <th style="text-align:{{ c.align|default:'left' }};">
+                {{ c.label }}
+              </th>
+            {% endfor %}
+          </tr>
+        </thead>
+
+        <tbody>
+          {# ✅ rows × columns 반복 렌더 (⚠️ Django 템플릿은 dict 동적 키 접근 불가 → c.key별 분기 처리) #}
+          {% for r in rows %}
+            <tr>
+              {% for c in columns %}
+                <td class="text-{{ c.align|default:'left' }}">
+                  <!-- {# ─────────────────────────────────────────────────────────
+                     c.key 값에 따라 안전하게 분기
+                     - grade_display : 뷰에서 format_html로 생성한 안전 HTML
+                     - member_type   : 뱃지 표기
+                     - order         : 숫자
+                     - discount_rate/point_rate : 퍼센트
+                     - member_count  : 숫자 뱃지
+                     - is_active     : 활성/비활성 뱃지
+                     - actions       : 수정/삭제 버튼
+                     ───────────────────────────────────────────────────────── #} -->
+
+                  {% if c.key == 'grade_display' %}
+                    {{ r.grade_display|safe }}
+
+                  {% elif c.key == 'member_type' %}
+                    {% if r.member_type == 'B2C' %}
+                      <span class="badge badge-primary">B2C</span>
+                    {% elif r.member_type == 'B2B' %}
+                      <span class="badge badge-success">B2B</span>
+                    {% else %}
+                      <span class="badge badge-secondary">공통</span>
+                    {% endif %}
+
+                  {% elif c.key == 'order' %}
+                    {{ r.order }}
+
+                  {% elif c.key == 'discount_rate' %}
+                    {{ r.discount_rate|default_if_none:"0" }}%
+
+                  {% elif c.key == 'point_rate' %}
+                    {{ r.point_rate|default_if_none:"0" }}%
+
+                  {% elif c.key == 'member_count' %}
+                    <span class="badge badge-info">{{ r.member_count|default_if_none:"0" }}</span>
+
+                  {% elif c.key == 'is_active' %}
+                    {% if r.is_active %}
+                      <span class="badge badge-success">활성</span>
+                    {% else %}
+                      <span class="badge badge-secondary">비활성</span>
+                    {% endif %}
+
+                  {% elif c.key == 'actions' %}
+                    <a href="{{ r.actions.update_url }}" class="btn btn-sm btn-outline-primary" title="수정">
+                      <i class="fas fa-edit"></i>
+                    </a>
+                    {# ❗ 삭제는 data-url + 쿠키 CSRF (폼 유무와 무관하게 안전) #}
+                    <button class="btn btn-sm btn-outline-danger"
+                            data-url="{{ r.actions.delete_url }}"
+                            onclick="deleteGrade(this, '{{ r.actions.name|escapejs }}')"
+                            title="삭제">
+                      <i class="fas fa-trash"></i>
+                    </button>
+
+                  {% else %}
+                    {# 혹시 예상 밖의 key가 들어와도 안전하게 처리 #}
+                    {{ "" }}
+                  {% endif %}
+                </td>
+              {% endfor %}
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="{{ columns|length }}" class="text-center py-4">등록된 등급이 없습니다.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 📄 페이지네이션 (⚠️ has_previous/has_next 확인 후에만 번호 메서드 호출) -->
+    <div class="card-footer">
+      <nav aria-label="grades pagination">
+        <ul class="pagination mb-0">
+          {% if grades.has_previous %}
+            <li class="page-item">
+              <a class="page-link"
+                 href="?page={{ grades.previous_page_number }}&search={{ search }}&member_type={{ member_type_filter }}">이전</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">이전</span></li>
+          {% endif %}
+
+          {% for num in grades.paginator.page_range %}
+            <li class="page-item {% if grades.number == num %}active{% endif %}">
+              <a class="page-link"
+                 href="?page={{ num }}&search={{ search }}&member_type={{ member_type_filter }}">{{ num }}</a>
+            </li>
+          {% endfor %}
+
+          {% if grades.has_next %}
+            <li class="page-item">
+              <a class="page-link"
+                 href="?page={{ grades.next_page_number }}&search={{ search }}&member_type={{ member_type_filter }}">다음</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">다음</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{# 
+  ⬇️ 삭제 Ajax: 쿠키에서 csrftoken을 읽어 POST 호출 (표준/안전)
+  - base에 extra_scripts 블록이 없어도 무해. 필요한 경우 content 아래로 옮겨도 OK
+#}
+{% block extra_scripts %}
+<script>
+  // 🍪 쿠키에서 csrftoken 읽기 (Django 권장)
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+  }
+
+  /**
+   * 🗑️ 등급 삭제
+   * - 버튼의 data-url(서버에서 reverse한 안전 URL)로 POST 호출
+   * - confirm으로 사용자 확인 → 성공 시 새로고침
+   */
+  async function deleteGrade(btnEl, gradeName) {
+    if (!confirm(`'${gradeName}' 등급을 삭제하시겠습니까?`)) return;
+
+    const url = btnEl.getAttribute('data-url');
+    const csrftoken = getCookie('csrftoken');
+
+    try {
+      const res = await fetch(url, { method: 'POST', headers: { 'X-CSRFToken': csrftoken } });
+      const data = await res.json();
+      alert(data.message || '처리가 완료되었습니다.');
+      if (data.success) location.reload();
+    } catch (err) {
+      console.error(err);
+      alert('삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    }
+  }
+</script>
+{% endblock %}

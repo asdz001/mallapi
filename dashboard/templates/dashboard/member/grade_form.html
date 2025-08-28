@@ -1,0 +1,167 @@
+{% extends "dashboard/base_admin.html" %}
+{% load i18n static %}
+
+{% block title %}
+    {% if is_edit %}등급 수정{% else %}등급 생성{% endif %}
+{% endblock %}
+
+{% block extrahead %}
+<style>
+.color-preview { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #ddd; margin-left: 10px; }
+.icon-preview { font-size: 1.5em; margin-left: 10px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="content-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1>
+            {% if is_edit %}등급 수정{% else %}등급 생성{% endif %}
+        </h1>
+        <a href="{% url 'dashboard:grade_list' %}" class="btn btn-secondary">목록으로</a>
+    </div>
+</section>
+
+<section class="content">
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>등급명 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="name" 
+                                   value="{% if is_edit %}{{ grade.name }}{% endif %}"
+                                   {% if is_edit %}readonly{% endif %} required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>표시명</label>
+                            <input type="text" class="form-control" name="display_name" 
+                                   value="{% if is_edit %}{{ grade.display_name }}{% endif %}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>회원 타입 <span class="text-danger">*</span></label>
+                            <select class="form-control" name="member_type" {% if is_edit %}disabled{% endif %} required>
+                                <option value="">선택하세요</option>
+                                <option value="B2C" {% if is_edit and grade.member_type == 'B2C' %}selected{% endif %}>B2C</option>
+                                <option value="B2B" {% if is_edit and grade.member_type == 'B2B' %}selected{% endif %}>B2B</option>
+                                <option value="ALL" {% if is_edit and grade.member_type == 'ALL' %}selected{% endif %}>공통</option>
+                            </select>
+                            {% if is_edit %}<input type="hidden" name="member_type" value="{{ grade.member_type }}">{% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>등급 순서</label>
+                            <input type="number" class="form-control" name="order" 
+                                   value="{% if is_edit %}{{ grade.order }}{% else %}999{% endif %}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>할인율 (%)</label>
+                            <input type="number" class="form-control" name="discount_rate" step="0.01"
+                                   value="{% if is_edit %}{{ grade.discount_rate }}{% else %}0{% endif %}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>포인트 적립율 (%)</label>
+                            <input type="number" class="form-control" name="point_rate" step="0.1"
+                                   value="{% if is_edit %}{{ grade.point_rate }}{% else %}1.0{% endif %}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" name="auto_upgrade" 
+                               {% if is_edit and grade.auto_upgrade or not is_edit %}checked{% endif %}>
+                        <label class="form-check-label">자동 승급 활성화</label>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>최소 주문횟수</label>
+                            <input type="number" class="form-control" name="min_order_count" 
+                                   value="{% if is_edit %}{{ grade.min_order_count }}{% endif %}">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>최소 총 구매금액</label>
+                            <input type="number" class="form-control" name="min_total_amount" 
+                                   value="{% if is_edit %}{{ grade.min_total_amount }}{% endif %}">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>연간 구매금액</label>
+                            <input type="number" class="form-control" name="min_period_amount" 
+                                   value="{% if is_edit %}{{ grade.min_period_amount }}{% endif %}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>등급 색상</label>
+                            <div class="input-group">
+                                <input type="color" class="form-control" name="color_code" 
+                                       value="{% if is_edit %}{{ grade.color_code }}{% else %}#6c757d{% endif %}">
+                                <span class="color-preview" id="colorPreview"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>아이콘</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" name="icon_class" 
+                                       value="{% if is_edit %}{{ grade.icon_class }}{% else %}fas fa-user{% endif %}">
+                                <span class="icon-preview" id="iconPreview"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" name="is_default" 
+                               {% if is_edit and grade.is_default %}checked{% endif %}>
+                        <label class="form-check-label">기본 등급으로 설정</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" name="is_active" 
+                               {% if is_edit and grade.is_active or not is_edit %}checked{% endif %}>
+                        <label class="form-check-label">활성화</label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    {% if is_edit %}수정 완료{% else %}등급 생성{% endif %}
+                </button>
+                <a href="{% url 'dashboard:grade_list' %}" class="btn btn-secondary ml-2">취소</a>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -50,6 +50,15 @@
                 <p>{% trans "회원 목록" %}</p>
               </a>
             </li>
+
+
+            <li class="nav-item">
+              <a href="{% url 'dashboard:grade_list' %}"
+                class="nav-link {% if path == '/dashboard/members/grade' %}active{% endif %}">
+                <i class="far fa-circle nav-icon"></i>
+                <p>{% trans "회원별 등급관리" %}</p>
+              </a>
+            </li>
             
             <li class="nav-item">
               <a href="{% url 'dashboard:deleted_member_list' %}"

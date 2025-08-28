@@ -536,3 +536,75 @@ def percentage(value, total):
         return f"{(float(value) / float(total) * 100):.1f}%"
     except (ValueError, TypeError, ZeroDivisionError):
         return "0%"
+    
+    
+# 🆕 등급 타입 포맷팅 필터 추가
+@register.filter
+def format_table_cell(value, column):
+    """테이블 셀 값을 포맷팅하여 반환"""
+    
+    # ... 기존 타입들 처리 ...
+    
+    # 🆕 등급 타입 처리 추가
+    if column.get('type') == 'grade':
+        if value and hasattr(value, 'display_name'):  # MemberGrade 객체
+            # 등급 고정 여부 확인 (value는 member.grade이므로 member 객체 참조)
+            member = getattr(value, 'member_set', None)
+            is_fixed = False
+            if hasattr(value, '_prefetched_objects_cache'):
+                # member 객체에서 grade_fixed 확인하는 방법이 필요함
+                pass
+            
+            # 등급 배지 HTML 생성
+            badge_html = f'''
+                <span class="grade-badge" 
+                      style="background-color: {value.color_code}; 
+                             color: white; 
+                             padding: 4px 8px; 
+                             border-radius: 12px; 
+                             font-size: 11px; 
+                             font-weight: 600;">
+                    <i class="{value.icon_class}"></i> {value.display_name}
+                </span>
+            '''
+            return mark_safe(badge_html)
+        else:
+            return format_html('<span class="text-muted" style="font-style: italic;">등급없음</span>')
+    
+    # 기존 타입 처리는 그대로 유지...
+    
+    return value
+
+# 🆕 등급 전용 필터 추가 (더 정확한 처리를 위해)
+@register.filter
+def format_member_grade(member):
+    """회원 등급을 포맷팅하여 표시"""
+    if not member.grade:
+        return format_html('<span class="text-muted" style="font-style: italic; font-size: 12px;">등급없음</span>')
+    
+    # 고정 표시 여부
+    fixed_icon = ''
+    if member.grade_fixed:
+        fixed_icon = '<i class="fas fa-lock text-warning ml-1" title="등급 고정"></i>'
+    
+    badge_html = f'''
+        <span class="grade-badge" 
+              style="background-color: {member.grade.color_code}; 
+                     color: white; 
+                     padding: 4px 8px; 
+                     border-radius: 12px; 
+                     font-size: 11px; 
+                     font-weight: 600; 
+                     display: inline-block;">
+            <i class="{member.grade.icon_class}"></i> {member.grade.display_name}
+        </span>{fixed_icon}
+    '''
+    return mark_safe(badge_html)
+
+# 🆕 회원타입별 등급 옵션 생성 필터
+@register.filter
+def grades_for_member_type(grades, member_type):
+    """특정 회원타입에 해당하는 등급들만 필터링"""
+    if not grades:
+        return []
+    return grades.filter(member_type__in=[member_type, 'ALL'])

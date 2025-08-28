@@ -1,0 +1,151 @@
+{% extends "dashboard/base_admin.html" %}
+{% load i18n static %}
+
+{% block title %}등급 변경 이력{% endblock %}
+
+{% block content %}
+<section class="content-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1><i class="fas fa-history"></i> 등급 변경 이력</h1>
+            <small class="text-muted">{{ member.name }} ({{ member.username }}) 회원의 등급 변경 내역</small>
+        </div>
+        <div>
+            <a href="{% url 'members:member_list' %}" class="btn btn-secondary">회원 목록</a>
+        </div>
+    </div>
+</section>
+
+<section class="content">
+    <!-- 현재 회원 정보 -->
+    <div class="card mb-3">
+        <div class="card-header">
+            <h6>현재 회원 정보</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>이름:</strong> {{ member.name }}<br>
+                    <strong>아이디:</strong> {{ member.username }}<br>
+                    <strong>회원타입:</strong> {{ member.get_member_type_display }}
+                </div>
+                <div class="col-md-6">
+                    <strong>현재 등급:</strong> 
+                    {% if member.grade %}
+                        <span class="badge" style="background-color: {{ member.grade.color_code }};">
+                            <i class="{{ member.grade.icon_class }}"></i> {{ member.grade.display_name }}
+                        </span>
+                        {% if member.grade_fixed %}
+                            <i class="fas fa-lock text-warning" title="등급 고정"></i>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-muted">등급 없음</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 이력 목록 -->
+    <div class="card">
+        <div class="card-header">
+            <h6>등급 변경 이력</h6>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>변경일시</th>
+                        <th>이전 등급</th>
+                        <th>새 등급</th>
+                        <th>변경 사유</th>
+                        <th>변경자</th>
+                        <th>상세 사유</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for history in histories %}
+                    <tr>
+                        <td>{{ history.created_at|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            {% if history.old_grade %}
+                                <span class="badge" style="background-color: {{ history.old_grade.color_code }};">
+                                    {{ history.old_grade.display_name }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">없음</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge" style="background-color: {{ history.new_grade.color_code }};">
+                                <i class="{{ history.new_grade.icon_class }}"></i> {{ history.new_grade.display_name }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if history.change_reason == 'auto' %}
+                                <span class="badge badge-success">자동 승급</span>
+                            {% elif history.change_reason == 'manual' %}
+                                <span class="badge badge-primary">수동 변경</span>
+                            {% elif history.change_reason == 'signup' %}
+                                <span class="badge badge-info">신규 가입</span>
+                            {% elif history.change_reason == 'promotion' %}
+                                <span class="badge badge-warning">특별 승급</span>
+                            {% elif history.change_reason == 'demotion' %}
+                                <span class="badge badge-danger">등급 강등</span>
+                            {% else %}
+                                {{ history.get_change_reason_display }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if history.changed_by %}
+                                {{ history.changed_by.username }}
+                            {% else %}
+                                <span class="text-muted">시스템</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if history.reason_detail %}
+                                <small>{{ history.reason_detail|truncatechars:50 }}</small>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            등급 변경 이력이 없습니다.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 페이지네이션 -->
+        {% if histories.has_other_pages %}
+        <div class="card-footer">
+            <nav>
+                <ul class="pagination justify-content-center mb-0">
+                    {% if histories.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ histories.previous_page_number }}">이전</a>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">{{ histories.number }} / {{ histories.paginator.num_pages }}</span>
+                    </li>
+                    
+                    {% if histories.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ histories.next_page_number }}">다음</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

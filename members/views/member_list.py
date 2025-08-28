@@ -26,6 +26,22 @@ COLUMNS = [
         "default": "미입력",
     },
     {
+        "field": "grade",
+        "header": "등급",
+        "type": "grade",  # 새로운 타입
+        "align": "center",
+        "width": "100px",
+        "default": "등급없음",
+    },
+    {
+        "field": "member_type",
+        "header": "회원유형",
+        "type": "choice",
+        "align": "center",
+        "width": "90px",
+        "default": "일반",
+    },
+    {
         "field": "member_type",  # 🔁 user_type → member_type
         "header": "회원유형",
         "type": "choice",
@@ -110,110 +126,74 @@ STATUS_CHOICES = [
 PER_PAGE_OPTIONS = [10, 25, 50, 100]
 
 
+#member_list 뷰 함수 수정 (기존 함수 내용 일부 수정)
 def member_list(request):
-    """
-    회원 목록 뷰 (활성 회원만 표시)
-    - 검색/필터/정렬/페이지네이션을 처리해서 템플릿에 전달
-    """
-    # 📊 기본 쿼리셋 (소프트 삭제된 회원 제외)
-    queryset = Member.objects.all()  # 자동으로 is_deleted=False인 회원만 조회
+    # 🆕 등급 관련 데이터를 포함하여 쿼리 (select_related 추가)
+    members_qs = Member.objects.select_related('grade').all()
+    
+    # 기존 검색 및 필터링...
+    search_field = request.GET.get('search_field', 'username')
+    search_query = request.GET.get('search_query', '').strip()
+    member_type_filter = request.GET.get('member_type')
+    is_active_filter = request.GET.get('is_active')
+    
+    # 🆕 등급 필터링 추가
+    grade_filter = request.GET.get('grade')
+    if grade_filter:
+        if grade_filter == 'none':  # 등급 없음
+            members_qs = members_qs.filter(grade__isnull=True)
+        else:
+            members_qs = members_qs.filter(grade_id=grade_filter)
+    
+    # 기존 필터링 로직들...
+    if search_query and search_field:
+        if search_field == 'username':
+            members_qs = members_qs.filter(username__icontains=search_query)
+        elif search_field == 'name':
+            members_qs = members_qs.filter(name__icontains=search_query)
+        elif search_field == 'email':
+            members_qs = members_qs.filter(email__icontains=search_query)
+        elif search_field == 'phone':
+            members_qs = members_qs.filter(phone__icontains=search_query)
+    
+    if member_type_filter:
+        members_qs = members_qs.filter(member_type=member_type_filter)
+    
+    if is_active_filter:
+        members_qs = members_qs.filter(is_active=(is_active_filter == 'true'))
 
-    # 🔍 검색/필터 파라미터 수집
-    search_field = request.GET.get("search_field", "username")
-    search_value = request.GET.get("search_value", "").strip()
-    user_type = request.GET.get("user_type", "")  # UI 파라미터 이름 유지
-    status = request.GET.get("status", "")
-    start_date = request.GET.get("start_date", "")
-    end_date = request.GET.get("end_date", "")
+    # 페이지네이션
+    per_page = min(int(request.GET.get('per_page', 20)), 100)
+    paginator = Paginator(members_qs, per_page)
+    page = request.GET.get('page', 1)
+    members = paginator.get_page(page)
 
-    # 🔎 기본 검색 적용 (선택된 필드 기준 부분일치)
-    if search_value:
-        if search_field == "username":
-            queryset = queryset.filter(username__icontains=search_value)
-        elif search_field == "name":
-            queryset = queryset.filter(name__icontains=search_value)
-        elif search_field == "email":
-            queryset = queryset.filter(email__icontains=search_value)
-        elif search_field == "phone":  # 🔁 mobile → phone
-            queryset = queryset.filter(phone__icontains=search_value)
+    # 🆕 등급 목록을 템플릿에 전달 (필터용)
+    from members.models import MemberGrade
+    grades = MemberGrade.objects.filter(is_active=True).order_by('member_type', 'order')
 
-    # 🔎 회원유형 필터 (모델 필드명으로 직접 필터)
-    if user_type:
-        queryset = queryset.filter(member_type=user_type)
-
-    # 🔎 상태 필터
-    if status:
-        if status == "active":
-            queryset = queryset.filter(is_active=True)
-        elif status == "inactive":
-            queryset = queryset.filter(is_active=False)
-
-    # 🔎 가입일(생성일) 범위 필터
-    if start_date:
-        try:
-            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
-            queryset = queryset.filter(created_at__date__gte=start_date_obj)
-        except ValueError:
-            pass  # 잘못된 형식은 무시
-
-    if end_date:
-        try:
-            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
-            queryset = queryset.filter(created_at__date__lte=end_date_obj)
-        except ValueError:
-            pass
-
-    # ↕️ 정렬 (기본: 최신 가입순)
-    sort_by = request.GET.get("sort", "-created_at")
-    valid_sort_fields = [
-        "username", "-username",
-        "name", "-name",
-        "email", "-email",
-        "phone", "-phone",          # ✚ 정렬 허용
-        "member_type", "-member_type",    # ✚ 정렬 허용
-        "created_at", "-created_at",
-        "is_active", "-is_active",
+    # 검색 필드 옵션
+    search_fields = [
+        ('username', '아이디'),
+        ('name', '이름'),
+        ('email', '이메일'),
+        ('phone', '휴대폰'),
     ]
-    queryset = queryset.order_by(sort_by) if sort_by in valid_sort_fields else queryset.order_by("-created_at")
 
-    # 📄 페이지네이션
-    try:
-        per_page = int(request.GET.get("per_page", 25))
-    except ValueError:
-        per_page = 25
-    if per_page not in PER_PAGE_OPTIONS:
-        per_page = 25
-
-    paginator = Paginator(queryset, per_page)
-    page_number = request.GET.get("page", 1)
-    try:
-        members = paginator.get_page(page_number)
-    except Exception:
-        members = paginator.get_page(1)
-
-    # 📦 템플릿 컨텍스트
     context = {
-        # 테이블 데이터
-        "columns": COLUMNS,
-        "members": members,
-        # 검색/필터 옵션
-        "search_fields": SEARCH_FIELDS,
-        "user_type_choices": USER_TYPE_CHOICES,
-        "status_choices": STATUS_CHOICES,
-        "per_page_options": PER_PAGE_OPTIONS,
-        # 현재 값 유지
-        "search_field": search_field,
-        "search_value": search_value,
-        "user_type": user_type,
-        "status": status,
-        "start_date": start_date,
-        "end_date": end_date,
-        "per_page": per_page,
-        "sort_by": sort_by,
-        # 부가 정보
-        "total_count": queryset.count(),
+        'members': members,
+        'columns': COLUMNS,
+        'search_fields': search_fields,
+        'search_field': search_field,
+        'search_query': search_query,
+        'member_type_filter': member_type_filter,
+        'is_active_filter': is_active_filter,
+        'grades': grades,  # 🆕 등급 목록 추가
+        'grade_filter': grade_filter,  # 🆕 현재 선택된 등급 필터
+        'per_page': per_page,
     }
-    return render(request, "dashboard/member/member_list.html", context)
+
+    return render(request, 'dashboard/member/member_list.html', context)
 
 
 def member_bulk_action(request):
