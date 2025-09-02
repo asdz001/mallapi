@@ -56,7 +56,7 @@ FIELD_GROUPS = {
         'icon': 'fas fa-crown',
         'description': '회원 등급 및 혜택 정보',
         'required_for': ['B2C', 'B2B'],
-        'coming_soon': True,  # 향후 구현 예정 표시
+        #'coming_soon': True,  # 향후 구현 예정 표시
     },
     'points': {
         'name': '포인트/적립금',
@@ -505,11 +505,55 @@ MEMBER_FIELDS = {
 # 기존 'coming_soon': True를 제거하거나 False로 변경:
 
     'grade': {
-        'name': '등급정보',
-        'icon': 'fas fa-crown',
-        'description': '회원 등급 및 혜택 정보',
-        'required_for': ['B2C', 'B2B'],
-        # 'coming_soon': False,  # 활성화 (주석 처리하거나 False로 설정)
+        'group': 'grade',
+        'label': '회원등급',
+        'type': 'choice_foreign',
+        'model': 'MemberGrade',
+        'required': False,
+        'editable': True,
+        'list_display': True,
+        'list_width': '100px',
+        'list_align': 'center',
+        'filter_field': True,
+        'help_text': '회원의 현재 등급',
+        'widget_attrs': {
+            'class': 'form-control',
+            'id': 'id_grade',
+        },
+    },
+    
+    'grade_fixed': {
+        'group': 'grade',
+        'label': '등급고정',
+        'type': 'boolean',
+        'required': False,
+        'default': False,
+        'editable': 'admin_only',
+        'list_display': True,
+        'list_width': '80px',
+        'list_align': 'center',
+        'help_text': '체크 시 자동 승급/강등 방지',
+        'icon_true': 'fas fa-lock',
+        'icon_false': 'fas fa-unlock',
+        'widget_attrs': {
+            'class': 'form-check-input',
+        },
+    },
+    
+    'grade_fixed_reason': {
+        'group': 'grade',
+        'label': '고정사유',
+        'type': 'textarea',
+        'required': False,
+        'editable': 'admin_only',
+        'rows': 2,
+        'help_text': '등급 고정 사유 입력',
+        'member_types': ['B2C', 'B2B'],
+        'placeholder': '예: VIP 계약 고객, 대량구매 고객 등',
+        'widget_attrs': {
+            'class': 'form-control',
+            'rows': 2,
+        },
     },
 }
 

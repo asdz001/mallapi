@@ -16,11 +16,11 @@
     <div class="d-flex justify-content-between align-items-center">
         <h1>👥 회원 리스트</h1>
         <div>
-            <!-- 🆕 삭제 회원 관리 버튼 추가 -->
+            <!-- 🆕 삭제 회원 관리 버튼 -->
             <a href="{% url 'dashboard:deleted_member_list' %}" class="btn btn-sm btn-warning mr-2">
                 <i class="fas fa-trash-restore"></i> 삭제 회원 관리
             </a>
-            <!-- 엑셀 다운로드 버튼 (향후 구현) -->
+            <!-- (향후) 엑셀 다운로드 -->
             <button class="btn btn-sm btn-success" disabled>
                 <i class="fas fa-file-excel"></i> 엑셀 다운로드
             </button>
@@ -39,7 +39,7 @@
         <div class="card-body">
             <form method="get" id="search-form">
                 
-                {# 📋 첫 번째 줄: 기본 검색 #}
+                {# 📋 1줄: 기본 검색 #}
                 <div class="row mb-3">
                     <div class="col-md-12">
                         <div class="form-inline">
@@ -62,7 +62,7 @@
                     </div>
                 </div>
 
-                {# 📋 두 번째 줄: 회원유형 + 상태 + 가입일 #}
+                {# 📋 2줄: 회원유형 #}
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <div class="form-inline">
@@ -78,6 +78,7 @@
                     </div>
                 </div>    
 
+                {# 📋 3줄: 상태 #}
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <div class="form-inline">
@@ -93,6 +94,7 @@
                     </div>
                 </div>    
 
+                {# 📋 4줄: 가입일(기간) #}
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <div class="form-inline">
@@ -113,9 +115,29 @@
                         </div>
                     </div>
                 </div>
-                
 
-                {# 🎯 검색 버튼 영역 #}
+                {# 🆕 5줄: 등급 필터 (뷰: grades/grade_filter or grade 제공) #}
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="form-inline">
+                            <label class="mr-3" style="font-size: 13px;"><strong>{% trans "등급" %}</strong></label>
+                            <select name="grade" id="grade" class="form-control form-control-sm" style="width: 180px; font-size: 13px;">
+                                <option value="">{% trans "전체 등급" %}</option>
+                                <option value="none" {% if grade_filter == 'none' or grade == 'none' %}selected{% endif %}>{% trans "등급 없음" %}</option>
+                                {% if grades %}
+                                    {% for g in grades %}
+                                        <option value="{{ g.id }}"
+                                            {% if grade_filter == g.id|stringformat:"s" or grade == g.id|stringformat:"s" %}selected{% endif %}>
+                                            [{{ g.member_type }}] {{ g.display_name|default:g.name }}
+                                        </option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {# 🎯 버튼 영역 #}
                 <div class="row">
                     <div class="col-md-12 text-center">
                         <button type="submit" class="btn btn-primary mr-3" style="font-size: 13px; padding: 8px 16px;">
@@ -149,7 +171,7 @@
                             </th>
                             <!-- 동적 컬럼 생성 -->
                             {% for col in columns %}
-                            <th class="{{ col|get_column_class }}">{{ col.header }}</th>
+                                <th class="{{ col|get_column_class }}">{{ col.header }}</th>
                             {% endfor %}
                             <!-- 보기/수정 컬럼 -->
                             <th style="width: 120px;" class="text-center">관리</th>
@@ -182,18 +204,17 @@
                             
                             <!-- 보기/수정 버튼 -->
                             <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-primary btn-view-member " 
+                                <button type="button" class="btn btn-sm btn-primary btn-view-member" 
                                         data-member-id="{{ member.id }}" title="상세보기" data-toggle="tooltip">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-warning btn-edit-member " 
+                                <button type="button" class="btn btn-sm btn-warning btn-edit-member" 
                                         data-member-id="{{ member.id }}" title="수정" data-toggle="tooltip">
                                     <i class="fas fa-edit"></i>
                                 </button>
                             </td>
 
-                                                       
-                            <!-- 삭제 버튼 (별도 컬럼) -->
+                            <!-- 삭제 버튼 -->
                             <td class="text-center">
                                 <button type="button" class="btn btn-sm btn-danger btn-delete-member" 
                                         data-member-id="{{ member.id }}" title="삭제" data-toggle="tooltip">
@@ -202,7 +223,6 @@
                             </td>
                         </tr>
                         {% empty %}
-                        <!-- 데이터가 없을 때 -->
                         <tr>
                             <td colspan="{{ columns|length|add:3 }}" class="text-center py-4">
                                 <div class="text-muted">
@@ -233,14 +253,15 @@
         </div>
     </div>
 
-    <!-- 📊 표시 설정 및 페이지네이션 (공통 컴포넌트 사용) -->
+    <!-- 📊 페이지네이션 (공통 컴포넌트) -->
     {% include 'common/pagination.html' with items=members sort_choices=sort_choices %}
 
 </section>
-<!-- 🆕 회원 상세/수정 모달 포함 -->
+
+<!-- 회원 상세/수정 모달 -->
 {% include 'dashboard/member/member_modal.html' %}
 
-<!-- 🆕 삭제 사유 입력 모달 -->
+<!-- 삭제 사유 입력 모달 -->
 <div class="modal fade" id="deleteReasonModal" tabindex="-1" role="dialog" aria-labelledby="deleteReasonModalLabel" aria-hidden="true">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
@@ -293,8 +314,8 @@
   </div>
 </div>
 
-<!-- JavaScript 로드 -->
-<script src="{% static 'dashboard/js/search_engine.js' %}"></script>
+<!-- JS -->
+
 <script src="{% static 'dashboard/js/member/member_list.js' %}"></script>
 <script src="{% static 'dashboard/js/member/member_modal.js' %}"></script>
 

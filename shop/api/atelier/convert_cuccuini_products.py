@@ -139,9 +139,10 @@ def convert_atelier_products():
             discount = safe_decimal(discount_raw)
 
             product, _ = RawProduct.objects.update_or_create(
+                retailer=RETAILER_CODE,
                 external_product_id=gid,
                 defaults={
-                    "retailer": RETAILER_CODE,
+                    
                     "raw_brand_name": brand_name,
                     "product_name": f"{goods.get('GoodsName', '')} {goods.get('Model', '')} {goods.get('Variant', '')}",
                     "gender": gender,

@@ -1,77 +1,84 @@
 # members/forms.py
 # ------------------------------------------------------------
-# 수정된 부분: field_config.py를 활용한 동적 필드 생성
-# UX 변경 없음: 기존과 동일한 화면과 동작 보장
-# 오류 수정: Meta 클래스에서 self 사용 문제 해결
+# field_config 기반 동적 폼 구성 - 등급 선택 필드 강화
 # ------------------------------------------------------------
-
 from django import forms
 from django.contrib.auth.hashers import make_password
-from .models import Member
+from django.db import models
+from .models import Member, MemberGrade  # ✅ MemberGrade 추가 import
 from .field_config import (
-    MEMBER_FIELDS, 
-    get_form_fields, 
-    get_required_fields,
-    FIELD_GROUPS
+    MEMBER_FIELDS,
+    get_form_fields,
+    get_required_fields,   # ← 필수필드 계산(회원유형 필요)
+    FIELD_GROUPS,
 )
 
-def _digits(s: str) -> str:
-    """숫자만 추출하는 헬퍼 함수 (기존과 동일)"""
-    return ''.join(ch for ch in (s or '') if ch.isdigit())
+# ─────────────────────────────────────────────────────────────
+# 유틸
+# ─────────────────────────────────────────────────────────────
+def _digits(text: str) -> str:
+    """문자열에서 숫자만 추출"""
+    return ''.join(ch for ch in (text or '') if ch.isdigit())
 
-# ========================================
-# 🛠️ 헬퍼 함수들 (클래스 외부에서 정의)
-# ========================================
 
+# ─────────────────────────────────────────────────────────────
+# form.Meta: fields / widgets 구성 헬퍼
+# ─────────────────────────────────────────────────────────────
 def _get_form_fields_list():
     """
-    폼에서 사용할 필드 목록을 동적으로 생성
-    기존 필드들을 모두 포함하여 UX 변경 없음 보장
+    form.Meta.fields 값을 구성한다.
+    - 기존 화면 UX를 유지하기 위해 기본 필드 + field_config 정의 필드를 합쳐서 사용
     """
-    # field_config.py에서 기본 필드들 가져오기
-    config_fields = list(get_form_fields().keys())
-    
-    # ✅ 기존 필드들 명시적 추가 (UX 변경 없음)
     base_fields = [
+        # 기본 정보
         "username", "member_type", "name", "email", "phone",
-        "address", "zip_code", "gender", "birth_date",
-        "marketing_agree", "is_forever_member", "is_sms_agree",
-        "recommender_id", "join_channel", "memo",
-        # B2B 필드들
+        "address", "zip_code",
+        # B2C
+        "gender", "birth_date", "marketing_agree", "is_sms_agree",
+        "recommender_id", "join_channel", "memo", "is_forever_member",
+        # B2B
         "company_name", "business_number", "representative_name",
-        "business_type", "business_item", "company_phone", 
-        "fax", "company_address",
-        # 시스템 필드
+        "business_type", "business_item", "company_phone", "fax",
+        "company_address",
+        # 시스템
         "is_active",
+        # 등급(필드 설정에 존재하면 표시됨)
+        "grade", "grade_fixed", "grade_fixed_reason",
     ]
-    
-    # 중복 제거 후 반환
-    all_fields = list(dict.fromkeys(base_fields + config_fields))
+
+    try:
+        cfg_fields = list(get_form_fields().keys())
+    except Exception:
+        cfg_fields = []
+
+    # 중복 제거하여 반환
+    all_fields = list(dict.fromkeys(base_fields + cfg_fields))
     return all_fields
+
 
 def _get_form_widgets():
     """
-    폼 위젯을 동적으로 생성
-    기존 위젯 설정을 모두 포함하여 UX 변경 없음
+    폼 위젯을 동적으로 구성한다.
     """
-    # ✅ 기존 위젯들 유지 (UX 변경 없음)
     base_widgets = {
-        "username": forms.TextInput(attrs={"class": "form-control", "placeholder": "아이디"}),
+        # 기본 정보
+        "username": forms.TextInput(attrs={"class": "form-control", "placeholder": "영문/숫자 조합"}),
         "member_type": forms.Select(attrs={"class": "form-control"}),
-        "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "이름"}),
+        "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "실명"}),
         "email": forms.EmailInput(attrs={"class": "form-control", "placeholder": "example@domain.com"}),
         "phone": forms.TextInput(attrs={"class": "form-control", "placeholder": "010-0000-0000"}),
-        "address": forms.TextInput(attrs={"class": "form-control", "placeholder": "주소", "readonly": "readonly"}),
-        "zip_code": forms.TextInput(attrs={"class": "form-control", "placeholder": "우편번호", "readonly": "readonly"}),
+        "address": forms.TextInput(attrs={"class": "form-control"}),
+        "zip_code": forms.TextInput(attrs={"class": "form-control"}),
+        # B2C
         "gender": forms.Select(attrs={"class": "form-control"}),
         "birth_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
         "marketing_agree": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-        "is_forever_member": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         "is_sms_agree": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         "recommender_id": forms.TextInput(attrs={"class": "form-control"}),
         "join_channel": forms.Select(attrs={"class": "form-control"}),
         "memo": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
-        # B2B 위젯들
+        "is_forever_member": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        # B2B
         "company_name": forms.TextInput(attrs={"class": "form-control"}),
         "business_number": forms.TextInput(attrs={"class": "form-control"}),
         "representative_name": forms.TextInput(attrs={"class": "form-control"}),
@@ -79,303 +86,313 @@ def _get_form_widgets():
         "business_item": forms.TextInput(attrs={"class": "form-control"}),
         "company_phone": forms.TextInput(attrs={"class": "form-control"}),
         "fax": forms.TextInput(attrs={"class": "form-control"}),
-        "company_address": forms.TextInput(attrs={"class": "form-control", "placeholder": "회사 주소"}),
+        "company_address": forms.TextInput(attrs={"class": "form-control"}),
+        # 시스템
         "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        # ✅ 등급 관련 위젯 강화
+        "grade": forms.Select(attrs={"class": "form-control", "id": "id_grade"}),  # JS에서 접근용 ID
+        "grade_fixed": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        "grade_fixed_reason": forms.Textarea(attrs={"class": "form-control", "rows": 2}),
     }
-    
-    # 🆕 field_config.py에서 추가 위젯 생성 (향후 확장용)
+
+    # field_config 기반 추가 위젯
     config_widgets = {}
     try:
         form_fields = get_form_fields()
-        
-        for field_name, field_config in form_fields.items():
-            if field_name not in base_widgets:  # 기존에 없는 필드만
-                widget_attrs = {"class": "form-control"}
-                
-                field_type = field_config.get('type', 'text')
-                if field_type == 'boolean':
-                    widget_attrs["class"] = "form-check-input"
-                elif field_type == 'textarea':
-                    widget_attrs["rows"] = field_config.get('rows', 3)
-                elif field_type == 'date':
-                    widget_attrs["type"] = "date"
-                elif field_type == 'email':
-                    widget_attrs["placeholder"] = "example@domain.com"
-                
-                # 위젯 클래스 결정
-                if field_type == 'boolean':
-                    widget_class = forms.CheckboxInput
-                elif field_type == 'choice':
-                    widget_class = forms.Select
-                elif field_type == 'textarea':
-                    widget_class = forms.Textarea
-                elif field_type == 'date':
-                    widget_class = forms.DateInput
-                elif field_type == 'email':
-                    widget_class = forms.EmailInput
-                else:
-                    widget_class = forms.TextInput
-                
-                config_widgets[field_name] = widget_class(attrs=widget_attrs)
+        for field_name, field_cfg in form_fields.items():
+            if field_name in base_widgets:
+                continue
+
+            field_type = field_cfg.get("type", "text")
+            attrs = {"class": "form-control"}
+
+            if field_type == "boolean":
+                widget_cls = forms.CheckboxInput
+                attrs = {"class": "form-check-input"}
+            elif field_type in ("choice", "choice_foreign"):   # ✅ 수정: FK 선택도 Select로
+                widget_cls = forms.Select
+            elif field_type == "choice_multiple":
+                widget_cls = forms.SelectMultiple
+            elif field_type == "textarea":
+                widget_cls = forms.Textarea
+                attrs["rows"] = field_cfg.get("rows", 3)
+            elif field_type == "date":
+                widget_cls = forms.DateInput
+                attrs["type"] = "date"
+            elif field_type == "email":
+                widget_cls = forms.EmailInput
+                attrs["placeholder"] = "example@domain.com"
+            else:
+                widget_cls = forms.TextInput
+
+            config_widgets[field_name] = widget_cls(attrs=attrs)
     except Exception as e:
-        # field_config.py에 문제가 있어도 기존 기능은 작동하도록
-        print(f"field_config.py 로딩 중 오류: {e}")
-    
-    # 기존 위젯 + 새로운 위젯 결합
+        # 설정 오류가 있어도 폼은 렌더되도록 방어
+        print(f"[forms] 동적 위젯 생성 오류: {e}")
+
     base_widgets.update(config_widgets)
     return base_widgets
 
+
+# ─────────────────────────────────────────────────────────────
+# 생성 폼
+# ─────────────────────────────────────────────────────────────
 class MemberCreateForm(forms.ModelForm):
-    """
-    회원 생성 폼 - field_config.py 기반으로 동적 생성
-    기존 UX와 완전히 동일하게 작동
-    """
-    
-    # 🆕 추가 커스텀 필드들 (기존 로직 유지)
+    # 추가 커스텀 필드(상세주소 등)
     address_detail = forms.CharField(
-        required=False, 
+        required=False,
         label="상세주소",
-        widget=forms.TextInput(attrs={
-            "class": "form-control", 
-            "placeholder": "상세주소"
-        })
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "상세주소"}),
     )
-    
     company_address_detail = forms.CharField(
-        required=False, 
+        required=False,
         label="회사 상세주소",
-        widget=forms.TextInput(attrs={
-            "class": "form-control", 
-            "placeholder": "회사 상세주소"
-        })
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "회사 상세주소"}),
     )
-    
     password1 = forms.CharField(
         label="비밀번호",
-        widget=forms.PasswordInput(attrs={
-            "class": "form-control", 
-            "placeholder": "비밀번호(8자 이상)"
-        })
+        widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "비밀번호(8자 이상)"}),
     )
-    
     password2 = forms.CharField(
         label="비밀번호 확인",
-        widget=forms.PasswordInput(attrs={
-            "class": "form-control", 
-            "placeholder": "비밀번호 확인"
-        })
+        widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "비밀번호 확인"}),
     )
 
     class Meta:
         model = Member
-        # 🔧 수정: 함수를 직접 호출 (self 사용하지 않음)
         fields = _get_form_fields_list()
         widgets = _get_form_widgets()
-    
+
     def __init__(self, *args, **kwargs):
-        """
-        폼 초기화 - 기존 로직 유지
-        """
         super().__init__(*args, **kwargs)
-        
-        # ✅ 기존 로직 유지 (UX 변경 없음)
-        self.fields["join_channel"].required = False
-        self.fields["join_channel"].initial = "direct"
-        
-        # 🆕 동적 필드 설정 (향후 확장용)
-        self._setup_dynamic_field_properties()
-    
-    def _setup_dynamic_field_properties(self):
-        """
-        field_config.py 설정을 기반으로 필드 속성 설정
-        기존 설정을 override하지 않고 보완만 함
-        """
+
+        # ✅ 회원 타입을 안전하게 추출
+        member_type = None
         try:
-            form_fields = get_form_fields()
-            
-            for field_name, field_config in form_fields.items():
-                if field_name in self.fields:
-                    field = self.fields[field_name]
+            if self.data:
+                member_type = (self.data.get("member_type") or "").strip()
+            elif self.initial:
+                member_type = (self.initial.get("member_type") or "").strip()
+            elif hasattr(self, "instance") and self.instance and hasattr(self.instance, "member_type"):
+                member_type = getattr(self.instance, "member_type", "").strip()
+        except Exception:
+            pass
+
+        # ✅ 등급 선택 필드 동적 구성
+        self._setup_grade_field(member_type)
+
+        # 필수 필드 설정
+        if member_type:
+            try:
+                required_fields = get_required_fields(member_type)
+                for field_name in required_fields:
+                    if field_name in self.fields:
+                        self.fields[field_name].required = True
+            except Exception:
+                pass
+
+        # 회원 타입별 필드 표시/숨김
+        self._configure_fields_by_member_type(member_type)
+
+    def _setup_grade_field(self, member_type):
+        """등급 선택 필드 동적 구성"""
+        if 'grade' in self.fields:
+            try:
+                # 기본 선택지: 빈 옵션
+                choices = [('', '(자동) 기본 등급')]
+                
+                if member_type:
+                    # 해당 회원타입에 맞는 등급들 조회
+                    grades = MemberGrade.objects.filter(
+                        models.Q(member_type=member_type) | models.Q(member_type='ALL'),
+                        is_active=True
+                    ).order_by('order', 'name')
                     
-                    # help_text 추가 (기존에 없는 경우만)
-                    if field_config.get('help_text') and not field.help_text:
-                        field.help_text = field_config['help_text']
+                    for grade in grades:
+                        label = f"[{grade.member_type}] {grade.display_name or grade.name}"
+                        if grade.is_default:
+                            label += " (기본)"
+                        choices.append((grade.id, label))
+                else:
+                    # 회원타입이 없으면 전체 등급 표시
+                    grades = MemberGrade.objects.filter(is_active=True).order_by('member_type', 'order', 'name')
+                    for grade in grades:
+                        label = f"[{grade.member_type}] {grade.display_name or grade.name}"
+                        if grade.is_default:
+                            label += " (기본)"
+                        choices.append((grade.id, label))
+                
+                self.fields['grade'].choices = choices
+                
+                # 도움말 텍스트 설정
+                self.fields['grade'].help_text = "미선택 시 회원유형에 맞는 기본 등급이 자동 지정됩니다."
+                
+            except Exception as e:
+                print(f"[forms] 등급 필드 설정 오류: {e}")
+                # 오류 시 기본 선택지만 제공
+                self.fields['grade'].choices = [('', '(자동) 기본 등급')]
+
+    def _configure_fields_by_member_type(self, member_type):
+        """회원 타입별 필드 표시/숨김 설정"""
+        try:
+            # B2C 전용 필드들
+            b2c_fields = ['gender', 'birth_date', 'nickname', 'recommender_id', 
+                         'join_channel', 'is_forever_member']
+            
+            # B2B 전용 필드들  
+            b2b_fields = ['company_name', 'business_number', 'representative_name',
+                         'business_type', 'business_item', 'company_phone', 'fax', 'company_address']
+            
+            if member_type == 'B2C':
+                # B2B 필드들 비활성화
+                for field in b2b_fields:
+                    if field in self.fields:
+                        self.fields[field].required = False
+                        self.fields[field].widget.attrs['disabled'] = True
                         
-                    # 필수 여부 설정 (기존 설정 유지 우선)
-                    if not hasattr(field, '_original_required'):
-                        if field_config.get('required') == True:
-                            field.required = True
-                        elif field_config.get('required') == False:
-                            field.required = False
+            elif member_type == 'B2B':
+                # B2C 필드들 비활성화
+                for field in b2c_fields:
+                    if field in self.fields:
+                        self.fields[field].required = False
+                        self.fields[field].widget.attrs['disabled'] = True
+                        
         except Exception as e:
-            # field_config.py에 문제가 있어도 폼은 정상 작동
-            print(f"동적 필드 설정 중 오류: {e}")
+            print(f"[forms] 필드 구성 오류: {e}")
 
-    # ========================================
-    # ✅ 기존 검증 로직 완전 유지 (UX 변경 없음)
-    # ========================================
-    
-    def clean_email(self):
-        """이메일 중복 검사 (기존 로직 유지)"""
-        email = (self.cleaned_data.get('email') or '').strip()
-        if not email:
-            return email
-        if Member.objects.filter(email=email).exists():
-            raise forms.ValidationError('이미 사용 중인 이메일입니다.')
-        return email
-    
-    def clean(self):
-        """전체 폼 검증 (기존 로직 완전 유지)"""
-        cleaned = super().clean()
+    def clean_password2(self):
+        """비밀번호 확인 검증"""
+        password1 = self.cleaned_data.get("password1")
+        password2 = self.cleaned_data.get("password2")
+        
+        if password1 and password2 and password1 != password2:
+            raise forms.ValidationError("비밀번호가 일치하지 않습니다.")
+            
+        return password2
 
-        # 🔐 기존 비밀번호 검사 (그대로 유지)
-        pw1 = (cleaned.get("password1") or "").strip()
-        pw2 = (cleaned.get("password2") or "").strip()
-        if pw1 != pw2:
-            self.add_error("password2", "비밀번호가 일치하지 않습니다.")
-        if pw1 and len(pw1) < 8:
-            self.add_error("password1", "비밀번호는 8자 이상이어야 합니다.")
+    def clean_phone(self):
+        """휴대폰 번호 검증 및 정규화"""
+        phone = self.cleaned_data.get("phone", "")
+        if phone:
+            # 숫자만 추출
+            digits = _digits(phone)
+            if digits and len(digits) >= 10:
+                # 하이픈 추가
+                if len(digits) == 11:
+                    return f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
+                elif len(digits) == 10:
+                    return f"{digits[:3]}-{digits[3:6]}-{digits[6:]}"
+        return phone
 
-        # 🧾 B2B일 때 '입력된 경우에만' 사업자번호 중복 검사 (기존 로직 유지)
-        member_type = (cleaned.get("member_type") or "").strip()
-        raw_bizno = cleaned.get("business_number") or ""
-        if member_type == "B2B" and raw_bizno:
-            biz = _digits(raw_bizno)  # '123-45-67890' → '1234567890'
-            if Member.objects.filter(business_number=biz).exists():
-                self.add_error("business_number", "이미 등록된 사업자번호입니다.")
-            else:
-                self.cleaned_data["business_number"] = biz
-
-        return cleaned
-    
-    def clean_join_channel(self):
-        """가입채널 검증 (기존 로직 유지)"""
-        v = (self.cleaned_data.get("join_channel") or "").strip()
-        return v or "direct"
+    def clean_business_number(self):
+        """사업자번호 검증 (B2B인 경우)"""
+        business_number = self.cleaned_data.get("business_number", "")
+        member_type = self.cleaned_data.get("member_type", "")
+        
+        if member_type == "B2B" and not business_number:
+            raise forms.ValidationError("사업자회원은 사업자번호가 필수입니다.")
+            
+        if business_number:
+            # 숫자만 추출하여 검증
+            digits = _digits(business_number)
+            if len(digits) != 10:
+                raise forms.ValidationError("사업자번호는 10자리 숫자여야 합니다.")
+            # 하이픈 추가하여 반환
+            return f"{digits[:3]}-{digits[3:5]}-{digits[5:]}"
+            
+        return business_number
 
     def save(self, commit=True):
-        """저장 로직 (기존 로직 완전 유지)"""
-        instance = super().save(commit=False)
-
-        # ✅ 기존 비밀번호 처리 로직 유지
-        raw_password = self.cleaned_data.get("password1")
-        if raw_password:
-            instance.password = make_password(raw_password)
-
-        # ✅ 기존 주소 합치기 로직 유지
-        base_addr = (self.cleaned_data.get("address") or "").strip()
-        detail = (self.cleaned_data.get("address_detail") or "").strip()
-        instance.address = f"{base_addr} {detail}".strip() if detail else base_addr
-
-        # ✅ 기존 회사주소 합치기 로직 유지
-        base_caddr = (self.cleaned_data.get("company_address") or "").strip()
-        cdetail = (self.cleaned_data.get("company_address_detail") or "").strip()
-        instance.company_address = f"{base_caddr} {cdetail}".strip() if cdetail else base_caddr
-
-        # ✅ 기존 기본값 보정 로직 유지
-        if not instance.join_channel:
-            instance.join_channel = "direct"
-
+        """회원 저장 - 비밀번호 해싱"""
+        member = super().save(commit=False)
+        
+        # 비밀번호 설정
+        if self.cleaned_data.get("password1"):
+            member.password = make_password(self.cleaned_data["password1"])
+            
         if commit:
-            instance.save()
-        return instance
-    
+            member.save()
+            
+        return member
 
+
+# ─────────────────────────────────────────────────────────────
+# 수정 폼 (비밀번호 없는 버전)
+# ─────────────────────────────────────────────────────────────
 class MemberUpdateForm(forms.ModelForm):
     """
-    회원 수정 폼 - MemberCreateForm 기반으로 수정용 최적화
-    기존 데이터 수정에 특화된 폼
+    회원 정보 수정 폼 (비밀번호 제외)
+    - 모달에서 사용
     """
     
     class Meta:
         model = Member
-        # 수정 가능한 필드만 포함 (username, password 제외)
-        fields = [
-            'name', 'email', 'phone', 'address', 'zip_code', 'is_active',
-            'gender', 'birth_date', 'marketing_agree', 'is_sms_agree', 
-            'recommender_id', 'join_channel', 'memo', 'nickname',
-            # B2B 필드들
-            'company_name', 'business_number', 'representative_name',
-            'business_type', 'business_item', 'company_phone', 
-            'fax', 'company_address', 'is_forever_member', 'is_blacklisted'
-        ]
-        
-        widgets = {
-            "name": forms.TextInput(attrs={"class": "form-control"}),
-            "email": forms.EmailInput(attrs={"class": "form-control"}),
-            "phone": forms.TextInput(attrs={"class": "form-control"}),
-            "address": forms.TextInput(attrs={"class": "form-control"}),
-            "zip_code": forms.TextInput(attrs={"class": "form-control"}),
-            "gender": forms.Select(attrs={"class": "form-control"}),
-            "birth_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
-            "marketing_agree": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-            "is_sms_agree": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-            "recommender_id": forms.TextInput(attrs={"class": "form-control"}),
-            "join_channel": forms.Select(attrs={"class": "form-control"}),
-            "memo": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
-            "nickname": forms.TextInput(attrs={"class": "form-control"}),
-            # B2B 위젯들
-            "company_name": forms.TextInput(attrs={"class": "form-control"}),
-            "business_number": forms.TextInput(attrs={"class": "form-control"}),
-            "representative_name": forms.TextInput(attrs={"class": "form-control"}),
-            "business_type": forms.TextInput(attrs={"class": "form-control"}),
-            "business_item": forms.TextInput(attrs={"class": "form-control"}),
-            "company_phone": forms.TextInput(attrs={"class": "form-control"}),
-            "fax": forms.TextInput(attrs={"class": "form-control"}),
-            "company_address": forms.TextInput(attrs={"class": "form-control"}),
-            "is_forever_member": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-            "is_blacklisted": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-        }
-    
+        exclude = ['password', 'username']  # 비밀번호, 아이디는 수정 불가
+        widgets = _get_form_widgets()
+
     def __init__(self, *args, **kwargs):
-        """폼 초기화 - 수정용 특별 설정"""
         super().__init__(*args, **kwargs)
         
-        # 선택적 필드 설정
-        self.fields["join_channel"].required = False
-        self.fields["email"].required = False
+        # 인스턴스에서 회원 타입 추출
+        member_type = None
+        if self.instance:
+            member_type = getattr(self.instance, 'member_type', '')
+            
+        # 등급 선택 필드 설정
+        self._setup_grade_field(member_type)
         
-        # member_type에 따라 필드 조건 설정
-        if self.instance and self.instance.member_type == 'B2B':
-            self.fields["company_name"].required = False  # 수정 시에는 필수 아님
-            self.fields["business_number"].required = False
-    
-    def clean_email(self):
-        """이메일 중복 검사 (현재 회원 제외)"""
-        email = (self.cleaned_data.get('email') or '').strip()
-        if not email:
-            return email
+        # 회원 타입별 필드 구성
+        self._configure_fields_by_member_type(member_type)
+
+    def _setup_grade_field(self, member_type):
+        """등급 선택 필드 동적 구성 (수정용)"""
+        if 'grade' in self.fields:
+            try:
+                choices = [('', '등급 선택')]
+                
+                if member_type:
+                    grades = MemberGrade.objects.filter(
+                        models.Q(member_type=member_type) | models.Q(member_type='ALL'),
+                        is_active=True
+                    ).order_by('order', 'name')
+                    
+                    for grade in grades:
+                        label = f"[{grade.member_type}] {grade.display_name or grade.name}"
+                        choices.append((grade.id, label))
+                
+                self.fields['grade'].choices = choices
+                
+            except Exception as e:
+                print(f"[forms] 등급 필드 설정 오류: {e}")
+
+    def _configure_fields_by_member_type(self, member_type):
+        """회원 타입별 필드 표시/숨김 설정"""
+        try:
+            b2c_fields = ['gender', 'birth_date', 'nickname', 'recommender_id', 
+                         'join_channel', 'is_forever_member']
+            b2b_fields = ['company_name', 'business_number', 'representative_name',
+                         'business_type', 'business_item', 'company_phone', 'fax', 'company_address']
             
-        # 현재 수정 중인 회원은 중복 검사에서 제외
-        existing = Member.objects.filter(email=email)
-        if self.instance:
-            existing = existing.exclude(pk=self.instance.pk)
-            
-        if existing.exists():
-            raise forms.ValidationError('이미 사용 중인 이메일입니다.')
-        return email
-    
-    def clean_business_number(self):
-        """사업자번호 중복 검사 (현재 회원 제외)"""
-        bizno = self.cleaned_data.get('business_number')
-        if not bizno:
-            return bizno
-            
-        biz = _digits(bizno)  # 숫자만 추출
-        if not biz:
-            return bizno
-            
-        # 현재 수정 중인 회원은 중복 검사에서 제외
-        existing = Member.objects.filter(business_number=biz)
-        if self.instance:
-            existing = existing.exclude(pk=self.instance.pk)
-            
-        if existing.exists():
-            raise forms.ValidationError('이미 등록된 사업자번호입니다.')
-        return biz
-    
-    def clean_join_channel(self):
-        """가입채널 검증"""
-        v = (self.cleaned_data.get("join_channel") or "").strip()
-        return v or "direct"
+            if member_type == 'B2C':
+                for field in b2b_fields:
+                    if field in self.fields:
+                        self.fields[field].required = False
+            elif member_type == 'B2B':
+                for field in b2c_fields:
+                    if field in self.fields:
+                        self.fields[field].required = False
+                        
+        except Exception as e:
+            print(f"[forms] 필드 구성 오류: {e}")
+
+    def clean_phone(self):
+        """휴대폰 번호 검증 및 정규화"""
+        phone = self.cleaned_data.get("phone", "")
+        if phone:
+            digits = _digits(phone)
+            if digits and len(digits) >= 10:
+                if len(digits) == 11:
+                    return f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
+                elif len(digits) == 10:
+                    return f"{digits[:3]}-{digits[3:6]}-{digits[6:]}"
+        return phone

@@ -140,8 +140,9 @@ def convert_atelier_products():
 
             product, _ = RawProduct.objects.update_or_create(
                 external_product_id=gid,
+                retailer=RETAILER_CODE,
                 defaults={
-                    "retailer": RETAILER_CODE,
+                    
                     "raw_brand_name": brand_name,
                     "product_name": f"{goods.get('GoodsName', '')} {goods.get('Model', '')} {goods.get('Variant', '')}",
                     "gender": gender,

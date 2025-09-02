@@ -1,9 +1,6 @@
-# members/urls.py
+# members/urls.py - 등급 선택 API URL 추가
 # ------------------------------------------------------------
-# 회원 관리 URL 패턴
-# - 기존 정상 동작 방식을 유지 (모듈 import → member_list.member_delete 형태)
-# - 새 상세/수정/활동 API는 member_detail 모듈로 분리, URL만 추가
-# - URL 끝 슬래시 제거 (프론트 호출부와 정확히 일치시켜 301/404 방지)
+# 기존 URL 패턴에 등급 관련 API 추가
 # ------------------------------------------------------------
 
 from django.urls import path
@@ -11,8 +8,8 @@ from django.urls import path
 # ✅ 기존 정상 구조: 모듈 단위 import
 from members.views import member_list, member_add, deleted_member_list, grade_views 
 
-# ✅ 신규 API 전용 모듈 (안에 스텁 함수 3개가 있어야 함)
-from members.views import member_detail  # member_detail.member_detail_api 등으로 접근
+# ✅ 신규 API 전용 모듈 (등급 선택 API 추가)
+from members.views import member_detail  # member_detail.get_member_grades_api 추가
 
 urlpatterns = [
     # =========================
@@ -26,12 +23,14 @@ urlpatterns = [
     path('bulk-action', member_list.member_bulk_action, name='member_bulk_action'),               # 벌크 액션
 
     # =========================
-    # 🆕 회원 상세/수정/활동 API (모달/탭용 AJAX)
-    # - 스텁(View) 먼저 배치 → 서버 안정화 → 점진 구현
+    # 🆕 회원 상세/수정/활동 API (모달/탭용 AJAX) - 등급 관리 포함
     # =========================
     path('detail/<int:member_id>', member_detail.member_detail_api, name='member_detail_api'),    # 상세보기
     path('update/<int:member_id>', member_detail.member_update_api, name='member_update_api'),    # 정보 수정
     path('activity/<int:member_id>', member_detail.member_activity_api, name='member_activity_api'),  # 활동 로그
+
+    # ✅ 등급 선택 옵션 API 추가
+    path('grades/<str:member_type>', member_detail.get_member_grades_api, name='get_member_grades_api'),  # 회원타입별 등급 목록
 
     # =========================
     # 🗂️ 삭제된 회원 관리
@@ -44,7 +43,6 @@ urlpatterns = [
     path('deleted/bulk-restore', deleted_member_list.bulk_restore_members, name='bulk_restore_members'),  # 벌크 복구
     path('deleted/bulk-permanent-delete', deleted_member_list.bulk_permanent_delete_members, name='bulk_permanent_delete_members'),  # 벌크 완전삭제
 
-
     # 🆕 등급 관리 URL 추가
     path('grade', grade_views.grade_list, name='grade_list'),
     path('grade/create', grade_views.grade_create, name='grade_create'),
@@ -52,7 +50,6 @@ urlpatterns = [
     path('grade/<int:grade_id>/delete', grade_views.grade_delete, name='grade_delete'),
     path('grade/bulk-change', grade_views.member_grade_change, name='member_grade_change'),
     path('grade/history/<int:member_id>', grade_views.grade_history, name='grade_history'),
-
 
     # =========================
     # 📄 향후 구현 예정 (인터페이스만)

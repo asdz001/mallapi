@@ -1,80 +1,105 @@
 /**
  * ========================================
  * 📁 파일 위치: dashboard/static/dashboard/js/member/member_modal.js
- * 🎯 목적: 회원 모달 관련 기능
- * 버전: 1.0
+ * 🎯 목적: 회원 모달 관련 기능 - 등급 관리 기능 추가
+ * 버전: 3.0 (모든 오류 해결 최종)
  * ========================================
  */
 
 const MemberModal = {
-
     // 현재 조회중인 회원 정보
     currentMember: null,
-
+    
     // 수정 모드 상태
     isEditMode: false,
+    
+    // ✅ 사용 가능한 등급 목록
+    availableGrades: [],
+    
+    // ✅ 등급 변경 사유 임시 저장
+    pendingGradeChangeReason: null,
 
     /**
      * 초기화
      */
     init: function () {
         console.log('회원 모달 관리 모듈 초기화 중...');
-
         this.bindEvents();
         this.initializeModals();
     },
 
     /**
-     * 이벤트 바인딩 - 기존 방식 유지
+     * 이벤트 바인딩
      */
     bindEvents: function () {
         const self = this;
 
-        // 수정 1: 모달 닫기 버튼 - 기존 방식에 추가만
+        // 모달 닫기 버튼
         $(document).on('click', '#memberModal .close, #memberModal [data-dismiss="modal"]', function (e) {
             e.preventDefault();
             $('#memberModal').modal('hide');
         });
 
-        // 모달 닫힐 때 초기화 - 기존과 동일
+        // 모달 닫힐 때 초기화
         $('#memberModal').on('hidden.bs.modal', function () {
             self.resetModal();
         });
 
-        // Bootstrap 4/5 호환성을 위한 이벤트 처리 - 기존과 동일
-        $('#memberModal').on('hide.bs.modal', function () {
-            self.resetModal();
-        });
-
-        // 수정 모드 토글 버튼 - 기존과 동일
+        // 수정 모드 토글 버튼
         $(document).on('click', '#editModeBtn', function () {
             self.enableEditMode();
         });
 
-        // 수정 저장 버튼 - 기존과 동일
+        // 수정 저장 버튼
         $(document).on('click', '#saveMemberBtn', function () {
             self.saveMember();
         });
 
-        // 수정 취소 버튼 - 기존과 동일
+        // 수정 취소 버튼
         $(document).on('click', '#cancelEditBtn', function () {
             self.cancelEdit();
         });
 
-        // 수정 2: 탭 전환 - Bootstrap 기본 이벤트만 사용
+        // 탭 전환 (기존 방식 유지)
         $('#memberModal .nav-tabs a').on('click', function (e) {
             e.preventDefault();
-            $(this).tab('show'); // Bootstrap 기본 탭 전환
+            $(this).tab('show');
         });
 
-        // 수정 3: Bootstrap 탭 이벤트로 활동내역 로드
+        // 활동내역 탭 활성화 시 데이터 로드
         $('#memberModal .nav-tabs a[href="#tab-activity"]').on('shown.bs.tab', function () {
             self.loadActivityData();
+        });
+
+        // ✅ 등급 변경 시 확인
+        $(document).on('change', '#modal-grade', function() {
+            if (self.isEditMode) {
+                const selectedGradeId = $(this).val();
+                const selectedGrade = self.availableGrades.find(g => g.id == selectedGradeId);
+                
+                if (selectedGrade && selectedGrade.id != (self.currentMember.grade_id || null)) {
+                    self.showGradeChangeConfirm(selectedGrade);
+                }
+            }
+        });
+
+        // ✅ 등급 고정 체크박스 변경 시
+        $(document).on('change', '#modal-grade-fixed', function() {
+            const isFixed = $(this).is(':checked');
+            const reasonGroup = $('#modal-grade-fixed-reason-edit-group');
+            if (reasonGroup.length) {
+                if (isFixed) {
+                    reasonGroup.show();
+                } else {
+                    reasonGroup.hide();
+                    $('#modal-grade-fixed-reason').val('');
+                }
+            }
         });
     },
 
     /**
-     * 모달 초기화 - 기존과 동일
+     * 모달 초기화
      */
     initializeModals: function () {
         // 기본 탭 활성화
@@ -82,247 +107,618 @@ const MemberModal = {
     },
 
     /**
-     * 회원 상세보기 모달 열기 - 기존과 동일
+     * 모달 리셋
+     */
+    resetModal: function () {
+        this.currentMember = null;
+        this.isEditMode = false;
+        this.availableGrades = [];
+        this.pendingGradeChangeReason = null;
+        
+        // 로딩 표시, 컨텐츠 숨김
+        $('#modal-loading').show();
+        $('#modal-content').hide();
+        
+        // 수정 모드 해제
+        this.disableEditMode();
+        
+        console.log('회원 모달 리셋 완료');
+    },
+
+    /**
+     * 회원 상세보기 모달 표시
      */
     showMemberDetail: function (memberId) {
-        console.log(`회원 상세보기 모달 열기: ${memberId}`);
+        if (!memberId) {
+            alert('회원 ID가 필요합니다.');
+            return;
+        }
 
-        // 모달 열기
+        console.log(`회원 상세보기: ${memberId}`);
+        
+        // 모달 표시 및 로딩 상태
         $('#memberModal').modal('show');
-
-        // 로딩 상태 표시
         this.showLoadingState();
 
-        // API 호출하여 회원 정보 조회
+        // API 호출
         $.ajax({
             url: `/dashboard/members/detail/${memberId}`,
             method: 'GET',
             success: function (response) {
-                console.log('API 응답 받음:', response);
+                console.log('회원 상세 데이터:', response);
+                
                 if (response.success) {
-                    MemberModal.displayMemberData(response.member);
                     MemberModal.currentMember = response.member;
-                    MemberModal.hideLoadingState();
+                    MemberModal.availableGrades = response.available_grades || [];
+                    
+                    // 화면에 데이터 표시
+                    MemberModal.displayMemberData(response.member);
+                    
+                    // 등급 이력 표시
+                    if (response.grade_histories) {
+                        MemberModal.displayGradeHistory(response.grade_histories);
+                    }
+                    
                 } else {
-                    alert('회원 정보를 불러올 수 없습니다: ' + response.message);
+                    alert('회원 정보를 불러오지 못했습니다: ' + (response.message || '알 수 없는 오류'));
                     $('#memberModal').modal('hide');
                 }
             },
             error: function (xhr) {
-                console.error('API 호출 오류:', xhr);
+                console.error('회원 상세 조회 오류:', xhr);
+                
                 let errorMessage = '회원 정보를 불러오는 중 오류가 발생했습니다.';
                 if (xhr.status === 404) {
                     errorMessage = '존재하지 않는 회원입니다.';
+                } else if (xhr.status === 500) {
+                    errorMessage = '서버 오류가 발생했습니다.';
                 }
+                
                 alert(errorMessage);
                 $('#memberModal').modal('hide');
+            },
+            complete: function () {
+                MemberModal.hideLoadingState();
             }
         });
     },
 
     /**
-     * 회원 정보를 모달에 표시 - 기존과 동일
+     * 회원 데이터 표시
      */
     displayMemberData: function (member) {
+        if (!member) {
+            console.error('회원 데이터가 없습니다.');
+            return;
+        }
+
         console.log('회원 데이터 표시:', member);
 
-        // 모달 제목 설정
-        $('#memberModalLabel').html(`
-            <i class="fas fa-user"></i> 
-            ${member.name || '이름없음'} (${member.username}) - ${member.member_type_display || member.member_type}
-        `);
+        // 등급 표시 (안전하게)
+        const gradeDisplay = member.grade_name && member.grade_name !== '등급없음' ?
+            `<span class="badge ml-2" style="background-color: ${member.grade_color}; color: white;">
+                <i class="${member.grade_icon}"></i> ${member.grade_name}
+            </span>` : '';
 
-        // 상태 배지 설정
+        // 모달 제목 설정 (안전하게)
+        const modalLabel = $('#memberModalLabel');
+        if (modalLabel.length) {
+            modalLabel.html(`
+                <i class="fas fa-user"></i> 
+                ${member.name || '이름없음'} (${member.username}) - ${member.member_type_display || member.member_type}
+                ${gradeDisplay}
+            `);
+        }
+
+        // 상태 배지 설정 (안전하게)
         const statusBadge = member.is_active
             ? '<span class="badge badge-success">활성</span>'
             : '<span class="badge badge-secondary">비활성</span>';
-        $('#modal-status-badge').html(statusBadge);
-        $('#modal-member-type-badge').text(member.member_type_display || member.member_type);
-        $('#modal-created-at').text(member.created_at_display || member.created_at || '');
+        
+        this.safeSetHtml('#modal-status-badge', statusBadge);
+        this.safeSetText('#modal-member-type-badge', member.member_type_display || member.member_type);
+        this.safeSetText('#modal-created-at', member.created_at_display || member.created_at || '');
 
-        // 통합된 회원정보 탭 채우기
+        // 탭별 정보 채우기
         this.fillMemberInfo(member);
-
-        // 마케팅설정 탭 채우기
+        this.fillGradeInfo(member);
         this.fillMarketingInfo(member);
-
-        // 시스템정보 탭 채우기
         this.fillSystemInfo(member);
+
+        // 회원 타입별 필드 표시/숨김
+        this.toggleMemberTypeFields(member.member_type);
 
         // 기본 탭으로 전환
         this.showTab('#tab-member-info');
     },
 
     /**
-     * 통합된 회원정보 채우기 - 기존과 동일
+     * 안전한 DOM 조작 헬퍼 함수들
+     */
+    safeSetValue: function(selector, value) {
+        const element = $(selector);
+        if (element.length) {
+            element.val(value || '');
+        }
+    },
+
+    safeSetText: function(selector, text) {
+        const element = $(selector);
+        if (element.length) {
+            element.text(text || '');
+        }
+    },
+
+    safeSetHtml: function(selector, html) {
+        const element = $(selector);
+        if (element.length) {
+            element.html(html || '');
+        }
+    },
+
+    safeSetChecked: function(selector, checked) {
+        const element = $(selector);
+        if (element.length) {
+            element.prop('checked', !!checked);
+        }
+    },
+
+    /**
+     * 회원 타입별 필드 표시/숨김
+     */
+    toggleMemberTypeFields: function(memberType) {
+        const b2cFields = $('#b2c-fields');
+        const b2bFields = $('#b2b-fields');
+        
+        if (memberType === 'B2C') {
+            b2cFields.show();
+            b2bFields.hide();
+        } else if (memberType === 'B2B') {
+            b2cFields.hide();
+            b2bFields.show();
+        } else {
+            b2cFields.hide();
+            b2bFields.hide();
+        }
+    },
+
+    /**
+     * 통합된 회원정보 채우기
      */
     fillMemberInfo: function (member) {
         // 기본 정보
-        $('#modal-username').val(member.username || '');
-        $('#modal-name').val(member.name || '');
-        $('#modal-member-type').val(member.member_type_display || member.member_type || '');
-        $('#modal-is-active').prop('checked', member.is_active);
+        this.safeSetValue('#modal-username', member.username);
+        this.safeSetValue('#modal-name', member.name);
+        this.safeSetValue('#modal-member-type', member.member_type_display || member.member_type);
+        this.safeSetChecked('#modal-is-active', member.is_active);
 
         // 연락처 정보
-        $('#modal-email').val(member.email || '');
-        $('#modal-phone').val(member.phone || '');
-        $('#modal-home-phone').val(member.home_phone || '');
-        $('#modal-address').val(member.address || '');
-        $('#modal-zip-code').val(member.zip_code || '');
+        this.safeSetValue('#modal-email', member.email);
+        this.safeSetValue('#modal-phone', member.phone);
+        this.safeSetValue('#modal-home-phone', member.home_phone);
+        this.safeSetValue('#modal-address', member.address);
+        this.safeSetValue('#modal-zip-code', member.zip_code);
 
-        // B2C 전용 필드들
+        // B2C 전용 필드
         if (member.member_type === 'B2C') {
-            $('.b2c-fields').show();
-            $('.b2b-fields').hide();
-
-            $('#modal-gender').val(member.gender || '');
-            $('#modal-birth-date').val(member.birth_date || '');
-            $('#modal-nickname').val(member.nickname || '');
-            $('#modal-recommender-id').val(member.recommender_id || '');
-            $('#modal-join-channel').val(member.join_channel || 'direct');
-            $('#modal-is-forever-member').prop('checked', member.is_forever_member || false);
+            this.safeSetValue('#modal-gender', member.gender);
+            this.safeSetValue('#modal-birth-date', member.birth_date);
+            this.safeSetValue('#modal-nickname', member.nickname);
+            this.safeSetValue('#modal-recommender-id', member.recommender_id);
+            this.safeSetValue('#modal-join-channel', member.join_channel);
+            this.safeSetChecked('#modal-is-forever-member', member.is_forever_member);
         }
 
-        // B2B 전용 필드들
+        // B2B 전용 필드
         if (member.member_type === 'B2B') {
-            $('.b2b-fields').show();
-            $('.b2c-fields').hide();
-
-            $('#modal-company-name').val(member.company_name || '');
-            $('#modal-business-number').val(member.business_number || '');
-            $('#modal-representative-name').val(member.representative_name || '');
-            $('#modal-business-type').val(member.business_type || '');
-            $('#modal-business-item').val(member.business_item || '');
-            $('#modal-company-phone').val(member.company_phone || '');
-            $('#modal-fax').val(member.fax || '');
-            $('#modal-company-address').val(member.company_address || '');
+            this.safeSetValue('#modal-company-name', member.company_name);
+            this.safeSetValue('#modal-business-number', member.business_number);
+            this.safeSetValue('#modal-representative-name', member.representative_name);
+            this.safeSetValue('#modal-business-type', member.business_type);
+            this.safeSetValue('#modal-business-item', member.business_item);
+            this.safeSetValue('#modal-company-phone', member.company_phone);
+            this.safeSetValue('#modal-fax', member.fax);
+            this.safeSetValue('#modal-company-address', member.company_address);
         }
     },
 
     /**
-     * 마케팅 정보 채우기 - 기존과 동일
+     * ✅ 등급정보 탭 채우기
+     */
+    fillGradeInfo: function (member) {
+        // 현재 등급 표시
+        const currentGradeEl = $('#modal-current-grade');
+        if (currentGradeEl.length) {
+            const gradeDisplay = member.grade_name && member.grade_name !== '등급없음' ?
+                `<span class="badge badge-lg" style="background-color: ${member.grade_color}; color: white;">
+                    <i class="${member.grade_icon}"></i> ${member.grade_name}
+                </span>` : '<span class="text-muted">등급 없음</span>';
+            
+            currentGradeEl.html(gradeDisplay);
+        }
+        
+        // 등급 고정 정보
+        const gradeFixedStatusEl = $('#modal-grade-fixed-status');
+        if (gradeFixedStatusEl.length) {
+            const gradeFixedIcon = member.grade_fixed ? 
+                '<i class="fas fa-lock text-warning"></i>' : '<i class="fas fa-unlock text-muted"></i>';
+            const gradeFixedText = member.grade_fixed ? '고정됨' : '고정 안됨';
+            
+            gradeFixedStatusEl.html(`${gradeFixedIcon} ${gradeFixedText}`);
+        }
+        
+        // 고정 사유 표시
+        const gradeFixedReasonDisplayEl = $('#modal-grade-fixed-reason-display');
+        if (gradeFixedReasonDisplayEl.length) {
+            gradeFixedReasonDisplayEl.text(member.grade_fixed_reason || '-');
+            
+            // 고정 사유 그룹 표시/숨김
+            const reasonGroup = $('#modal-grade-fixed-reason-group');
+            if (reasonGroup.length) {
+                if (member.grade_fixed && member.grade_fixed_reason) {
+                    reasonGroup.show();
+                } else {
+                    reasonGroup.hide();
+                }
+            }
+        }
+
+        // 등급 선택 드롭다운 구성 (수정 모드용)
+        this.setupGradeSelectOptions();
+        
+        // 등급 관련 입력 필드 설정
+        this.safeSetChecked('#modal-grade-fixed', member.grade_fixed);
+        this.safeSetValue('#modal-grade-fixed-reason', member.grade_fixed_reason);
+    },
+
+    /**
+     * ✅ 등급 선택 드롭다운 구성
+     */
+    setupGradeSelectOptions: function() {
+        const gradeSelect = $('#modal-grade');
+        
+        if (!gradeSelect.length) {
+            console.warn('등급 선택 요소(#modal-grade)를 찾을 수 없습니다.');
+            return;
+        }
+        
+        gradeSelect.empty();
+        gradeSelect.append('<option value="">등급 선택</option>');
+        
+        if (this.availableGrades && this.availableGrades.length > 0) {
+            this.availableGrades.forEach(grade => {
+                const isSelected = this.currentMember && (this.currentMember.grade_id == grade.id);
+                const defaultText = grade.is_default ? ' (기본)' : '';
+                
+                gradeSelect.append(
+                    `<option value="${grade.id}" ${isSelected ? 'selected' : ''}>
+                        [${grade.member_type}] ${grade.name}${defaultText}
+                    </option>`
+                );
+            });
+        }
+    },
+
+    /**
+     * 등급 변경 이력 표시
+     */
+    displayGradeHistory: function(histories) {
+        const historyContainer = $('#grade-history-list');
+        if (!historyContainer.length) return;
+        
+        if (!histories || histories.length === 0) {
+            historyContainer.html(`
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-info-circle"></i> 등급 변경 이력이 없습니다.
+                </div>
+            `);
+            return;
+        }
+        
+        let historyHtml = '';
+        histories.forEach(history => {
+            historyHtml += `
+                <div class="border-bottom pb-2 mb-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>${history.old_grade || '없음'} → ${history.new_grade || '없음'}</strong>
+                            <div class="text-muted small">
+                                사유: ${history.change_reason || '-'}
+                                ${history.reason_detail ? ` (${history.reason_detail})` : ''}
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-muted small">${history.changed_by || 'system'}</div>
+                            <div class="text-muted small">${history.created_at || ''}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        historyContainer.html(historyHtml);
+    },
+
+    /**
+     * ✅ 등급 변경 확인 다이얼로그
+     */
+    showGradeChangeConfirm: function(newGrade) {
+        const currentGradeName = this.currentMember.grade_name || '없음';
+        
+        if (confirm(`등급을 "${currentGradeName}"에서 "${newGrade.name}"(으)로 변경하시겠습니까?`)) {
+            const reason = prompt('등급 변경 사유를 입력하세요:', '관리자 수정');
+            
+            if (reason !== null) {
+                this.pendingGradeChangeReason = reason || '관리자 수정';
+            } else {
+                // 취소 시 원래 값으로 되돌림
+                $('#modal-grade').val(this.currentMember.grade_id || '');
+                this.pendingGradeChangeReason = null;
+            }
+        } else {
+            // 취소 시 원래 값으로 되돌림
+            $('#modal-grade').val(this.currentMember.grade_id || '');
+            this.pendingGradeChangeReason = null;
+        }
+    },
+
+    /**
+     * 마케팅설정 탭 채우기
      */
     fillMarketingInfo: function (member) {
-        $('#modal-marketing-agree').prop('checked', member.marketing_agree || false);
-        $('#modal-is-sms-agree').prop('checked', member.is_sms_agree || false);
-        $('#modal-join-channel-display').val(member.join_channel_display || member.join_channel || 'direct');
+        this.safeSetChecked('#modal-marketing-agree', member.marketing_agree);
+        this.safeSetChecked('#modal-is-sms-agree', member.is_sms_agree);
     },
 
     /**
-     * 시스템 정보 채우기 - 기존과 동일
+     * 시스템정보 탭 채우기
      */
     fillSystemInfo: function (member) {
-        const pointDisplay = member.point ? parseInt(member.point).toLocaleString() : '0';
-        $('#modal-point').val(pointDisplay);
-        $('#modal-is-blacklisted').prop('checked', member.is_blacklisted || false);
-        $('#modal-memo').val(member.memo || '');
+        this.safeSetChecked('#modal-is-blacklisted', member.is_blacklisted);
+        this.safeSetValue('#modal-memo', member.memo);
     },
 
     /**
-     * 수정 모드 활성화 - 기존과 동일
+     * 탭 전환
+     */
+    showTab: function (tabId) {
+        $('#memberModal .nav-tabs .nav-link').removeClass('active');
+        $('#memberModal .tab-pane').removeClass('active show');
+        
+        $(`#memberModal .nav-tabs .nav-link[href="${tabId}"]`).addClass('active');
+        $(tabId).addClass('active show');
+    },
+
+    /**
+     * 수정 모드 활성화
      */
     enableEditMode: function () {
-        console.log('수정 모드 활성화');
-        this.isEditMode = true;
-
-        $('#memberModal input:not([data-readonly]), #memberModal select, #memberModal textarea').prop('disabled', false);
-        $('#modal-username, #modal-member-type, #modal-created-at, #modal-point').prop('disabled', true);
-
-        $('#view-mode-buttons').hide();
-        $('#edit-mode-buttons').show();
-        $('#edit-mode-indicator').show();
-
-        $('#memberModal .modal-header').addClass('bg-warning text-dark');
-        $('#memberModalLabel').prepend('<i class="fas fa-edit"></i> [수정 중] ');
-
-        $('#modal-name').focus();
-    },
-
-    /**
-     * 수정 모드 비활성화 - 기존과 동일
-     */
-    disableEditMode: function () {
-        console.log('수정 모드 비활성화');
-        this.isEditMode = false;
-
-        $('#memberModal input, #memberModal select, #memberModal textarea').prop('disabled', true);
-
-        $('#view-mode-buttons').show();
-        $('#edit-mode-buttons').hide();
-        $('#edit-mode-indicator').hide();
-
-        $('#memberModal .modal-header').removeClass('bg-warning text-dark');
-
-        if (this.currentMember) {
-            this.displayMemberData(this.currentMember);
-        }
-    },
-
-    // member_modal.js의 saveMember 함수 수정 (332라인 근처)
-
-    /**
-    * 회원 정보 저장 - Django Form 방식으로 개선
-    */
-    saveMember: function () {
         if (!this.currentMember) {
-            alert('저장할 회원 정보가 없습니다.');
+            alert('회원 정보를 먼저 불러와주세요.');
             return;
         }
 
-        console.log('회원 정보 저장 시작 - Django Form 방식');
+        this.isEditMode = true;
+
+        // 기본 필드들 활성화
+        const basicFields = [
+            '#modal-name', '#modal-email', '#modal-phone', '#modal-home-phone', 
+            '#modal-address', '#modal-zip-code', '#modal-memo', '#modal-is-active',
+            '#modal-marketing-agree', '#modal-is-sms-agree', '#modal-is-blacklisted'
+        ];
+        
+        basicFields.forEach(selector => {
+            const element = $(selector);
+            if (element.length) {
+                element.prop('disabled', false);
+            }
+        });
+
+        // 등급 관련 필드 활성화
+        const gradeFields = ['#modal-grade', '#modal-grade-fixed', '#modal-grade-fixed-reason'];
+        gradeFields.forEach(selector => {
+            const element = $(selector);
+            if (element.length) {
+                element.prop('disabled', false);
+            }
+        });
+
+        // 회원 타입별 필드 활성화
+        if (this.currentMember.member_type === 'B2C') {
+            const b2cFields = [
+                '#modal-gender', '#modal-birth-date', '#modal-nickname',
+                '#modal-recommender-id', '#modal-join-channel', '#modal-is-forever-member'
+            ];
+            b2cFields.forEach(selector => {
+                const element = $(selector);
+                if (element.length) {
+                    element.prop('disabled', false);
+                }
+            });
+        } else if (this.currentMember.member_type === 'B2B') {
+            const b2bFields = [
+                '#modal-company-name', '#modal-business-number', '#modal-representative-name',
+                '#modal-business-type', '#modal-business-item', '#modal-company-phone',
+                '#modal-fax', '#modal-company-address'
+            ];
+            b2bFields.forEach(selector => {
+                const element = $(selector);
+                if (element.length) {
+                    element.prop('disabled', false);
+                }
+            });
+        }
+
+        // 등급 수정 섹션 표시
+        const gradeEditSection = $('#grade-edit-section');
+        if (gradeEditSection.length) {
+            gradeEditSection.show();
+        }
+
+        // 등급 고정 사유 입력 영역 처리
+        const isFixed = $('#modal-grade-fixed').is(':checked');
+        const reasonEditGroup = $('#modal-grade-fixed-reason-edit-group');
+        if (reasonEditGroup.length) {
+            if (isFixed) {
+                reasonEditGroup.show();
+            } else {
+                reasonEditGroup.hide();
+            }
+        }
+
+        // ✅ 버튼 상태 변경 (단순화)
+        $('#editModeBtn').hide();
+        $('#saveMemberBtn, #cancelEditBtn').show();
+
+        console.log('수정 모드 활성화됨');
+    },
+
+    /**
+     * 수정 모드 비활성화
+     */
+    disableEditMode: function () {
+        this.isEditMode = false;
+        this.pendingGradeChangeReason = null;
+
+        // 모든 입력 필드 비활성화
+        $('#memberModal input, #memberModal textarea, #memberModal select').prop('disabled', true);
+
+        // 등급 수정 섹션 숨기기
+        const gradeEditSection = $('#grade-edit-section');
+        if (gradeEditSection.length) {
+            gradeEditSection.hide();
+        }
+
+        // ✅ 버튼 상태 변경 (단순화)
+        $('#editModeBtn').show();
+        $('#saveMemberBtn, #cancelEditBtn').hide();
+
+        console.log('수정 모드 비활성화됨');
+    },
+
+    /**
+     * 로딩 상태 표시
+     */
+    showLoadingState: function (buttonSelector = null, loadingText = null) {
+        if (buttonSelector) {
+            $(buttonSelector).prop('disabled', true);
+            if (loadingText) {
+                $(buttonSelector).html(loadingText);
+            }
+        } else {
+            $('#modal-loading').show();
+            $('#modal-content').hide();
+        }
+    },
+
+    /**
+     * 로딩 상태 해제
+     */
+    hideLoadingState: function (buttonSelector = null, originalText = null) {
+        if (buttonSelector && originalText) {
+            $(buttonSelector).prop('disabled', false).html(originalText);
+        } else {
+            $('#modal-loading').hide();
+            $('#modal-content').show();
+        }
+    },
+
+    /**
+     * 회원 정보 저장
+     */
+    saveMember: function () {
+        if (!this.currentMember || !this.isEditMode) {
+            alert('수정 모드가 아닙니다.');
+            return;
+        }
+
+        // 필수 필드 검증
+        const name = $('#modal-name').val().trim();
+        const email = $('#modal-email').val().trim();
+        
+        if (!name) {
+            alert('이름을 입력해주세요.');
+            $('#modal-name').focus();
+            return;
+        }
+        
+        if (!email) {
+            alert('이메일을 입력해주세요.');
+            $('#modal-email').focus();
+            return;
+        }
 
         // 폼 데이터 수집
         const formData = this.collectFormData();
+        
+        // 등급 변경 사유 추가
+        if (this.pendingGradeChangeReason) {
+            formData.grade_change_reason = this.pendingGradeChangeReason;
+        }
 
-        // ✅ CSRF 토큰을 데이터에 포함 (Django 표준 방식)
-        formData['csrfmiddlewaretoken'] = $('[name=csrfmiddlewaretoken]').val();
+        console.log('💾 저장할 데이터:', formData);
 
         // 로딩 상태 표시
-        this.showLoadingState('#saveMemberBtn', '저장 중...');
+        this.showLoadingState('#saveMemberBtn', '<i class="fas fa-spinner fa-spin"></i> 저장중...');
 
-        // ✅ member_add와 동일한 AJAX 방식
+        // API 호출
         $.ajax({
             url: `/dashboard/members/update/${this.currentMember.id}`,
             method: 'POST',
-            data: formData,  // ✅ 일반 form data로 전송 (JSON 아님)
-            // headers 제거 - Django가 자동으로 CSRF 처리
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            timeout: 30000,
             success: function (response) {
+                console.log('✅ 저장 성공:', response);
+                
                 if (response.success) {
-                    alert(response.message);
-
+                    alert('회원 정보가 성공적으로 수정되었습니다.');
+                    
                     // 현재 회원 데이터 업데이트
-                    MemberModal.updateCurrentMemberData(formData);
+                    MemberModal.updateCurrentMemberData(response.member);
+                    
+                    // 화면 다시 표시 (읽기 모드로)
+                    MemberModal.displayMemberData(response.member);
                     MemberModal.disableEditMode();
-
-                    console.log('회원 정보 수정 완료:', response);
-                } else {
-                    // ✅ 구체적인 오류 메시지 표시
-                    let errorMsg = response.message || '저장에 실패했습니다.';
-                    if (response.errors && response.errors.length > 0) {
-                        errorMsg += '\n\n세부 오류:\n' + response.errors.join('\n');
+                    
+                    // 회원 목록 새로고침 (있다면)
+                    if (typeof MemberList !== 'undefined' && MemberList.refreshList) {
+                        MemberList.refreshList();
                     }
-                    alert(errorMsg);
+                    
+                    // 등급 변경 사유 초기화
+                    MemberModal.pendingGradeChangeReason = null;
+                    
+                } else {
+                    alert('저장 실패: ' + (response.message || '알 수 없는 오류가 발생했습니다.'));
                 }
             },
-            error: function (xhr, status, error) {
-                console.error('저장 오류:', { xhr, status, error });
-
+            error: function (xhr, textStatus, errorThrown) {
+                console.error('❌ 저장 오류:', {
+                    status: xhr.status,
+                    statusText: xhr.statusText,
+                    responseText: xhr.responseText,
+                    textStatus: textStatus,
+                    errorThrown: errorThrown
+                });
+                
                 let errorMessage = '저장 중 오류가 발생했습니다.';
-
-                // ✅ 서버 응답에서 구체적 오류 메시지 추출
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-
-                    // 폼 검증 오류도 함께 표시
-                    if (xhr.responseJSON.errors) {
-                        errorMessage += '\n\n' + xhr.responseJSON.errors.join('\n');
+                
+                if (xhr.status === 0) {
+                    errorMessage = '네트워크 연결을 확인해주세요.';
+                } else if (xhr.status === 400) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMessage = response.message || '입력값을 확인해주세요.';
+                    } catch (e) {
+                        errorMessage = '입력값을 확인해주세요.';
                     }
                 } else if (xhr.status === 404) {
                     errorMessage = '존재하지 않는 회원입니다.';
-                } else if (xhr.status === 400) {
-                    errorMessage = '잘못된 요청입니다. 입력값을 확인해주세요.';
                 } else if (xhr.status === 500) {
                     errorMessage = '서버 오류가 발생했습니다. 관리자에게 문의하세요.';
+                } else if (textStatus === 'timeout') {
+                    errorMessage = '요청 시간이 초과되었습니다. 다시 시도해주세요.';
                 }
 
                 alert(errorMessage);
@@ -334,44 +730,55 @@ const MemberModal = {
     },
 
     /**
-     * 폼 데이터 수집 - 기존과 동일
+     * 폼 데이터 수집
      */
     collectFormData: function () {
         const formData = {
-            name: $('#modal-name').val(),
+            // 기본 정보
+            name: $('#modal-name').val().trim(),
             is_active: $('#modal-is-active').is(':checked'),
-            email: $('#modal-email').val(),
-            phone: $('#modal-phone').val(),
-            home_phone: $('#modal-home-phone').val(),
-            address: $('#modal-address').val(),
-            zip_code: $('#modal-zip-code').val(),
+            email: $('#modal-email').val().trim(),
+            phone: $('#modal-phone').val().trim(),
+            home_phone: $('#modal-home-phone').val().trim(),
+            address: $('#modal-address').val().trim(),
+            zip_code: $('#modal-zip-code').val().trim(),
+            
+            // 마케팅 설정
             marketing_agree: $('#modal-marketing-agree').is(':checked'),
             is_sms_agree: $('#modal-is-sms-agree').is(':checked'),
+            
+            // 시스템 정보
             is_blacklisted: $('#modal-is-blacklisted').is(':checked'),
-            memo: $('#modal-memo').val(),
+            memo: $('#modal-memo').val().trim(),
+            
+            // ✅ 등급 관련 데이터
+            grade_id: $('#modal-grade').val() || null,
+            grade_fixed: $('#modal-grade-fixed').is(':checked'),
+            grade_fixed_reason: $('#modal-grade-fixed-reason').val().trim(),
         };
 
+        // 회원 타입별 데이터 추가
         if (this.currentMember.member_type === 'B2C') {
             Object.assign(formData, {
-                gender: $('#modal-gender').val(),
-                birth_date: $('#modal-birth-date').val(),
-                nickname: $('#modal-nickname').val(),
-                recommender_id: $('#modal-recommender-id').val(),
-                join_channel: $('#modal-join-channel').val(),
+                gender: $('#modal-gender').val() || null,
+                birth_date: $('#modal-birth-date').val() || null,
+                nickname: $('#modal-nickname').val().trim(),
+                recommender_id: $('#modal-recommender-id').val().trim(),
+                join_channel: $('#modal-join-channel').val() || null,
                 is_forever_member: $('#modal-is-forever-member').is(':checked'),
             });
         }
 
         if (this.currentMember.member_type === 'B2B') {
             Object.assign(formData, {
-                company_name: $('#modal-company-name').val(),
-                business_number: $('#modal-business-number').val(),
-                representative_name: $('#modal-representative-name').val(),
-                business_type: $('#modal-business-type').val(),
-                business_item: $('#modal-business-item').val(),
-                company_phone: $('#modal-company-phone').val(),
-                fax: $('#modal-fax').val(),
-                company_address: $('#modal-company-address').val(),
+                company_name: $('#modal-company-name').val().trim(),
+                business_number: $('#modal-business-number').val().trim(),
+                representative_name: $('#modal-representative-name').val().trim(),
+                business_type: $('#modal-business-type').val().trim(),
+                business_item: $('#modal-business-item').val().trim(),
+                company_phone: $('#modal-company-phone').val().trim(),
+                fax: $('#modal-fax').val().trim(),
+                company_address: $('#modal-company-address').val().trim(),
             });
         }
 
@@ -379,7 +786,7 @@ const MemberModal = {
     },
 
     /**
-     * 현재 회원 데이터 업데이트 - 기존과 동일
+     * 현재 회원 데이터 업데이트
      */
     updateCurrentMemberData: function (newData) {
         if (this.currentMember) {
@@ -388,147 +795,95 @@ const MemberModal = {
     },
 
     /**
-     * 수정 취소 - 기존과 동일
+     * 수정 취소
      */
     cancelEdit: function () {
         if (confirm('수정 중인 내용이 있습니다. 취소하시겠습니까?')) {
+            // 원래 데이터로 복원
+            this.displayMemberData(this.currentMember);
             this.disableEditMode();
         }
     },
 
     /**
-     * 활동 내역 데이터 로드 - 기존과 동일
+     * 활동내역 로드
      */
     loadActivityData: function () {
         if (!this.currentMember) return;
 
-        console.log('활동 내역 데이터 로드');
+        const activityContainer = $('#activity-list');
+        const activityLoading = $('#activity-loading');
+        const activityContent = $('#activity-content');
+        const activityEmpty = $('#activity-empty');
 
-        $('#activity-content').html(`
-            <div class="text-center text-muted py-4">
-                <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
-                <p>활동 내역을 불러오는 중...</p>
-            </div>
-        `);
+        // 로딩 표시
+        if (activityLoading.length) activityLoading.show();
+        if (activityContent.length) activityContent.hide();
+        if (activityEmpty.length) activityEmpty.hide();
 
         $.ajax({
             url: `/dashboard/members/activity/${this.currentMember.id}`,
             method: 'GET',
             success: function (response) {
-                if (response.success) {
-                    MemberModal.displayActivityData(response.activity);
+                if (response.success && response.activities && response.activities.length > 0) {
+                    let activitiesHtml = '';
+                    
+                    response.activities.forEach(activity => {
+                        activitiesHtml += `
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex align-items-start">
+                                    <div class="mr-3">
+                                        <i class="${activity.icon || 'fas fa-info-circle'} text-${activity.color || 'primary'}"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h6 class="mb-1">${activity.title || '활동'}</h6>
+                                                <p class="mb-1">${activity.description || ''}</p>
+                                                ${activity.reason ? `<small class="text-muted">사유: ${activity.reason}</small>` : ''}
+                                                ${activity.detail ? `<br><small class="text-muted">${activity.detail}</small>` : ''}
+                                            </div>
+                                            <div class="text-right">
+                                                <small class="text-muted">${activity.user || 'system'}</small><br>
+                                                <small class="text-muted">${activity.created_at || ''}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    if (activityContainer.length) {
+                        activityContainer.html(activitiesHtml);
+                    }
+                    if (activityContent.length) activityContent.show();
                 } else {
-                    $('#activity-content').html(`
-                        <div class="text-center text-muted py-4">
-                            <i class="fas fa-exclamation-triangle fa-2x mb-3 text-warning"></i>
-                            <p>활동 내역을 불러올 수 없습니다.</p>
+                    if (activityEmpty.length) activityEmpty.show();
+                }
+            },
+            error: function (xhr) {
+                console.error('활동내역 로드 오류:', xhr);
+                if (activityContainer.length) {
+                    activityContainer.html(`
+                        <div class="text-center text-danger py-3">
+                            <i class="fas fa-exclamation-triangle"></i> 활동내역을 불러오는 중 오류가 발생했습니다.
                         </div>
                     `);
                 }
+                if (activityContent.length) activityContent.show();
             },
-            error: function () {
-                $('#activity-content').html(`
-                    <div class="text-center text-muted py-4">
-                        <i class="fas fa-exclamation-triangle fa-2x mb-3 text-danger"></i>
-                        <p>활동 내역 로딩 중 오류가 발생했습니다.</p>
-                    </div>
-                `);
+            complete: function () {
+                if (activityLoading.length) activityLoading.hide();
             }
         });
-    },
-
-    /**
-     * 활동 내역 표시 - 기존과 동일
-     */
-    displayActivityData: function (activity) {
-        // 기존과 동일한 구현
-        $('#activity-content').html('<p>활동 내역이 표시됩니다.</p>');
-    },
-
-    /**
-     * 탭 전환 - Bootstrap 기본 방식 사용
-     */
-    showTab: function (tabId) {
-        // Bootstrap 기본 탭 전환 사용
-        $(`#memberModal .nav-tabs a[href="${tabId}"]`).tab('show');
-    },
-
-    /**
-     * 모달 초기화 - 기존과 동일
-     */
-    resetModal: function () {
-        console.log('모달 초기화');
-
-        this.currentMember = null;
-        this.isEditMode = false;
-
-        $('#memberModal input, #memberModal select, #memberModal textarea').val('');
-        $('#memberModal input[type="checkbox"]').prop('checked', false);
-
-        $('#view-mode-buttons').show();
-        $('#edit-mode-buttons').hide();
-        $('#edit-mode-indicator').hide();
-
-        $('#memberModal .modal-header').removeClass('bg-warning text-dark');
-
-        $('.b2c-fields, .b2b-fields').hide();
-
-        this.showTab('#tab-member-info');
-
-        $('#modal-content').hide();
-        $('#modal-loading').show();
-    },
-
-    /**
-     * 로딩 상태 표시 - 기존과 동일
-     */
-    showLoadingState: function (selector = null, text = '로딩 중...') {
-        if (selector) {
-            const button = $(selector);
-            button.data('original-text', button.html());
-            button.prop('disabled', true);
-            button.html(`<i class="fas fa-spinner fa-spin"></i> ${text}`);
-        } else {
-            $('#modal-loading').show();
-            $('#modal-content').hide();
-        }
-    },
-
-    /**
-     * 로딩 상태 해제 - 기존과 동일
-     */
-    hideLoadingState: function (selector = null, originalText = null) {
-        if (selector) {
-            const button = $(selector);
-            const text = originalText || button.data('original-text') || '완료';
-
-            button.prop('disabled', false);
-            button.html(text);
-        } else {
-            $('#modal-loading').hide();
-            $('#modal-content').show();
-        }
     }
 };
 
-/**
- * 자동 초기화
- */
+// DOM 로드 완료 시 초기화
 $(document).ready(function () {
-    if ($('#member-list-table').length > 0 || $('.btn-view-member').length > 0) {
-        MemberModal.init();
-        console.log('회원 모달 관리 모듈이 초기화되었습니다.');
-    }
-
-    if (typeof $().tooltip === 'function') {
-        $('[data-toggle="tooltip"]').tooltip({
-            container: 'body',
-            trigger: 'hover'
-        });
-    }
+    MemberModal.init();
 });
 
-/**
- * 전역 접근용
- */
+// 전역 접근을 위한 window 객체에 추가
 window.MemberModal = MemberModal;
