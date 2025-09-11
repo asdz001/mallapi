@@ -1,0 +1,74 @@
+<!-- dashboard/templates/dashboard/promotion/event_detail_modal.html -->
+<div class="modal fade" id="eventDetailModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-bullhorn"></i> {{ event.name }} - 상세 정보
+        </h5>
+        <button type="button" class="close text-white" data-dismiss="modal" data-bs-dismiss="modal">
+          <span>&times;</span>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        {% for section in sections %}
+        <div class="card mb-3">
+          <div class="card-header {{ section.header_class }}">
+            <h6 class="mb-0">
+              <i class="{{ section.icon }}"></i> {{ section.title }}
+            </h6>
+          </div>
+          <div class="card-body">
+            {% if section.layout == 'grid' %}
+              <div class="row">
+                {% for field in section.fields %}
+                <div class="col-md-{{ field.col_width|default:6 }}">
+                  <div class="form-group">
+                    <label class="font-weight-bold">{{ field.label }}:</label>
+                    <p class="form-control-plaintext">
+                      {% if field.type == 'badge' %}
+                        <span class="badge badge-{{ field.badge_class }}">{{ field.value }}</span>
+                      {% elif field.type == 'currency' %}
+                        {{ field.value|floatformat:0 }}원
+                      {% else %}
+                        {{ field.value|default:"-" }}
+                      {% endif %}
+                    </p>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <!-- 단일 컬럼 레이아웃 -->
+              {% for field in section.fields %}
+              <div class="form-group">
+                <label class="font-weight-bold">{{ field.label }}:</label>
+                <p class="form-control-plaintext">
+                  {% if field.type == 'badge' %}
+                    <span class="badge badge-{{ field.badge_class }}">{{ field.value }}</span>
+                  {% elif field.type == 'text' %}
+                    {{ field.value|default:"설명이 없습니다." }}
+                  {% else %}
+                    {{ field.value|default:"-" }}
+                  {% endif %}
+                </p>
+              </div>
+              {% endfor %}
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" onclick="editEvent({{ event.id }})">
+          <i class="fas fa-edit"></i> 수정
+        </button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">
+          <i class="fas fa-times"></i> 닫기
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

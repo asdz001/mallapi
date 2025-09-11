@@ -1,0 +1,211 @@
+{% extends "dashboard/base_admin.html" %}
+{% load i18n static %}
+
+{% block title %}프로모션 대시보드{% endblock %}
+
+{% block extrahead %}
+<style>
+.stat-card { border-left: 4px solid; padding-left: 15px; }
+.stat-card.primary { border-color: #007bff; }
+.stat-card.success { border-color: #28a745; }
+.stat-card.warning { border-color: #ffc107; }
+.stat-card.info { border-color: #17a2b8; }
+.recent-item { border-left: 3px solid #007bff; background: #f8f9fa; padding: 10px; margin-bottom: 10px; border-radius: 3px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 페이지 헤더 -->
+<section class="content-header">
+  <div class="d-flex justify-content-between align-items-center">
+    <div>
+      <h1><i class="fas fa-tags"></i> 프로모션 대시보드</h1>
+      <small class="text-muted">쿠폰, 이벤트 할인 관리</small>
+    </div>
+    <div>
+      <a href="{% url 'dashboard:coupon_create' %}" class="btn btn-success btn-sm">
+        <i class="fas fa-plus"></i> 쿠폰 생성
+      </a>
+      <a href="{% url 'dashboard:event_create' %}" class="btn btn-primary btn-sm">
+        <i class="fas fa-plus"></i> 이벤트 생성
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="content">
+  <!-- 통계 카드 -->
+  <div class="row mb-3">
+    <div class="col-md-3">
+      <div class="card stat-card primary">
+        <div class="card-body">
+          <h4>{{ stats.total_coupons }}</h4>
+          <small>총 쿠폰 수</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card stat-card success">
+        <div class="card-body">
+          <h4>{{ stats.active_coupons }}</h4>
+          <small>활성 쿠폰</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card stat-card info">
+        <div class="card-body">
+          <h4>{{ stats.total_events }}</h4>
+          <small>총 이벤트</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card stat-card warning">
+        <div class="card-body">
+          <h4>{{ stats.usage_today }}</h4>
+          <small>오늘 사용</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 콘텐츠 행 -->
+  <div class="row">
+    <!-- 최근 생성 쿠폰 -->
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header">
+          <h5><i class="fas fa-ticket-alt"></i> 최근 생성 쿠폰</h5>
+          <div class="card-tools">
+            <a href="{% url 'dashboard:coupon_list' %}" class="btn btn-tool">
+              <i class="fas fa-arrow-right"></i>
+            </a>
+          </div>
+        </div>
+        <div class="card-body">
+          {% if recent_coupons %}
+            {% for coupon in recent_coupons %}
+            <div class="recent-item">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <strong>{{ coupon.name }}</strong>
+                  <br>
+                  <small class="text-muted">
+                    {{ coupon.code }} | 
+                    {% if coupon.discount_type == 'fixed' %}{{ coupon.discount_value }}원{% else %}{{ coupon.discount_value }}%{% endif %}
+                  </small>
+                </div>
+                <span class="badge badge-{% if coupon.is_active %}success{% else %}secondary{% endif %}">
+                  {% if coupon.is_active %}활성{% else %}비활성{% endif %}
+                </span>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-center text-muted py-3">
+              <p>생성된 쿠폰이 없습니다.</p>
+              <a href="{% url 'dashboard:coupon_create' %}" class="btn btn-primary btn-sm">첫 쿠폰 만들기</a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- 진행중 이벤트 -->
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header">
+          <h5><i class="fas fa-calendar-alt"></i> 진행중 이벤트</h5>
+          <div class="card-tools">
+            <a href="{% url 'dashboard:event_list' %}" class="btn btn-tool">
+              <i class="fas fa-arrow-right"></i>
+            </a>
+          </div>
+        </div>
+        <div class="card-body">
+          {% if active_events %}
+            {% for event in active_events %}
+            <div class="recent-item">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <strong>{{ event.name }}</strong>
+                  <br>
+                  <small class="text-muted">
+                    {% if event.discount_type == 'fixed' %}{{ event.discount_value }}원{% else %}{{ event.discount_value }}%{% endif %} 할인
+                    | 종료: {{ event.end_date|date:"m/d H:i" }}
+                  </small>
+                </div>
+                <span class="badge badge-success">진행중</span>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-center text-muted py-3">
+              <p>진행중인 이벤트가 없습니다.</p>
+              <a href="{% url 'dashboard:event_create' %}" class="btn btn-success btn-sm">이벤트 만들기</a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 추가 정보 -->
+  <div class="row mt-3">
+    <!-- 인기 쿠폰 -->
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header">
+          <h5><i class="fas fa-star"></i> 인기 쿠폰</h5>
+        </div>
+        <div class="card-body">
+          {% if popular_coupons %}
+            {% for coupon in popular_coupons %}
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div>
+                <strong>{{ coupon.name }}</strong>
+                <br><small class="text-muted">{{ coupon.code }}</small>
+              </div>
+              <span class="badge badge-warning">{{ coupon.used_count }}회</span>
+            </div>
+            {% endfor %}
+          {% else %}
+            <p class="text-muted text-center">사용된 쿠폰이 없습니다.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- 최근 사용 내역 -->
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header">
+          <h5><i class="fas fa-history"></i> 최근 사용 내역</h5>
+        </div>
+        <div class="card-body">
+          {% if recent_usages %}
+            {% for usage in recent_usages %}
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div>
+                <strong>{{ usage.coupon.name }}</strong>
+                <br>
+                <small class="text-muted">{{ usage.user.username }} | {{ usage.discount_amount|floatformat:0 }}원</small>
+              </div>
+              <small class="text-muted">{{ usage.used_at|date:"m/d H:i" }}</small>
+            </div>
+            {% endfor %}
+          {% else %}
+            <p class="text-muted text-center">사용 내역이 없습니다.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'dashboard/js/promotion/dashboard.js' %}"></script>
+{% endblock %}

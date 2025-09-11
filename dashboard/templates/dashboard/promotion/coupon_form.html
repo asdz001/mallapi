@@ -1,11 +1,297 @@
 <!-- dashboard/templates/dashboard/promotion/coupon_form.html -->
 {% extends "dashboard/base_admin.html" %}
+{% load i18n static %}
+
+{% block title %}
+{% if is_edit %}쿠폰 수정{% else %}쿠폰 생성{% endif %}
+{% endblock %}
+
+{% block extrahead %}
+<style>
+.form-section { background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px; }
+.form-section h6 { color: #007bff; margin-bottom: 10px; }
+.coupon-preview { background: #fff; border: 2px dashed #007bff; padding: 20px; text-align: center; margin-bottom: 15px; border-radius: 5px; }
+.coupon-code-preview { font-family: 'Courier New', monospace; font-size: 1.5em; font-weight: bold; color: #007bff; }
+</style>
+{% endblock %}
 
 {% block content %}
-<h2>🎫 쿠폰 등록</h2>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" class="btn btn-success">등록</button>
-</form>
+<!-- 페이지 헤더 -->
+<section class="content-header">
+  <div class="d-flex justify-content-between align-items-center">
+    <div>
+      <h1>
+        <i class="fas fa-{% if is_edit %}edit{% else %}plus{% endif %}"></i> 
+        {% if is_edit %}쿠폰 수정{% else %}쿠폰 생성{% endif %}
+      </h1>
+      <small class="text-muted">
+        {% if is_edit %}{{ coupon.name }} 수정{% else %}새로운 쿠폰 생성{% endif %}
+      </small>
+    </div>
+    <div>
+      <a href="{% url 'dashboard:coupon_list' %}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left"></i> 목록으로
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="content">
+  <div class="row">
+    
+    <!-- 폼 영역 -->
+    <div class="col-lg-8">
+      <form method="post" id="coupon-form">
+        {% csrf_token %}
+        
+        <!-- 기본 정보 -->
+        <div class="form-section">
+          <h6><i class="fas fa-info-circle"></i> 기본 정보</h6>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label>쿠폰명 <span class="text-danger">*</span></label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                  <small class="text-danger">{{ form.name.errors.0 }}</small>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label>쿠폰 코드 <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  {{ form.code }}
+                  <div class="input-group-append">
+                    <button type="button" class="btn btn-outline-secondary" id="generate-code">
+                      <i class="fas fa-magic"></i>
+                    </button>
+                  </div>
+                </div>
+                {% if form.code.errors %}
+                  <small class="text-danger">{{ form.code.errors.0 }}</small>
+                {% endif %}
+                <div class="form-check mt-2">
+                  {{ form.auto_generate_code }}
+                  <label class="form-check-label" for="id_auto_generate_code">자동 생성</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>설명</label>
+            {{ form.description }}
+            {% if form.description.errors %}
+              <small class="text-danger">{{ form.description.errors.0 }}</small>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- 할인 설정 -->
+        <div class="form-section">
+          <h6><i class="fas fa-percent"></i> 할인 설정</h6>
+          
+          <div class="row">
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>할인 타입 <span class="text-danger">*</span></label>
+                {{ form.discount_type }}
+                {% if form.discount_type.errors %}
+                  <small class="text-danger">{{ form.discount_type.errors.0 }}</small>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>할인 값 <span class="text-danger">*</span></label>
+                {{ form.discount_value }}
+                {% if form.discount_value.errors %}
+                  <small class="text-danger">{{ form.discount_value.errors.0 }}</small>
+                {% endif %}
+                <small class="form-text text-muted">정액할인: 원 단위, 정률할인: % 단위</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>최대 할인금액</label>
+                {{ form.max_discount_amount }}
+                {% if form.max_discount_amount.errors %}
+                  <small class="text-danger">{{ form.max_discount_amount.errors.0 }}</small>
+                {% endif %}
+                <small class="form-text text-muted">정률할인 시만 적용</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 사용 조건 -->
+        <div class="form-section">
+          <h6><i class="fas fa-cog"></i> 사용 조건</h6>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label>최소 구매금액</label>
+                {{ form.min_purchase_amount }}
+                {% if form.min_purchase_amount.errors %}
+                  <small class="text-danger">{{ form.min_purchase_amount.errors.0 }}</small>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label>회원별 사용 제한</label>
+                {{ form.usage_limit_per_user }}
+                {% if form.usage_limit_per_user.errors %}
+                  <small class="text-danger">{{ form.usage_limit_per_user.errors.0 }}</small>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>총 사용 제한</label>
+            {{ form.usage_limit }}
+            {% if form.usage_limit.errors %}
+              <small class="text-danger">{{ form.usage_limit.errors.0 }}</small>
+            {% endif %}
+            <small class="form-text text-muted">미입력시 무제한</small>
+          </div>
+        </div>
+
+        <!-- 기간 설정 -->
+        <div class="form-section">
+          <h6><i class="fas fa-calendar-alt"></i> 유효 기간</h6>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label>시작일시 <span class="text-danger">*</span></label>
+                {{ form.start_date }}
+                {% if form.start_date.errors %}
+                  <small class="text-danger">{{ form.start_date.errors.0 }}</small>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label>종료일시 <span class="text-danger">*</span></label>
+                {{ form.end_date }}
+                {% if form.end_date.errors %}
+                  <small class="text-danger">{{ form.end_date.errors.0 }}</small>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 대상 설정 -->
+        <div class="form-section">
+          <h6><i class="fas fa-users"></i> 대상 설정</h6>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label>대상 회원</label>
+                {{ form.target_member_types }}
+                {% if form.target_member_types.errors %}
+                  <small class="text-danger">{{ form.target_member_types.errors.0 }}</small>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label>대상 등급</label>
+                {{ form.target_grades }}
+                {% if form.target_grades.errors %}
+                  <small class="text-danger">{{ form.target_grades.errors.0 }}</small>
+                {% endif %}
+                <small class="form-text text-muted">미선택시 모든 등급 적용</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 상태 설정 -->
+        <div class="form-section">
+          <h6><i class="fas fa-toggle-on"></i> 상태 설정</h6>
+          
+          <div class="form-check">
+            {{ form.is_active }}
+            <label class="form-check-label" for="id_is_active">활성화</label>
+            <small class="form-text text-muted">체크 해제시 쿠폰이 비활성화됩니다</small>
+          </div>
+        </div>
+
+        <!-- 버튼 -->
+        <div class="form-group">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i>
+            {% if is_edit %}수정 완료{% else %}쿠폰 생성{% endif %}
+          </button>
+          <a href="{% url 'dashboard:coupon_list' %}" class="btn btn-secondary ml-2">
+            <i class="fas fa-times"></i> 취소
+          </a>
+        </div>
+        
+      </form>
+    </div>
+
+    <!-- 미리보기 영역 -->
+    <div class="col-lg-4">
+      <div class="sticky-top" style="top: 20px;">
+        
+        <!-- 쿠폰 미리보기 -->
+        <div class="coupon-preview">
+          <h6>쿠폰 미리보기</h6>
+          <div class="coupon-code-preview" id="preview-code">{{ form.code.value|default:"SAMPLE123" }}</div>
+          <div id="preview-name">{{ form.name.value|default:"샘플 쿠폰" }}</div>
+          <hr>
+          <div id="preview-discount">
+            <span id="discount-amount">10</span><span id="discount-unit">%</span> 할인
+          </div>
+          <small class="text-muted" id="preview-condition">
+            최소 구매금액: <span id="min-amount">0</span>원
+          </small>
+        </div>
+
+        <!-- 도움말 -->
+        <div class="card">
+          <div class="card-header">
+            <h6><i class="fas fa-info-circle"></i> 도움말</h6>
+          </div>
+          <div class="card-body">
+            <small class="text-muted">
+              <strong>쿠폰 코드 규칙:</strong><br>
+              • 영문 대문자와 숫자만 사용<br>
+              • 4-20자 사이<br>
+              • 중복 불가<br><br>
+              
+              <strong>할인 타입:</strong><br>
+              • 정액할인: 고정 금액 할인<br>
+              • 정률할인: 비율로 할인<br><br>
+              
+              <strong>사용 제한:</strong><br>
+              • 총 사용제한: 전체 사용 가능 횟수<br>
+              • 개인 제한: 한 회원당 사용 가능 횟수
+            </small>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// 서버가 내려주는 수정 모드 플래그 (true/false)
+window.IS_COUPON_EDIT = {{ is_edit|yesno:"true,false" }};
+</script>
+<script src="{% static 'dashboard/js/promotion/coupon_form.js' %}"></script>
 {% endblock %}

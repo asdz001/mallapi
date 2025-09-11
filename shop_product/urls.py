@@ -35,6 +35,9 @@ urlpatterns = [
     path('classification/category/<str:level>/<int:category_id>/update/', category.category_update, name='category_update'),
     path('classification/category/<str:level>/<int:category_id>/delete/', category.category_delete, name='category_delete'),
     path('classification/category/quick_create/', category.category_quick_create, name='category_quick_create'),
+
+    # ✅ 카테고리 “옵션” API (이 한 줄이 필요합니다)
+    path('classification/category/options/<str:level>/', category.category_options, name='category_options'),
     
 
 # 🔧 카테고리 옵션 관리

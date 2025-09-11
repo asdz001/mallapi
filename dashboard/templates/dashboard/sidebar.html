@@ -42,7 +42,7 @@
                 <p>{% trans "회원 추가" %}</p>
               </a>
             </li>
-            
+
             <li class="nav-item">
               <a href="{% url 'dashboard:member_list' %}"
                 class="nav-link {% if path == '/dashboard/members/' %}active{% endif %}">
@@ -59,7 +59,7 @@
                 <p>{% trans "회원별 등급관리" %}</p>
               </a>
             </li>
-            
+
             <li class="nav-item">
               <a href="{% url 'dashboard:deleted_member_list' %}"
                 class="nav-link {% if '/dashboard/members/deleted' in path %}active{% endif %}">
@@ -68,7 +68,7 @@
                   {% trans "삭제 회원 관리" %}
                   <!-- 🔢 삭제된 회원 수 배지 (선택사항) -->
                   {% if deleted_member_count > 0 %}
-                    <span class="badge badge-danger badge-sm">{{ deleted_member_count }}</span>
+                  <span class="badge badge-danger badge-sm">{{ deleted_member_count }}</span>
                   {% endif %}
                 </p>
               </a>
@@ -215,9 +215,9 @@
           </ul>
         </li>
 
-        {# 📊 프로모션 #}
-        <li class="nav-item has-treeview {% if '/dashboard/stats/' in path %}menu-open{% endif %}">
-          <a href="#" class="nav-link {% if '/dashboard/stats/' in path %}active{% endif %}">
+        {# 🎫 프로모션 관리 #}
+        <li class="nav-item has-treeview {% if '/dashboard/promotions/' in path %}menu-open{% endif %}">
+          <a href="#" class="nav-link {% if '/dashboard/promotions/' in path %}active{% endif %}">
             <i class="nav-icon fas fa-tags"></i>
             <p>
               {% trans "프로모션" %}
@@ -226,9 +226,31 @@
           </a>
           <ul class="nav nav-treeview">
             <li class="nav-item">
-              <a href="#" class="nav-link {% if '/dashboard/stats/' in path %}active{% endif %}">
+              <a href="{% url 'dashboard:promotion_dashboard' %}"
+                class="nav-link {% if path == '/dashboard/promotions/' %}active{% endif %}">
                 <i class="far fa-circle nav-icon"></i>
-                <p>{% trans "프로모션" %}</p>
+                <p>{% trans "프로모션 대시보드" %}</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{% url 'dashboard:coupon_list' %}"
+                class="nav-link {% if '/dashboard/promotions/coupons' in path %}active{% endif %}">
+                <i class="far fa-circle nav-icon"></i>
+                <p>{% trans "쿠폰 관리" %}</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{% url 'dashboard:event_list' %}"
+                class="nav-link {% if '/dashboard/promotions/events' in path %}active{% endif %}">
+                <i class="far fa-circle nav-icon"></i>
+                <p>{% trans "이벤트 관리" %}</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{% url 'dashboard:promotion_rule_settings' %}"
+                class="nav-link {% if '/dashboard/promotions/rules' in path %}active{% endif %}">
+                <i class="far fa-circle nav-icon"></i>
+                <p>{% trans "규칙 설정" %}</p>
               </a>
             </li>
           </ul>

@@ -1,0 +1,105 @@
+{% extends "dashboard/base_admin.html" %}
+{% load static %}
+{% block title %}{% if is_edit %}이벤트 수정{% else %}이벤트 생성{% endif %}{% endblock %}
+
+{% block content %}
+<section class="content-header d-flex justify-content-between align-items-center">
+  <div>
+    <h1><i class="fas fa-bullhorn"></i> {% if is_edit %}이벤트 수정{% else %}이벤트 생성{% endif %}</h1>
+    <small class="text-muted">{{ form.instance.name|default:"새 이벤트" }}</small>
+  </div>
+  <div>
+    <a href="{% url 'dashboard:event_list' %}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> 목록</a>
+  </div>
+</section>
+
+<section class="content">
+  <div class="card">
+    <div class="card-body">
+      <!-- id 부여(권장): JS가 이 폼만 확실히 타겟팅 -->
+      <form method="post" id="event-form">
+        {% csrf_token %}
+
+        <div class="form-row">
+          <div class="form-group col-md-8">
+            <label>이벤트명</label>{{ form.name }}
+          </div>
+          <div class="form-group col-md-4">
+            <label>활성화</label>
+            <div class="form-check">{{ form.is_active }}</div>
+          </div>
+        </div>
+
+        <div class="form-group"><label>설명</label>{{ form.description }}</div>
+
+        <div class="form-row">
+          <div class="form-group col-md-4"><label>할인 타입</label>{{ form.discount_type }}</div>
+          <div class="form-group col-md-4"><label>할인 값</label>{{ form.discount_value }}</div>
+          <div class="form-group col-md-4"><label>최대 할인금액</label>{{ form.max_discount_amount }}</div>
+        </div>
+
+        <!-- ⛔️ 여기 있던 'form-group form-check mb-2' 블록은 삭제했습니다 (중복 방지) -->
+
+        <div class="card mb-3">
+          <div class="card-header bg-light">
+            <strong><i class="fas fa-filter"></i> 적용 대상</strong>
+          </div>
+          <div class="card-body">
+            <div class="form-check mb-3">
+              {{ form.target_all_products }}
+              <label class="form-check-label" for="id_target_all_products">전체 상품 적용</label>
+            </div>
+
+            <!-- 브랜드 드롭다운 -->
+            <div class="form-group">
+              <label class="font-weight-bold">대상 브랜드 (여러 개 선택 가능)</label>
+              <input id="brand-filter" class="form-control mb-2" type="text" placeholder="브랜드 검색…" />
+              <select id="event-brand-select" class="form-control" multiple size="8"></select>
+              {{ form.target_brands }} <!-- Hidden(JSON) -->
+              <small class="text-muted d-block mt-1">브랜드 관리에 등록된 활성 브랜드가 표시됩니다.</small>
+            </div>
+
+            <!-- 성별 드롭다운 -->
+            <div class="form-group">
+              <label class="font-weight-bold">성별 (여러 개 선택 가능 / level1)</label>
+              <select id="event-category-l1" class="form-control" multiple size="6"></select>
+              <small class="text-muted d-block mt-1">카테고리 레벨1(성별)입니다.</small>
+            </div>
+
+            <!-- 카테고리 드롭다운 -->
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label class="font-weight-bold">대상 카테고리 - 대분류(level2)</label>
+                <select id="event-category-l2" class="form-control" multiple size="8"></select>
+              </div>
+              <div class="form-group col-md-6">
+                <label class="font-weight-bold">대상 카테고리 - 중분류(level3)</label>
+                <select id="event-category-l3" class="form-control" multiple size="8"></select>
+              </div>
+            </div>
+            {{ form.target_categories }} <!-- Hidden(JSON) -->
+            <small class="text-muted d-block mt-1">대·중분류를 여러 개 선택할 수 있습니다. 선택값은 JSON 배열로 저장됩니다.</small>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-md-6"><label>시작일시</label>{{ form.start_date }}</div>
+          <div class="form-group col-md-6"><label>종료일시</label>{{ form.end_date }}</div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-md-6"><label>최소 구매금액</label>{{ form.min_purchase_amount }}</div>
+          <div class="form-group col-md-6"><label>우선순위(작을수록 우선)</label>{{ form.priority }}</div>
+        </div>
+
+        <button class="btn btn-primary" type="submit"><i class="fas fa-save"></i> 저장</button>
+        <a href="{% url 'dashboard:event_list' %}" class="btn btn-secondary ml-2"><i class="fas fa-times"></i> 취소</a>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'dashboard/js/promotion/event_form.js' %}?v={% now 'U' %}"></script>
+{% endblock %}

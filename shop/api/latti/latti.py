@@ -58,8 +58,8 @@ def fetch_latti_raw_products_optimized(limit=None):
 
             raw = RawProduct.objects.update_or_create(
                 external_product_id=cod,
+                retailer="IT-R-01",
                 defaults={
-                    "retailer": "IT-R-01",
                     "raw_brand_name": item.get("BRAND"),
                     "product_name": product_name,
                     "sku": sku,

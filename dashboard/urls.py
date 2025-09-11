@@ -11,6 +11,7 @@ urlpatterns = [
     path('members/', include('members.urls')), # 회원 관리 앱 URL 포함
 
     path('settings/', include('mall_settings.urls')), # 쇼핑몰 설정 앱 URL 포함
+    path('promotions/', include('promotion.urls')), # 프로모션 관리 앱 URL 포함
 ]
 
 

@@ -1,0 +1,165 @@
+{% extends "dashboard/base_admin.html" %}
+{% load static %}
+
+{% block title %}이벤트 관리{% endblock %}
+
+{% block content %}
+<section class="content-header d-flex justify-content-between align-items-center">
+  <div>
+    <h1><i class="fas fa-bullhorn"></i> 이벤트 관리</h1>
+    <small class="text-muted">기간 한정 할인 이벤트</small>
+  </div>
+  <div>
+    <a href="{% url 'dashboard:event_create' %}" class="btn btn-success btn-sm">
+      <i class="fas fa-plus"></i> 이벤트 생성
+    </a>
+  </div>
+</section>
+
+<section class="content">
+  <div class="card mb-3">
+    <div class="card-body">
+      <form method="get" class="form-inline">
+        <div class="form-group mr-2">
+          <input type="text" name="search" value="{{ search|default:'' }}" class="form-control" placeholder="이벤트명/설명 검색">
+        </div>
+        <div class="form-group mr-2">
+          <select name="status" class="form-control">
+            <option value="">모든 상태</option>
+            <option value="active" {% if status == 'active' %}selected{% endif %}>진행중</option>
+            <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>비활성</option>
+            <option value="expired" {% if status == 'expired' %}selected{% endif %}>만료</option>
+          </select>
+        </div>
+        <button class="btn btn-primary btn-sm mr-2" type="submit"><i class="fas fa-search"></i> 검색</button>
+        <a class="btn btn-secondary btn-sm" href="{% url 'dashboard:event_list' %}"><i class="fas fa-undo"></i> 초기화</a>
+      </form>
+    </div>
+  </div>
+
+  <div class="row">
+    {% for event in page_obj %}
+    <div class="col-lg-6 mb-3">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center" style="overflow: visible;">
+          <h6 class="mb-0">{{ event.name }}</h6>
+          <div class="btn-group">
+            <!-- 활성/비활성 토글 -->
+            <button
+              type="button"
+              class="btn btn-sm toggle-status {% if event.is_active %}btn-success{% else %}btn-secondary{% endif %}"
+              data-event-id="{{ event.id }}"
+              data-url="/dashboard/promotions/events/{{ event.id }}/toggle"
+              title="상태 토글">
+              <i class="fas fa-toggle-{% if event.is_active %}on{% else %}off{% endif %}"></i>
+            </button>
+
+            <!-- 드롭다운 -->
+            <div class="btn-group">
+              <button type="button"
+                      class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                      data-toggle="dropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-ellipsis-v"></i>
+              </button>
+              <div class="dropdown-menu dropdown-menu-right" style="z-index: 1060;">
+                <!-- 모달 상세보기 -->
+                <a class="dropdown-item" href="#"
+                   onclick="viewEventDetail({{ event.id }}); return false;">
+                  <i class="fas fa-eye"></i> 상세보기
+                </a>
+                <a class="dropdown-item" href="{% url 'dashboard:event_edit' event.id %}">
+                  <i class="fas fa-edit"></i> 수정
+                </a>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item text-danger" href="#"
+                   data-delete-url="/dashboard/promotions/events/{{ event.id }}/delete"
+                   onclick="deleteEvent({{ event.id }}, '{{ event.name }}')">
+                  <i class="fas fa-trash"></i> 삭제
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="mb-1 text-muted">{{ event.description|default:"-" }}</p>
+          <table class="table table-sm table-borderless mb-0">
+            <tr><td>할인</td><td class="text-right">
+              {% if event.discount_type == 'fixed' %}{{ event.discount_value|floatformat:0 }}원
+              {% else %}{{ event.discount_value }}%{% if event.max_discount_amount %} (최대 {{ event.max_discount_amount|floatformat:0 }}원){% endif %}
+              {% endif %}
+            </td></tr>
+            <tr><td>기간</td><td class="text-right">{{ event.start_date|date:"Y-m-d H:i" }} ~ {{ event.end_date|date:"Y-m-d H:i" }}</td></tr>
+            <tr><td>최소 구매금액</td><td class="text-right">{{ event.min_purchase_amount|floatformat:0 }}원</td></tr>
+          </table>
+        </div>
+
+        <!-- 카드 푸터 - 상태 표시 (쿠폰과 동일) -->
+        <div class="card-footer d-flex justify-content-between align-items-center">
+          <div>
+            {% now "U" as now_ts %}
+            {% with start_ts=event.start_date|date:"U" end_ts=event.end_date|date:"U" %}
+              {% if event.is_active and start_ts <= now_ts and end_ts >= now_ts %}
+                <span class="badge badge-success event-status-badge" data-event-id="{{ event.id }}">진행중</span>
+              {% elif end_ts < now_ts %}
+                <span class="badge badge-secondary event-status-badge" data-event-id="{{ event.id }}">종료</span>
+              {% elif not event.is_active %}
+                <span class="badge badge-secondary event-status-badge" data-event-id="{{ event.id }}">비활성</span>
+              {% else %}
+                <span class="badge badge-warning event-status-badge" data-event-id="{{ event.id }}">대기</span>
+              {% endif %}
+            {% endwith %}
+          </div>
+          <small class="text-muted">생성 {{ event.created_at|date:"m/d H:i" }}</small>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+      <div class="alert alert-light text-center">이벤트가 없습니다. 새 이벤트를 생성해 보세요.</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <nav>
+    <ul class="pagination justify-content-center">
+      {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">이전</a></li>
+      {% endif %}
+      <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+      {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">다음</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</section>
+
+<!-- 삭제 확인 모달 -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">이벤트 삭제</h5>
+        <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+          <span>&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p><strong id="delete-event-name"></strong> 이벤트를 정말 삭제하시겠습니까?</p>
+        <p class="text-danger">
+          <i class="fas fa-exclamation-triangle"></i> 삭제된 이벤트는 복구할 수 없습니다.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">취소</button>
+        <button type="button" class="btn btn-danger" id="confirm-delete">삭제</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'dashboard/js/promotion/event_list.js' %}?v={% now 'U' %}"></script>
+{% endblock %}

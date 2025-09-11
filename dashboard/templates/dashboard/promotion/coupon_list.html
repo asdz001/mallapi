@@ -1,30 +1,275 @@
 <!-- dashboard/templates/dashboard/promotion/coupon_list.html -->
 {% extends "dashboard/base_admin.html" %}
+{% load i18n static %}
+
+{% block title %}쿠폰 관리{% endblock %}
+
+{% block extrahead %}
+<style>
+  .coupon-card { transition: all 0.2s; border-left: 4px solid #007bff; }
+  .coupon-card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+  .coupon-code { font-family: 'Courier New', monospace; font-weight: bold; background: #f8f9fa; padding: 4px 8px; border-radius: 4px; }
+  .stats-card { border-left: 4px solid; padding-left: 15px; }
+  .stats-card.primary { border-color: #007bff; }
+  .stats-card.success { border-color: #28a745; }
+  .stats-card.warning { border-color: #ffc107; }
+</style>
+{% endblock %}
 
 {% block content %}
-<h2>🎫 쿠폰 목록</h2>
-<a href="{% url 'coupon_create' %}" class="btn btn-primary mb-3">+ 쿠폰 생성</a>
+<section class="content-header">
+  <div class="d-flex justify-content-between align-items-center">
+    <div>
+      <h1><i class="fas fa-ticket-alt"></i> 쿠폰 관리</h1>
+      <small class="text-muted">쿠폰 생성, 수정, 사용현황 관리</small>
+    </div>
+    <div>
+      <a href="{% url 'dashboard:coupon_create' %}" class="btn btn-success btn-sm">
+        <i class="fas fa-plus"></i> 쿠폰 생성
+      </a>
+      <a href="{% url 'dashboard:coupon_bulk_create' %}" class="btn btn-primary btn-sm">
+        <i class="fas fa-layer-group"></i> 대량 생성
+      </a>
+      <a href="{% url 'dashboard:coupon_export_csv' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-download"></i> CSV
+      </a>
+    </div>
+  </div>
+</section>
 
-<table class="table table-bordered">
-    <thead>
-        <tr>
-            <th>코드</th><th>이름</th><th>타입</th><th>값</th><th>기간</th><th>최소금액</th><th>사용가능</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for coupon in coupons %}
-        <tr>
-            <td>{{ coupon.code }}</td>
-            <td>{{ coupon.name }}</td>
-            <td>{{ coupon.get_discount_type_display }}</td>
-            <td>{{ coupon.discount_value }}</td>
-            <td>{{ coupon.valid_from }} ~ {{ coupon.valid_to }}</td>
-            <td>{{ coupon.min_order_amount }}</td>
-            <td>{{ coupon.is_active }}</td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="7" class="text-center">쿠폰 없음</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
+<section class="content">
+  <!-- 통계 -->
+  <div class="row mb-3">
+    <div class="col-md-4">
+      <div class="card stats-card primary">
+        <div class="card-body">
+          <h4>{{ stats.total_coupons }}</h4>
+          <small>전체 쿠폰</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card stats-card success">
+        <div class="card-body">
+          <h4>{{ stats.active_coupons }}</h4>
+          <small>활성 쿠폰</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card stats-card warning">
+        <div class="card-body">
+          <h4>{{ stats.used_today }}</h4>
+          <small>오늘 사용</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 검색 필터 -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <form method="get" id="search-form" class="form-inline">
+        <div class="form-group mr-3">
+          <label class="mr-2">검색:</label>
+          {{ search_form.query }}
+        </div>
+        <div class="form-group mr-3">
+          <label class="mr-2">상태:</label>
+          {{ search_form.status }}
+        </div>
+        <div class="form-group mr-3">
+          <label class="mr-2">대상 회원:</label>
+          {{ search_form.target_member_type }}
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm mr-2">
+          <i class="fas fa-search"></i> 검색
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" id="reset-search">
+          <i class="fas fa-undo"></i> 초기화
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 쿠폰 목록 -->
+  <div class="card">
+    <div class="card-header">
+      <h5>쿠폰 목록 <span class="badge badge-secondary">{{ page_obj.paginator.count }}개</span></h5>
+    </div>
+
+    <div class="card-body">
+      {% if page_obj %}
+        <div class="row">
+          {% for coupon in page_obj %}
+          <div class="col-lg-6 mb-3">
+            <div class="card coupon-card">
+              <!-- 카드 헤더 -->
+              <div class="card-header d-flex justify-content-between align-items-center" style="overflow: visible;">
+                <h6 class="mb-0">{{ coupon.name }}</h6>
+                <div class="btn-group">
+                  <!-- 활성/비활성 토글 -->
+                  <button
+                    type="button"
+                    class="btn btn-sm toggle-status {% if coupon.is_active %}btn-success{% else %}btn-secondary{% endif %}"
+                    data-coupon-id="{{ coupon.id }}"
+                    data-url="/dashboard/promotions/coupons/{{ coupon.id }}/toggle"
+                    title="상태 토글">
+                    <i class="fas fa-toggle-{% if coupon.is_active %}on{% else %}off{% endif %}"></i>
+                  </button>
+
+                  <!-- 드롭다운 -->
+                  <div class="btn-group">
+                    <button type="button"
+                            class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                            data-toggle="dropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-right" style="z-index: 1060;">
+                      <!-- ✅ 모달 상세보기 -->
+                      <a class="dropdown-item" href="#"
+                         onclick="viewCouponDetail({{ coupon.id }}); return false;">
+                        <i class="fas fa-eye"></i> 상세보기
+                      </a>
+                      <a class="dropdown-item" href="{% url 'dashboard:coupon_edit' coupon.id %}">
+                        <i class="fas fa-edit"></i> 수정
+                      </a>
+                      <div class="dropdown-divider"></div>
+                      <a class="dropdown-item text-danger" href="#"
+                         data-delete-url="/dashboard/promotions/coupons/{{ coupon.id }}/delete"
+                         onclick="deleteCoupon({{ coupon.id }}, '{{ coupon.name }}')"
+                         {% if coupon.used_count > 0 %}disabled{% endif %}>
+                        <i class="fas fa-trash"></i> 삭제
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 카드 바디 -->
+              <div class="card-body">
+                <div class="text-center mb-3">
+                  <div class="coupon-code">{{ coupon.code }}</div>
+                </div>
+
+                <table class="table table-sm table-borderless">
+                  <tr>
+                    <td><strong>할인:</strong></td>
+                    <td class="text-right">
+                      {% if coupon.discount_type == 'fixed' %}
+                        {{ coupon.discount_value|floatformat:0 }}원
+                      {% else %}
+                        {{ coupon.discount_value }}%
+                        {% if coupon.max_discount_amount %}
+                          <small class="text-muted">(최대 {{ coupon.max_discount_amount|floatformat:0 }}원)</small>
+                        {% endif %}
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% if coupon.min_purchase_amount > 0 %}
+                  <tr>
+                    <td><strong>최소구매:</strong></td>
+                    <td class="text-right">{{ coupon.min_purchase_amount|floatformat:0 }}원</td>
+                  </tr>
+                  {% endif %}
+                  <tr>
+                    <td><strong>사용현황:</strong></td>
+                    <td class="text-right">
+                      {{ coupon.used_count }}회
+                      {% if coupon.usage_limit %}/ {{ coupon.usage_limit }}회{% endif %}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong>기간:</strong></td>
+                    <td class="text-right">
+                      <small>{{ coupon.start_date|date:"m/d" }} ~ {{ coupon.end_date|date:"m/d" }}</small>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <!-- 카드 푸터 -->
+              <div class="card-footer d-flex justify-content-between align-items-center">
+                <div>
+                  {% now "U" as now_ts %}
+                  {% with start_ts=coupon.start_date|date:"U" end_ts=coupon.end_date|date:"U" %}
+                    {% if coupon.is_active and start_ts <= now_ts and end_ts >= now_ts %}
+                      <span class="badge badge-success">진행중</span>
+                    {% elif end_ts < now_ts %}
+                      <span class="badge badge-secondary">종료</span>
+                    {% else %}
+                      <span class="badge badge-warning">대기</span>
+                    {% endif %}
+                  {% endwith %}
+                </div>
+                <small class="text-muted">생성 {{ coupon.created_at|date:"m/d H:i" }}</small>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- 페이지네이션 -->
+        {% if page_obj.paginator.num_pages > 1 %}
+        <nav>
+          <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.previous_page_number }}">이전</a>
+            </li>
+            {% endif %}
+            <li class="page-item disabled">
+              <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+            </li>
+            {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.next_page_number }}">다음</a>
+            </li>
+            {% endif %}
+          </ul>
+        </nav>
+        {% endif %}
+
+      {% else %}
+        <div class="text-center py-5">
+          <i class="fas fa-ticket-alt fa-3x text-muted mb-3"></i>
+          <h4 class="text-muted">쿠폰이 없습니다</h4>
+          <p class="text-muted">첫 번째 쿠폰을 만들어보세요!</p>
+          <a href="{% url 'dashboard:coupon_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> 쿠폰 생성하기
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- 삭제 확인 모달 -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">쿠폰 삭제</h5>
+        <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+          <span>&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p><strong id="delete-coupon-name"></strong> 쿠폰을 정말 삭제하시겠습니까?</p>
+        <p class="text-danger">
+          <i class="fas fa-exclamation-triangle"></i> 삭제된 쿠폰은 복구할 수 없습니다.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">취소</button>
+        <button type="button" class="btn btn-danger" id="confirm-delete">삭제</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <!-- jQuery/Bootstrap 이후에 로드해야 함 -->
+  <script src="{% static 'dashboard/js/promotion/coupon_list.js' %}?v={% now 'U' %}"></script>
 {% endblock %}
