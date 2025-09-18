@@ -157,7 +157,7 @@ class UltraOptimizedConversionService:
                     logger.info(f"상품 생성 완료: [{raw_product.retailer}-{raw_product.external_product_id}]")
 
             # 옵션 처리 (기존 로직 유지)
-            self._process_options_with_external_functions(raw_product, product, existing_options={}, options_to_create=[], options_to_update=[])
+            self._process_single_product_options(raw_product, product)
 
             return True
 
