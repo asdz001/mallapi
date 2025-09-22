@@ -15,6 +15,7 @@ import time
 
 logger = logging.getLogger(__name__)
 
+
 class UltraOptimizedConversionService:
     """최종 최적화된 상품 변환 서비스"""
 
@@ -496,10 +497,28 @@ class UltraOptimizedConversionService:
 _conversion_service = None
 
 def get_conversion_service():
-    """변환 서비스 인스턴스 반환 (매핑 캐시 재사용)"""
+    """
+    변환 서비스 싱글톤 객체 반환
+    """
     global _conversion_service
     if _conversion_service is None:
         _conversion_service = UltraOptimizedConversionService()
+    return _conversion_service
+
+
+# ✅ 캐시 강제 리로드 함수 추가
+def reload_conversion_cache():
+    """
+    매핑 캐시를 강제로 다시 로딩한다.
+    - BrandAlias, CategoryAlias, CountryAlias 등 최신 데이터 반영
+    """
+    global _conversion_service
+    if _conversion_service is None:
+        _conversion_service = UltraOptimizedConversionService()
+        logger.info("[ConversionService] 매핑 캐시 새로 생성 및 로딩 완료")
+    else:
+        _conversion_service._load_mapping_caches()
+        logger.info("[ConversionService] 매핑 캐시 강제 리로드 완료")
     return _conversion_service
 
 
